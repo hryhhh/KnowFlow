@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import PageHeader from "../../components/PageHeader";
 import TopStepsBar from "../../components/TopStepsBar";
 import CreateKBModal from "./CreateKBModal";
 import EditKBModal from "./EditKBModal";
@@ -23,9 +24,14 @@ export default function KnowledgeBaseList() {
     await fetch();
   };
 
+  const handleView = (kb: (typeof list)[0]) => {
+    select(kb);
+    navigate(`/knowledge-bases/${kb.id}/documents`);
+  };
+
   return (
     <div className="content">
-      <div className="header">知识库</div>
+      <PageHeader title="知识库管理" />
       <TopStepsBar active={0} />
 
       <div className="toolbar">
@@ -47,61 +53,66 @@ export default function KnowledgeBaseList() {
       {loading ? (
         <div className="empty">加载中…</div>
       ) : list.length === 0 ? (
-        <div className="empty">暂无知识库，点击「创建知识库」开始</div>
-      ) : (
-        <div className="kb-grid">
-          {list.map((kb) => (
-            <div
-              key={kb.id}
-              className="kb-card"
-              onClick={() => {
-                select(kb);
-                navigate(`/knowledge-bases/${kb.id}/documents`);
-              }}
-            >
-              <div className="kb-card-header">
-                <span className="kb-icon">🗄️</span>
-                <div className="kb-actions">
-                  <button 
-                    className="action-btn" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      select(kb);
-                      setShowEditModal(true);
-                    }}
-                    title="编辑"
-                  >
-                    ✏️
-                  </button>
-                  <button 
-                    className="action-btn" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(kb.id);
-                    }}
-                    title="删除"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-              <h3>{kb.name}</h3>
-              <p>{kb.description || "（暂无描述）"}</p>
-              <div className="meta">
-                <span>{kb.type === "free" ? "免费版" : kb.type}</span>
-                <span>{kb.documentCount} 个文档</span>
-                <span>{kb.chunkCount} 个切片</span>
-              </div>
-            </div>
-          ))}
+        <div className="empty">
+          <p>暂无知识库</p>
+          <p>点击「创建知识库」开始</p>
         </div>
+      ) : (
+        <table className="table">
+          <thead>
+            <tr>
+              <th>知识库名称</th>
+              <th>描述</th>
+              <th>类型</th>
+              <th>文档数</th>
+              <th>切片数</th>
+              <th>更新时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((kb) => (
+              <tr key={kb.id}>
+                <td>
+                  <strong style={{ color: "var(--primary)" }}>{kb.name}</strong>
+                </td>
+                <td style={{ color: "var(--text-sub)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {kb.description || "—"}
+                </td>
+                <td>
+                  <span className="badge success" style={{ fontSize: 11 }}>
+                    {kb.type === "free" ? "免费版" : kb.type}
+                  </span>
+                </td>
+                <td>{kb.documentCount}</td>
+                <td>{kb.chunkCount}</td>
+                <td style={{ color: "var(--text-subtle)", fontSize: 12 }}>{kb.createdAt?.slice(0, 10) || "—"}</td>
+                <td>
+                  <a style={{ cursor: "pointer", marginRight: 8 }} onClick={() => handleView(kb)}>
+                    进入
+                  </a>
+                  <a style={{ cursor: "pointer", marginRight: 8 }} onClick={() => { select(kb); setShowEditModal(true); }}>
+                    编辑
+                  </a>
+                  <a
+                    className="danger"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleDelete(kb.id)}
+                  >
+                    删除
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
       {showModal && <CreateKBModal onClose={() => setShowModal(false)} />}
       {showEditModal && (
-        <EditKBModal 
-          kb={current} 
-          onClose={() => setShowEditModal(false)} 
+        <EditKBModal
+          kb={current}
+          onClose={() => setShowEditModal(false)}
         />
       )}
     </div>

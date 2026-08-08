@@ -29,3 +29,6 @@ Thumbs.db
 
 # Coverage
 coverage/
+
+# Uploads
+apps/server/uploads/

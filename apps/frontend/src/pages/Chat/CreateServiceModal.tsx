@@ -34,20 +34,24 @@ export default function CreateServiceModal({
   return (
     <div className="modal-mask" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>创建服务调用</h3>
-        <p style={{ color: "var(--text-sub)", fontSize: 13 }}>
+        <div className="modal-header">
+          <h3>创建服务调用</h3>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <p style={{ color: "var(--text-sub)", fontSize: 13, margin: "0 0 16px" }}>
           将调试好的检索问答参数发布为知识服务，并通过 API Key 调用
         </p>
 
         {!result ? (
           <>
             <div className="field">
-              <label>服务调用名称 *</label>
+              <label>服务调用名称 <span className="required">*</span></label>
               <input
                 className="input"
                 value={serviceName}
                 onChange={(e) => setServiceName(e.target.value)}
                 placeholder="例如：学生成绩问答 API"
+                autoFocus
               />
             </div>
             <div className="field">
@@ -58,7 +62,7 @@ export default function CreateServiceModal({
                 placeholder="给业务系统调用"
               />
             </div>
-            {error && <div className="badge failed">{error}</div>}
+            {error && <div className="badge failed" style={{ marginBottom: 12, display: "inline-block" }}>{error}</div>}
             <div className="modal-actions">
               <button className="btn" onClick={onClose}>
                 取消

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+import PageHeader from "../../components/PageHeader";
 import TopStepsBar from "../../components/TopStepsBar";
 import { retrievalApi } from "../../services/api";
 import { useKbStore } from "../../stores/kb-store";
@@ -29,66 +30,72 @@ export default function RetrievalPage() {
     }
   };
 
+  const highlightMatch = (text: string, query: string) => {
+    if (!query.trim()) return text;
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    return parts.map((part, i) =>
+      part.toLowerCase() === query.toLowerCase() ? (
+        <mark key={i} style={{ background: "#fff3a1", padding: "1px 2px", borderRadius: 2 }}>{part}</mark>
+      ) : part
+    );
+  };
+
   return (
     <div className="content">
-      <div className="header">知识检索 · {current?.name ?? kbId}</div>
+      <PageHeader title="知识检索" breadcrumb={current?.name ?? kbId} />
       <TopStepsBar active={2} />
 
       <div className="retrieval">
         <div className="params">
-          <h3 style={{ marginTop: 0 }}>📊 检索参数</h3>
-          <p style={{ color: "var(--text-sub)", fontSize: 12 }}>
+          <h3 style={{ marginTop: 0, fontSize: 15, fontWeight: 600 }}>📊 检索参数</h3>
+          <p style={{ color: "var(--text-sub)", fontSize: 12, margin: "0 0 16px" }}>
             调整检索参数，预览知识库命中效果
           </p>
 
           <div className="param-row">
-            <label>结果返回数量</label>
+            <label>结果返回数量 (TopK)</label>
             <input
               className="input"
               type="number"
+              min={1}
+              max={50}
               value={params.topK}
-              onChange={(e) =>
-                setParams((p) => ({ ...p, topK: Number(e.target.value) }))
-              }
+              onChange={(e) => setParams((p) => ({ ...p, topK: Number(e.target.value) }))}
             />
           </div>
 
           <div className="param-row">
-            <label>最低相似度</label>
+            <label>最低相似度阈值</label>
             <input
               className="input"
               type="number"
               step="0.01"
+              min={0}
+              max={1}
               value={params.minScore}
-              onChange={(e) =>
-                setParams((p) => ({ ...p, minScore: Number(e.target.value) }))
-              }
+              onChange={(e) => setParams((p) => ({ ...p, minScore: Number(e.target.value) }))}
             />
           </div>
 
           <div className="param-row">
-            <label>重排模型</label>
+            <label>重排模型 (Reranker)</label>
             <span
               className={"toggle" + (params.useReranker ? " on" : "")}
-              onClick={() =>
-                setParams((p) => ({ ...p, useReranker: !p.useReranker }))
-              }
+              onClick={() => setParams((p) => ({ ...p, useReranker: !p.useReranker }))}
             />
           </div>
 
           <div className="param-row">
-            <label>Dense Weight</label>
+            <label>Dense Weight (0~1)</label>
             <input
               className="input"
               type="number"
               step="0.1"
+              min={0}
+              max={1}
               value={params.denseWeight}
-              onChange={(e) =>
-                setParams((p) => ({
-                  ...p,
-                  denseWeight: Number(e.target.value),
-                }))
-              }
+              onChange={(e) => setParams((p) => ({ ...p, denseWeight: Number(e.target.value) }))}
             />
           </div>
         </div>
@@ -113,13 +120,15 @@ export default function RetrievalPage() {
           </div>
 
           {results.length === 0 ? (
-            <div className="empty">输入查询词后查看命中结果</div>
+            <div className="empty">
+              <p>输入查询词后查看命中结果</p>
+            </div>
           ) : (
             results.map((r, i) => (
               <div key={i} className="result-item">
-                <span className="score">相似度 {r.score}</span>
+                <span className="score">相似度 {r.score.toFixed(4)}</span>
                 <span className="src">{r.sourceFile}</span>
-                <pre>{r.content}</pre>
+                <pre>{highlightMatch(r.content, query)}</pre>
               </div>
             ))
           )}

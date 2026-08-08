@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import type { ChangeEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import PageHeader from "../../components/PageHeader";
 import TopStepsBar from "../../components/TopStepsBar";
 import StatusBadge from "../../components/StatusBadge";
 import { docApi } from "../../services/api";
@@ -15,6 +16,7 @@ export default function DocumentList() {
   const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [dragOver, setDragOver] = useState(false);
 
   const load = async () => {
     if (!kbId) return;
@@ -29,9 +31,8 @@ export default function DocumentList() {
 
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const onUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !kbId) return;
+  const onUpload = async (file: File) => {
+    if (!kbId || !file) return;
     setUploading(true);
     setError("");
     try {
@@ -41,9 +42,21 @@ export default function DocumentList() {
       setError(err instanceof Error ? err.message : "上传失败");
     } finally {
       setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
     }
   };
+
+  const handleDrop = (e: React.DragEvent) => {
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) onUpload(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = () => setDragOver(false);
 
   const deleteDoc = async (kbId: string, docId: string) => {
     await docApi.remove(kbId, docId);
@@ -52,8 +65,8 @@ export default function DocumentList() {
 
   return (
     <div className="content">
-      <div className="header">文档管理 · {current?.name ?? kbId}</div>
-      <TopStepsBar active={1} /> 
+      <PageHeader title="文档管理" breadcrumb={current?.name ?? kbId} />
+      <TopStepsBar active={1} />
 
       <div className="toolbar">
         <button
@@ -68,8 +81,14 @@ export default function DocumentList() {
           type="file"
           accept=".csv,.xlsx,.xls,.pdf,.docx,.doc"
           style={{ display: "none" }}
-          onChange={onUpload}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => {
+            const file = e.target.files?.[0];
+            if (file) onUpload(file);
+          }}
         />
+        <span style={{ color: "var(--text-sub)", fontSize: 12 }}>
+          支持 CSV / XLSX / PDF / Word
+        </span>
         <span className="spacer" />
         <input
           className="search-input"
@@ -79,53 +98,86 @@ export default function DocumentList() {
         />
       </div>
 
-      {error && <div className="badge failed">{error}</div>}
+      {error && <div className="badge failed" style={{ marginBottom: 12, display: "inline-block" }}>{error}</div>}
+
+      {/* 拖拽上传区 */}
+      <div
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onClick={() => fileRef.current?.click()}
+        style={{
+          border: `2px dashed ${dragOver ? "var(--primary)" : "var(--border-strong)"}`,
+          borderRadius: "var(--radius-lg)",
+          padding: "24px",
+          textAlign: "center",
+          margin: "0 0 16px",
+          cursor: "pointer",
+          background: dragOver ? "var(--primary-soft)" : "transparent",
+          transition: "all 0.2s",
+        }}
+      >
+        <div style={{ fontSize: 24, marginBottom: 8 }}>📁</div>
+        <div style={{ color: "var(--text)", fontWeight: 500 }}>
+          {dragOver ? "拖放文件到此处上传" : "拖放文件到此处，或点击选择文件"}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--text-subtle)", marginTop: 4 }}>
+          支持 CSV / XLSX / PDF / DOCX / DOC 格式
+        </div>
+      </div>
 
       {docs.length === 0 ? (
-        <div className="empty">暂无文档，上传 CSV / XLSX / PDF / Word 开始</div>
+        <div className="empty">
+          <p>暂无文档</p>
+          <p>上传 CSV / XLSX / PDF / Word 开始</p>
+        </div>
       ) : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>文档名称 / ID</th>
-              <th>状态</th>
-              <th>处理策略</th>
-              <th>切片数</th>
-              <th>导入方式</th>
-              <th>更新时间</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {docs.map((d) => (
-              <tr key={d.id}>
-                <td>{d.name}</td>
-                <td>
-                  <StatusBadge status={d.status} />
-                </td>
-                <td>{d.strategy || "—"}</td>
-                <td>{d.chunkCount}</td>
-                <td>{d.importMethod}</td>
-                <td>{d.updatedAt}</td>
-                <td>
-                  <a
-                    onClick={() => navigate(`/knowledge-bases/${kbId}/documents/${d.id}/chunks`)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    切片详情
-                  </a>&nbsp;&nbsp;
-                  <a
-                    onClick={() => deleteDoc(d.kbId, d.id)}
-                    className="danger"
-                    style={{ cursor: "pointer" }}
-                  >
-                    删除
-                  </a>
-                </td>
+        <>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>文档名称</th>
+                <th>状态</th>
+                <th>处理策略</th>
+                <th>切片数</th>
+                <th>导入方式</th>
+                <th>更新时间</th>
+                <th>操作</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {docs.map((d) => (
+                <tr key={d.id}>
+                  <td>
+                    <strong>{d.name}</strong>
+                  </td>
+                  <td>
+                    <StatusBadge status={d.status} />
+                  </td>
+                  <td>{d.strategy || "—"}</td>
+                  <td>{d.chunkCount}</td>
+                  <td>{d.importMethod}</td>
+                  <td style={{ color: "var(--text-subtle)", fontSize: 12 }}>{d.updatedAt}</td>
+                  <td>
+                    <a
+                      style={{ cursor: "pointer", marginRight: 8 }}
+                      onClick={() => navigate(`/knowledge-bases/${kbId}/documents/${d.id}/chunks`)}
+                    >
+                      切片详情
+                    </a>
+                    <a
+                      className="danger"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => deleteDoc(d.kbId, d.id)}
+                    >
+                      删除
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
       )}
     </div>
   );

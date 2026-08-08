@@ -32,14 +32,18 @@ export default function EditKBModal({
   return (
     <div className="modal-mask" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>编辑知识库</h3>
+        <div className="modal-header">
+          <h3>编辑知识库</h3>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
         <div className="field">
-          <label>知识库名称 *</label>
+          <label>知识库名称 <span className="required">*</span></label>
           <input
             className="input"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="例如：学生成绩知识库"
+            autoFocus
           />
         </div>
         <div className="field">

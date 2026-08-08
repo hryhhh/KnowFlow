@@ -7,25 +7,25 @@ export default function Sidebar() {
   const base = current ? `/knowledge-bases/${current.id}` : null;
 
   const items = [
-    { to: "/knowledge-bases", label: "📚 知识库", icon: "📚" },
+    { to: "/knowledge-bases", label: "知识库管理", icon: "📚" },
     {
       to: base ? `${base}/documents` : "#",
-      label: "📄 文档管理",
+      label: "文档管理",
       disabled: !base,
     },
     {
       to: base ? `${base}/chunks` : "#",
-      label: "📋 切片管理",
+      label: "切片管理",
       disabled: !base,
     },
     {
       to: base ? `${base}/retrieval` : "#",
-      label: "🔍 知识检索",
+      label: "知识检索",
       disabled: !base,
     },
     {
       to: base ? `${base}/chat` : "#",
-      label: "💬 知识问答",
+      label: "知识问答",
       disabled: !base,
     },
   ];
@@ -42,19 +42,20 @@ export default function Sidebar() {
             key={it.label}
             to={it.disabled ? "#" : it.to}
             className={({ isActive }) =>
-              "nav-item" + (isActive && !it.disabled ? " active" : "")
+              "nav-item" + (isActive && !it.disabled ? " active" : "") + (it.disabled ? " disabled" : "")
             }
             onClick={(e) => {
               if (it.disabled) e.preventDefault();
             }}
           >
-            {it.label}
+            <span>{it.icon}</span>
+            <span>{it.label}</span>
           </NavLink>
         ))}
       </nav>
       <div className="sidebar-stats">
         <div>
-          当前知识库：<b>{current ? current.name : "未选择"}</b>
+          当前知识库：<b style={{ color: "#fff" }}>{current ? current.name : "未选择"}</b>
         </div>
         {current && (
           <>

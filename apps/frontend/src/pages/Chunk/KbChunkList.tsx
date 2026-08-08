@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import PageHeader from "../../components/PageHeader";
 import TopStepsBar from "../../components/TopStepsBar";
 import ChunkModal from "./ChunkModal";
 import { chunkApi } from "../../services/api";
@@ -53,7 +54,7 @@ export default function KbChunkList() {
 
   return (
     <div className="content">
-      <div className="header">切片管理 · {current?.name ?? kbId}</div>
+      <PageHeader title="切片管理" breadcrumb={current?.name ?? kbId} />
       <TopStepsBar active={1} />
 
       <div className="toolbar">
@@ -66,67 +67,62 @@ export default function KbChunkList() {
       </div>
 
       {chunks.length === 0 ? (
-        <div className="empty">暂无切片，请先上传文档或手动添加切片</div>
-      ) : (
-        <div className="chunk-grid">
-          {chunks.map((c) => (
-            <div key={c.id} className="chunk-card">
-              <div className="chunk-card-header">
-                <div className="chunk-info">
-                  <span className="chunk-idx">#{c.index + 1}</span>
-                  <span className="chunk-title">{c.title}</span>
-                </div>
-                <div className="chunk-actions">
-                  <button
-                    className="action-btn"
-                    onClick={() => {
-                      setEditingChunk(c);
-                      setShowModal(true);
-                    }}
-                    title="编辑"
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    className="action-btn"
-                    onClick={() => handleDelete(c.id)}
-                    title="删除"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-              <pre className="chunk-content">{c.contentPreview}</pre>
-              <div className="chunk-meta">
-                <span>{c.sourceFile}</span>
-                <span>{c.tokenCount} 字节</span>
-              </div>
-              <div
-                className="chunk-meta"
-                style={{ marginTop: 6, color: "var(--text-sub)" }}
-              >
-                <span>更新于 {c.updatedAt}</span>
-              </div>
-            </div>
-          ))}
+        <div className="empty">
+          <p>暂无切片</p>
+          <p>请先上传文档或手动添加切片</p>
         </div>
+      ) : (
+        <table className="table">
+          <thead>
+            <tr>
+              <th>切片 ID</th>
+              <th>标题</th>
+              <th>内容预览</th>
+              <th>来源文件</th>
+              <th>字节数</th>
+              <th>更新时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {chunks.map((c) => (
+              <tr key={c.id}>
+                <td style={{ fontSize: 12, color: "var(--text-subtle)" }}>#{c.index + 1}</td>
+                <td><strong>{c.title || "—"}  </strong></td>
+                <td style={{ maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--text-sub)" }}>
+                  {c.contentPreview}
+                </td>
+                <td style={{ fontSize: 12 }}>{c.sourceFile}</td>
+                <td>{c.tokenCount}</td>
+                <td style={{ fontSize: 12, color: "var(--text-subtle)" }}>{c.updatedAt}</td>
+                <td>
+                  <a
+                    style={{ cursor: "pointer", marginRight: 8 }}
+                    onClick={() => { setEditingChunk(c); setShowModal(true); }}
+                  >
+                    编辑
+                  </a>
+                  <a
+                    className="danger"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleDelete(c.id)}
+                  >
+                    删除
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
       {pages > 1 && (
         <div className="toolbar" style={{ marginTop: 16 }}>
-          <button
-            className="btn"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
+          <button className="btn" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
             上一页
           </button>
           <span>第 {page} / {pages} 页</span>
-          <button
-            className="btn"
-            disabled={page >= pages}
-            onClick={() => setPage((p) => p + 1)}
-          >
+          <button className="btn" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
             下一页
           </button>
         </div>
