@@ -1,0 +1,51 @@
+# Knowledge AI — 基础设施 (PostgreSQL + pgvector + Redis)
+version: '3.8'
+
+services:
+  postgres-vector:
+    image: pgvector/pgvector:pg16
+    container_name: kb-pgvector
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
+      POSTGRES_DB: ${POSTGRES_DB:-knowledge_rag}
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kb-network
+
+  redis:
+    image: redis:8-alpine
+    container_name: kb-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kb-network
+
+volumes:
+  pgvector_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  kb-network:
+    driver: bridge

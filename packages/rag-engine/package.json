@@ -1,0 +1,31 @@
+{
+  "name": "@knowledge-ai/rag-engine",
+  "version": "1.0.0",
+  "description": "Knowledge AI 核心引擎：文档加载、切片、向量化、向量存储、检索与 LLM 集成",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:watch": "tsc -p tsconfig.json --watch"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@langchain/classic": "1.0.39",
+    "@langchain/community": "1.1.29",
+    "@langchain/core": "1.2.1",
+    "@langchain/openai": "1.5.3",
+    "@langchain/textsplitters": "1.0.1",
+    "d3-dsv": "3.0.1",
+    "mammoth": "1.9.0",
+    "pdf-parse": "1.1.1",
+    "pg": "8.22.0",
+    "uuid": "11.0.5",
+    "xlsx": "0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "24.0.15",
+    "@types/pg": "8.20.0",
+    "@types/uuid": "10.0.0",
+    "typescript": "5.7.3"
+  }
+}
