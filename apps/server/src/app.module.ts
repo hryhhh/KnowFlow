@@ -9,6 +9,7 @@ import { ChunkModule } from "./modules/chunk/chunk.module";
 import { RetrievalModule } from "./modules/retrieval/retrieval.module";
 import { ChatModule } from "./modules/chat/chat.module";
 import { ApiServiceModule } from "./modules/api-service/api-service.module";
+import { DashboardModule } from "./modules/dashboard/dashboard.module";
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ApiServiceModule } from "./modules/api-service/api-service.module";
     RetrievalModule,
     ChatModule,
     ApiServiceModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}

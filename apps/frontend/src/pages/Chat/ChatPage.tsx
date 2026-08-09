@@ -39,14 +39,14 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="content">
+    <div className="content chat-page">
       <PageHeader title="知识问答" breadcrumb={current?.name ?? kbId} />
       <TopStepsBar active={2} />
 
       <div className="chat">
         {/* 左：参数 */}
         <div className="params" style={panelStyle}>
-          <h3 style={{ marginTop: 0, fontSize: 15, fontWeight: 600 }}>📋 模型回答参数</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15, fontWeight: 600 }}>模型回答参数</h3>
           <p style={{ color: "var(--text-sub)", fontSize: 12, margin: "0 0 16px" }}>
             调整检索参数，预览知识库命中效果
           </p>
@@ -87,7 +87,7 @@ export default function ChatPage() {
 
           <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "18px 0" }} />
 
-          <h3 style={{ fontSize: 15, fontWeight: 600 }}>⚙️ 服务调用</h3>
+          <h3 style={{ fontSize: 15, fontWeight: 600 }}>服务调用</h3>
           <p style={{ color: "var(--text-sub)", fontSize: 12, margin: "0 0 12px" }}>
             发布当前问答参数，生成 API Key 供外部系统集成
           </p>
@@ -134,7 +134,7 @@ export default function ChatPage() {
           <div className="messages">
             {messages.length === 0 ? (
               <div className="empty">
-                <div style={{ fontSize: 32, marginBottom: 12 }}>💡</div>
+                
                 <p style={{ fontWeight: 500, fontSize: 15 }}>知识库助手</p>
                 <p>我可以阅读知识库的资料并使用自然语言回答你的问题</p>
               </div>
@@ -169,7 +169,7 @@ export default function ChatPage() {
           <ApiUsagePanel service={selectedService} />
         ) : (
           <div className="sources">
-            <h3 style={{ marginTop: 0, fontSize: 15, fontWeight: 600 }}>📎 引用来源</h3>
+            <h3 style={{ marginTop: 0, fontSize: 15, fontWeight: 600 }}>引用来源</h3>
             <p style={{ color: "var(--text-sub)", fontSize: 12, margin: "0 0 12px" }}>
               回答使用到的命中切片将显示在此
             </p>

@@ -76,3 +76,30 @@ export interface SseEvent {
   type: "sources" | "token" | "done" | "error";
   value: unknown;
 }
+
+export interface DashboardSummary {
+  knowledgeBaseCount: number;
+  documentCount: number;
+  chunkCount: number;
+  processingCount: number;
+  storageUsage: string;
+  activeKbCount: number;
+  errorCount: number;
+}
+
+export interface TrendPoint {
+  date: string;
+  apiCalls: number;
+  retrievalCalls: number;
+  chatCalls: number;
+}
+
+export interface ActivityItem {
+  id: string;
+  title: string;
+  type: string;
+  agent: string;
+  duration: number;
+  status: string;
+  createdAt: string;
+}

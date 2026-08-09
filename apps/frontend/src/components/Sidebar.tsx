@@ -7,7 +7,8 @@ export default function Sidebar() {
   const base = current ? `/knowledge-bases/${current.id}` : null;
 
   const items = [
-    { to: "/knowledge-bases", label: "知识库管理", icon: "📚" },
+    { to: "/dashboard", label: "工作台" },
+    { to: "/knowledge-bases", label: "知识库管理" },
     {
       to: base ? `${base}/documents` : "#",
       label: "文档管理",
@@ -48,7 +49,6 @@ export default function Sidebar() {
               if (it.disabled) e.preventDefault();
             }}
           >
-            <span>{it.icon}</span>
             <span>{it.label}</span>
           </NavLink>
         ))}

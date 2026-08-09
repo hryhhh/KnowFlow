@@ -7,6 +7,9 @@ import type {
   ApiServiceItem,
   CreateApiResult,
   SearchParams,
+  DashboardSummary,
+  TrendPoint,
+  ActivityItem,
 } from "../types";
 
 const api = axios.create({ baseURL: "/api" });
@@ -80,6 +83,12 @@ export const apiServiceApi = {
     creator?: string;
   }) => api.post<Resp<CreateApiResult>>("/api-services", body),
   remove: (id: string) => api.delete(`/api-services/${id}`),
+};
+
+export const dashboardApi = {
+  summary: () => api.get<Resp<DashboardSummary>>("/dashboard/summary"),
+  trends: () => api.get<Resp<{ series: TrendPoint[] }>>("/dashboard/usage-trends"),
+  activities: () => api.get<Resp<{ items: ActivityItem[] }>>("/dashboard/recent-activities"),
 };
 
 export default api;

@@ -163,6 +163,19 @@ button {
   overflow: auto;
 }
 
+/* Chat page: flex column, chat fills remaining space — no outer scrollbar */
+.content.chat-page {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.content.chat-page > .chat {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
+
 /* ===== Steps bar ===== */
 .steps {
   display: flex;
@@ -627,7 +640,6 @@ button {
 .chat {
   display: flex;
   gap: 16px;
-  height: calc(100vh - 56px - 48px);
 }
 
 .chat .params {

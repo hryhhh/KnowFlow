@@ -117,7 +117,7 @@ export default function DocumentList() {
           transition: "all 0.2s",
         }}
       >
-        <div style={{ fontSize: 24, marginBottom: 8 }}>📁</div>
+        
         <div style={{ color: "var(--text)", fontWeight: 500 }}>
           {dragOver ? "拖放文件到此处上传" : "拖放文件到此处，或点击选择文件"}
         </div>

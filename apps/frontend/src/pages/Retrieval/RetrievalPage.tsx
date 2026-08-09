@@ -48,7 +48,7 @@ export default function RetrievalPage() {
 
       <div className="retrieval">
         <div className="params">
-          <h3 style={{ marginTop: 0, fontSize: 15, fontWeight: 600 }}>📊 检索参数</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15, fontWeight: 600 }}>检索参数</h3>
           <p style={{ color: "var(--text-sub)", fontSize: 12, margin: "0 0 16px" }}>
             调整检索参数，预览知识库命中效果
           </p>
