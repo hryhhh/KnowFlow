@@ -1,7 +1,7 @@
 {
-  "name": "@knowledge-ai/server",
+  "name": "@knowbase-x/server",
   "version": "0.0.1",
-  "description": "Knowledge AI 后端 API 服务 (NestJS)",
+  "description": "KnowBase X 后端 API 服务 (NestJS)",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
@@ -14,7 +14,7 @@
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
   },
   "dependencies": {
-    "@knowledge-ai/rag-engine": "workspace:*",
+    "@knowbase-x/rag-engine": "workspace:*",
     "@langchain/openai": "1.5.3",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.0",
@@ -41,6 +41,7 @@
     "concurrently": "^10.0.4",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",
+    "tsx": "^4.23.11",
     "typescript": "5.7.3"
   }
 }

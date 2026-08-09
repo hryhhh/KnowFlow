@@ -36,7 +36,7 @@
 ### 2.1 docker-compose.yml（完整版）
 
 ```yaml
-# knowledge-ai/docker-compose.yml
+# knowbase-x/docker-compose.yml
 version: '3.8'
 
 services:
@@ -103,7 +103,7 @@ networks:
 
 ```bash
 # ============================================
-# Knowledge AI - 环境变量配置模板
+# KnowBase X - 环境变量配置模板
 # 复制为 .env 并修改实际值
 # ============================================
 
@@ -154,8 +154,8 @@ JWT_SECRET=your-jwt-secret-change-in-production
 
 ```bash
 # 1. 克隆项目
-git clone <repo-url> knowledge-ai
-cd knowledge-ai
+git clone <repo-url> knowbase-x
+cd knowbase-x
 
 # 2. 复制环境变量模板
 cp .env.example .env

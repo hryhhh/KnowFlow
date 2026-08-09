@@ -1,4 +1,4 @@
-# Knowledge AI — 智能知识库系统
+# KnowBase X — 智能知识库系统
 
 > 基于 LangChain.js 的企业级 RAG 知识库平台：文档上传 → 智能切片 → 向量检索 → 对话问答 → API 服务化。
 
@@ -14,7 +14,7 @@
 ## 目录结构
 
 ```
-knowledge-ai/
+knowbase-x/
 ├── package.json / pnpm-workspace.yaml / tsconfig.base.json
 ├── docker-compose.yml          # PGVector + Redis
 ├── db/init.sql                 # 启用 vector 扩展
@@ -56,10 +56,10 @@ pnpm start:frontend
 
 ```bash
 # 后端
-docker build -f docker/Dockerfile.server -t knowledge-ai-server .
+docker build -f docker/Dockerfile.server -t knowbase-x-server .
 
 # 前端
-docker build -f docker/Dockerfile.frontend -t knowledge-ai-frontend .
+docker build -f docker/Dockerfile.frontend -t knowbase-x-frontend .
 ```
 
 前端镜像内含 Nginx，已配置 `/api` 反向代理与 SSE 支持（见 `apps/frontend/nginx.conf`）。

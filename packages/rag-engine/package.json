@@ -1,7 +1,7 @@
 {
-  "name": "@knowledge-ai/rag-engine",
+  "name": "@knowbase-x/rag-engine",
   "version": "1.0.0",
-  "description": "Knowledge AI 核心引擎：文档加载、切片、向量化、向量存储、检索与 LLM 集成",
+  "description": "KnowBase X 核心引擎：文档加载、切片、向量化、向量存储、检索与 LLM 集成",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

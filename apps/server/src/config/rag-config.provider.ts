@@ -1,4 +1,4 @@
-import type { RAGPipelineConfig } from "@knowledge-ai/rag-engine";
+import type { RAGPipelineConfig } from "@knowbase-x/rag-engine";
 
 export const RAG_CONFIG = "RAG_CONFIG";
 

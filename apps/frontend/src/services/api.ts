@@ -87,7 +87,7 @@ export const apiServiceApi = {
 
 export const dashboardApi = {
   summary: () => api.get<Resp<DashboardSummary>>("/dashboard/summary"),
-  trends: () => api.get<Resp<{ series: TrendPoint[] }>>("/dashboard/usage-trends"),
+  trends: () => api.get<Resp<TrendPoint[]>>("/dashboard/usage-trends"),
   activities: () => api.get<Resp<{ items: ActivityItem[] }>>("/dashboard/recent-activities"),
 };
 

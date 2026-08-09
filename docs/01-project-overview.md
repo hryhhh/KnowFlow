@@ -1,10 +1,10 @@
-# Knowledge AI — 智能知识库系统
+# KnowBase X — 智能知识库系统
 
 > 基于 LangChain.js 的企业级 RAG 知识库平台，支持文档上传、智能切片、向量检索、对话问答与 API 服务化。
 
 ## 一、项目概述
 
-Knowledge AI 是一个**检索增强生成（RAG）**驱动的智能知识库系统，允许用户上传业务文档（CSV / PDF / Word / XLSX），经过自动切片、向量化后存入向量数据库，再通过语义检索 + 大语言模型生成精准回答。系统同时提供 **SSE 流式 API** 供外部业务系统调用。
+KnowBase X 是一个**检索增强生成（RAG）**驱动的智能知识库系统，允许用户上传业务文档（CSV / PDF / Word / XLSX），经过自动切片、向量化后存入向量数据库，再通过语义检索 + 大语言模型生成精准回答。系统同时提供 **SSE 流式 API** 供外部业务系统调用。
 
 ### 核心工作流（4 步）
 
@@ -64,7 +64,7 @@ Knowledge AI 是一个**检索增强生成（RAG）**驱动的智能知识库系
 ## 四、项目目录结构
 
 ```
-knowledge-ai/
+knowbase-x/
 ├── package.json                  # 根 package.json (workspace)
 ├── pnpm-workspace.yaml           # workspace 配置: apps/*, packages/*
 ├── tsconfig.json                 # 根 TS 配置

@@ -88,19 +88,21 @@ export default function KnowledgeBaseList() {
                 <td>{kb.chunkCount}</td>
                 <td style={{ color: "var(--text-subtle)", fontSize: 12 }}>{kb.createdAt?.slice(0, 10) || "—"}</td>
                 <td>
-                  <a style={{ cursor: "pointer", marginRight: 8 }} onClick={() => handleView(kb)}>
-                    进入
-                  </a>
-                  <a style={{ cursor: "pointer", marginRight: 8 }} onClick={() => { select(kb); setShowEditModal(true); }}>
+                  <button className="act-btn" onClick={() => handleView(kb)}>进入</button>
+                  <button
+                    className="act-btn"
+                    style={{ marginLeft: 6 }}
+                    onClick={() => { select(kb); setShowEditModal(true); }}
+                  >
                     编辑
-                  </a>
-                  <a
-                    className="danger"
-                    style={{ cursor: "pointer" }}
+                  </button>
+                  <button
+                    className="act-btn danger"
+                    style={{ marginLeft: 6 }}
                     onClick={() => handleDelete(kb.id)}
                   >
                     删除
-                  </a>
+                  </button>
                 </td>
               </tr>
             ))}

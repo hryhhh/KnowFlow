@@ -5,6 +5,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { ApiKey } from "./entities/api-key.entity";
 import { CreateApiServiceDto } from "./dto/create-api-service.dto";
 import type { ApiKeyClaim } from "../../common/decorators/current-api-key.decorator";
+import { UsageLogService } from "../usage/usage-log.service";
 
 export interface ApiServiceListItem {
   id: string;
@@ -28,6 +29,7 @@ export class ApiKeyService {
   constructor(
     @InjectRepository(ApiKey)
     private readonly repo: Repository<ApiKey>,
+    private readonly usageLog: UsageLogService,
   ) {}
 
   private genKey(prefix: string): string {
@@ -89,9 +91,16 @@ export class ApiKeyService {
   }
 
   /** 校验通过后记入调用统计 */
-  async recordCall(id: string): Promise<void> {
+  async recordCall(id: string, duration?: number): Promise<void> {
     await this.repo.increment({ id }, "callCount", 1);
     await this.repo.update({ id }, { lastCalledAt: new Date() });
+    await this.usageLog.record({
+      type: "api",
+      kbId: null,
+      apiKeyId: id,
+      duration: duration ?? 0,
+      status: "success",
+    });
   }
 
   private fmt(d: Date): string {

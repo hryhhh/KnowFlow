@@ -10,6 +10,7 @@ import type { ChunkCard } from "../../types";
 export default function KbChunkList() {
   const { kbId } = useParams();
   const current = useKbStore((s) => s.current);
+  const refreshCurrent = useKbStore((s) => s.refreshCurrent);
   const [chunks, setChunks] = useState<ChunkCard[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -36,18 +37,21 @@ export default function KbChunkList() {
   const handleCreate = async (selectedDocId: string, content: string, title?: string) => {
     await chunkApi.create(selectedDocId, { content, title });
     refresh();
+    await refreshCurrent();
   };
 
   const handleUpdate = async (_docId: string, content: string, title?: string) => {
     if (!editingChunk) return;
     await chunkApi.update(editingChunk.id, { content, title });
     refresh();
+    await refreshCurrent();
   };
 
   const handleDelete = async (chunkId: string) => {
     if (!window.confirm("确定要删除这个切片吗？")) return;
     await chunkApi.remove(chunkId);
     refresh();
+    await refreshCurrent();
   };
 
   const pages = Math.ceil(total / pageSize);
@@ -96,19 +100,19 @@ export default function KbChunkList() {
                 <td>{c.tokenCount}</td>
                 <td style={{ fontSize: 12, color: "var(--text-subtle)" }}>{c.updatedAt}</td>
                 <td>
-                  <a
-                    style={{ cursor: "pointer", marginRight: 8 }}
+                  <button
+                    className="act-btn"
                     onClick={() => { setEditingChunk(c); setShowModal(true); }}
                   >
                     编辑
-                  </a>
-                  <a
-                    className="danger"
-                    style={{ cursor: "pointer" }}
+                  </button>
+                  <button
+                    className="act-btn danger"
+                    style={{ marginLeft: 6 }}
                     onClick={() => handleDelete(c.id)}
                   >
                     删除
-                  </a>
+                  </button>
                 </td>
               </tr>
             ))}

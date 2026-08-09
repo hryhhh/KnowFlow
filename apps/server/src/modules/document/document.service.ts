@@ -11,9 +11,9 @@ import * as path from "node:path";
 import * as iconv from "iconv-lite";
 import { Document } from "./entities/document.entity";
 import { Chunk } from "../chunk/entities/chunk.entity";
-import { detectFileType } from "@knowledge-ai/rag-engine";
-import { ingestDocument } from "@knowledge-ai/rag-engine";
-import type { RAGPipelineConfig } from "@knowledge-ai/rag-engine";
+import { detectFileType } from "@knowbase-x/rag-engine";
+import { ingestDocument } from "@knowbase-x/rag-engine";
+import type { RAGPipelineConfig } from "@knowbase-x/rag-engine";
 import { RAG_CONFIG } from "../../config/rag-config.provider";
 
 export interface DocListItem {

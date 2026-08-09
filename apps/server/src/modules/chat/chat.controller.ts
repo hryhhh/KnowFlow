@@ -2,7 +2,7 @@ import { Controller, Sse, Body, RequestMethod } from "@nestjs/common";
 import { Observable } from "rxjs";
 import { MessageEvent } from "http";
 import { ChatService } from "./chat.service";
-import { ChatStreamBody } from "./chat.service";
+import type { ChatStreamBody } from "./chat.service";
 
 @Controller("chat")
 export class ChatController {

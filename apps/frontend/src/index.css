@@ -17,8 +17,8 @@
   --text: #1d2129;
   --text-sub: #4e5969;
   --text-subtle: #86909c;
-  --sidebar-bg: #001529;
-  --sidebar-text: rgba(255, 255, 255, 0.65);
+  --sidebar-bg: #1e3a5f;
+  --sidebar-text: rgba(255, 255, 255, 0.75);
   --sidebar-active: #1677ff;
   --radius-sm: 4px;
   --radius: 8px;
@@ -32,8 +32,13 @@
   box-sizing: border-box;
 }
 
-body {
+html, body, #root {
+  height: 100%;
   margin: 0;
+  padding: 0;
+}
+
+body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Microsoft YaHei", sans-serif;
   background: var(--bg);
@@ -55,7 +60,7 @@ button {
 /* ===== Layout ===== */
 .layout {
   display: flex;
-  min-height: 100vh;
+  height: 100%;
 }
 
 .sidebar {
@@ -74,7 +79,7 @@ button {
   font-weight: 700;
   font-size: 16px;
   color: #fff;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   flex-shrink: 0;
 }
 
@@ -82,7 +87,7 @@ button {
   display: block;
   font-size: 11px;
   font-weight: 400;
-  color: var(--sidebar-text);
+  color: rgba(255, 255, 255, 0.6);
   margin-top: 4px;
 }
 
@@ -98,7 +103,7 @@ button {
   gap: 10px;
   padding: 10px 12px;
   border-radius: var(--radius);
-  color: var(--sidebar-text);
+  color: rgba(255, 255, 255, 0.75);
   margin-bottom: 2px;
   transition: all 0.2s;
   text-decoration: none;
@@ -106,7 +111,7 @@ button {
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
 }
 
@@ -123,9 +128,9 @@ button {
 
 .sidebar-stats {
   padding: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
   font-size: 12px;
-  color: var(--sidebar-text);
+  color: rgba(255, 255, 255, 0.65);
   line-height: 1.8;
   flex-shrink: 0;
 }
@@ -135,6 +140,7 @@ button {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  height: 100%;
   background: var(--bg);
 }
 
@@ -161,19 +167,21 @@ button {
   padding: 24px;
   flex: 1;
   overflow: auto;
+  height: 100%;
 }
 
-/* Chat page: flex column, chat fills remaining space — no outer scrollbar */
+/* Chat page: fill remaining height, no outer scrollbar */
 .content.chat-page {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 
 .content.chat-page > .chat {
   flex: 1;
   min-height: 0;
-  height: auto;
+  height: 0;
 }
 
 /* ===== Steps bar ===== */
@@ -519,6 +527,39 @@ button {
   margin-top: 20px;
 }
 
+/* ===== Table action buttons ===== */
+.act-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 10px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--panel);
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.5;
+  height: 26px;
+}
+
+.act-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.act-btn.danger {
+  color: var(--error);
+  border-color: #ffa39e;
+}
+
+.act-btn.danger:hover {
+  background: var(--error-bg);
+  border-color: var(--error);
+  color: var(--error);
+}
+
 /* ===== Empty State ===== */
 .empty {
   text-align: center;
@@ -640,6 +681,8 @@ button {
 .chat {
   display: flex;
   gap: 16px;
+  flex: 1;
+  min-height: 0;
 }
 
 .chat .params {
@@ -667,11 +710,13 @@ button {
 
 .chat .sources {
   width: 280px;
+  max-width: 280px;
   flex-shrink: 0;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 20px;
+  overflow-x: auto;
   overflow-y: auto;
   box-shadow: var(--shadow-sm);
 }
@@ -724,6 +769,8 @@ button {
   margin-bottom: 10px;
   font-size: 12px;
   background: var(--bg);
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 .source-item .score {
@@ -738,6 +785,8 @@ button {
   color: var(--text-sub);
   font-size: 12px;
   line-height: 1.5;
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 /* ===== Chunk grid ===== */

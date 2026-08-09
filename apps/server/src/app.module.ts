@@ -10,6 +10,7 @@ import { RetrievalModule } from "./modules/retrieval/retrieval.module";
 import { ChatModule } from "./modules/chat/chat.module";
 import { ApiServiceModule } from "./modules/api-service/api-service.module";
 import { DashboardModule } from "./modules/dashboard/dashboard.module";
+import { UsageLogModule } from "./modules/usage/usage-log.module";
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { DashboardModule } from "./modules/dashboard/dashboard.module";
     ChatModule,
     ApiServiceModule,
     DashboardModule,
+    UsageLogModule,
   ],
 })
 export class AppModule {}

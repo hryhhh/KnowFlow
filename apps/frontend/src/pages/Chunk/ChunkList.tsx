@@ -97,19 +97,19 @@ export default function ChunkList() {
                 <td>{c.tokenCount}</td>
                 <td style={{ fontSize: 12, color: "var(--text-subtle)" }}>{c.updatedAt}</td>
                 <td>
-                  <a
-                    style={{ cursor: "pointer", marginRight: 8 }}
+                  <button
+                    className="act-btn"
                     onClick={() => { setEditingChunk(c); setShowModal(true); }}
                   >
                     编辑
-                  </a>
-                  <a
-                    className="danger"
-                    style={{ cursor: "pointer" }}
+                  </button>
+                  <button
+                    className="act-btn danger"
+                    style={{ marginLeft: 6 }}
                     onClick={() => handleDelete(c.id)}
                   >
                     删除
-                  </a>
+                  </button>
                 </td>
               </tr>
             ))}

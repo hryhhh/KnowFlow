@@ -24,7 +24,7 @@ async function bootstrap() {
   const port = process.env.SERVER_PORT ?? 3000;
   await app.listen(port);
   // eslint-disable-next-line no-console
-  console.log(`🚀 Knowledge AI server listening on http://localhost:${port}`);
+  console.log(`🚀 KnowBase X server listening on http://localhost:${port}`);
 }
 
 bootstrap();

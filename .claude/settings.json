@@ -1,7 +1,25 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs ls)"
+      "Bash(xargs ls)",
+      "Bash(npx tsc *)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm --filter @knowbase-x/server build)",
+      "Bash(pnpm start:dev)",
+      "Bash(jobs)",
+      "Bash(kill %1)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d, indent=2, ensure_ascii=False\\)\\)\")",
+      "Bash(node dist/main.js)",
+      "Bash(lsof -ti:3000)",
+      "Bash(xargs kill)",
+      "Bash(node apps/server/dist/main.js)",
+      "Bash(curl -s http://localhost:3000/api/knowledge-bases)",
+      "Bash(wait %1)",
+      "Bash(node -e \"const p = require\\('/home/hhhry/projects/knowledge-ai-main/apps/frontend/node_modules/@ant-design/charts/package.json'\\); console.log\\(p.version\\)\")",
+      "Bash(npx vite *)",
+      "Bash(npx playwright *)",
+      "Bash(pkill -f \"vite\")"
     ]
   }
 }

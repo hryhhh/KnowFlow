@@ -12,6 +12,7 @@ export default function DocumentList() {
   const { kbId } = useParams();
   const navigate = useNavigate();
   const current = useKbStore((s) => s.current);
+  const refreshCurrent = useKbStore((s) => s.refreshCurrent);
   const [docs, setDocs] = useState<DocListItem[]>([]);
   const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -38,6 +39,7 @@ export default function DocumentList() {
     try {
       await docApi.upload(kbId, file);
       await load();
+      await refreshCurrent();
     } catch (err) {
       setError(err instanceof Error ? err.message : "上传失败");
     } finally {
@@ -61,6 +63,7 @@ export default function DocumentList() {
   const deleteDoc = async (kbId: string, docId: string) => {
     await docApi.remove(kbId, docId);
     await load();
+    await refreshCurrent();
   };
 
   return (
@@ -159,19 +162,19 @@ export default function DocumentList() {
                   <td>{d.importMethod}</td>
                   <td style={{ color: "var(--text-subtle)", fontSize: 12 }}>{d.updatedAt}</td>
                   <td>
-                    <a
-                      style={{ cursor: "pointer", marginRight: 8 }}
+                    <button
+                      className="act-btn"
                       onClick={() => navigate(`/knowledge-bases/${kbId}/documents/${d.id}/chunks`)}
                     >
                       切片详情
-                    </a>
-                    <a
-                      className="danger"
-                      style={{ cursor: "pointer" }}
+                    </button>
+                    <button
+                      className="act-btn danger"
+                      style={{ marginLeft: 6 }}
                       onClick={() => deleteDoc(d.kbId, d.id)}
                     >
                       删除
-                    </a>
+                    </button>
                   </td>
                 </tr>
               ))}

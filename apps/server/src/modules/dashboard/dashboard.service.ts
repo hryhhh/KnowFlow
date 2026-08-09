@@ -4,6 +4,7 @@ import { Repository } from "typeorm";
 import { KnowledgeBase } from "../knowledge-base/entities/knowledge-base.entity";
 import { Document } from "../document/entities/document.entity";
 import { Chunk } from "../chunk/entities/chunk.entity";
+import { UsageLogService } from "../usage/usage-log.service";
 
 @Injectable()
 export class DashboardService {
@@ -14,6 +15,7 @@ export class DashboardService {
     private readonly docRepo: Repository<Document>,
     @InjectRepository(Chunk)
     private readonly chunkRepo: Repository<Chunk>,
+    private readonly usageLog: UsageLogService,
   ) {}
 
   async getSummary() {
@@ -36,19 +38,7 @@ export class DashboardService {
   }
 
   async getUsageTrends() {
-    const series: Array<{ date: string; apiCalls: number; retrievalCalls: number; chatCalls: number; }> = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const date = d.toISOString().slice(0, 10);
-      series.push({
-        date,
-        apiCalls: Math.floor(Math.random() * 50) + 10,
-        retrievalCalls: Math.floor(Math.random() * 80) + 20,
-        chatCalls: Math.floor(Math.random() * 30) + 5,
-      });
-    }
-    return { series };
+    return this.usageLog.getTrends();
   }
 
   async getRecentActivities() {

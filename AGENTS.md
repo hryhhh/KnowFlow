@@ -5,7 +5,7 @@
 pnpm monorepo with three packages:
 
 ```
-knowledge-ai/
+knowbase-x/
 ├── apps/server/        # NestJS backend (controllers, services, entities)
 ├── apps/frontend/      # React 19 + Vite SPA (pages, components, stores, services)
 ├── packages/rag-engine/ # Shared RAG library (loaders, splitters, embeddings, stores)
@@ -35,7 +35,7 @@ pnpm start:frontend           # Frontend on :5173 (proxy /api → :3000)
 | `pnpm start:dev` | Build RAG engine + start backend (watch mode) |
 | `pnpm start:frontend` | Start frontend dev server |
 | `pnpm build` | Build all packages for production |
-| `pnpm --filter @knowledge-ai/server format` | Format server code with Prettier |
+| `pnpm --filter @knowbase-x/server format` | Format server code with Prettier |
 
 ## Coding Style
 

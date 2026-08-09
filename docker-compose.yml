@@ -1,4 +1,4 @@
-# Knowledge AI — 基础设施 (PostgreSQL + pgvector + Redis)
+# KnowBase X — 基础设施 (PostgreSQL + pgvector + Redis)
 version: '3.8'
 
 services:

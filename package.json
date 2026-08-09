@@ -1,13 +1,13 @@
 {
-  "name": "knowledge-ai",
+  "name": "knowbase-x",
   "version": "1.0.0",
   "private": true,
-  "description": "Knowledge AI — 基于 LangChain.js 的企业级 RAG 知识库平台",
+  "description": "KnowBase X — 基于 LangChain.js 的企业级 RAG 知识库平台",
   "scripts": {
-    "build": "pnpm --filter @knowledge-ai/rag-engine build && pnpm --filter @knowledge-ai/server build && pnpm --filter @knowledge-ai/frontend build",
-    "build:engine": "pnpm --filter @knowledge-ai/rag-engine build",
-    "start:dev": "pnpm --filter @knowledge-ai/rag-engine build && pnpm --filter @knowledge-ai/server start:dev",
-    "start:frontend": "pnpm --filter @knowledge-ai/frontend dev",
+    "build": "pnpm --filter @knowbase-x/rag-engine build && pnpm --filter @knowbase-x/server build && pnpm --filter @knowbase-x/frontend build",
+    "build:engine": "pnpm --filter @knowbase-x/rag-engine build",
+    "start:dev": "pnpm --filter @knowbase-x/rag-engine build && pnpm --filter @knowbase-x/server start:dev",
+    "start:frontend": "pnpm --filter @knowbase-x/frontend dev",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down"
   },

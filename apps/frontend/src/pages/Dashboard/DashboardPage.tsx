@@ -17,14 +17,14 @@ export default function DashboardPage() {
     ])
       .then(([sumRes, trendRes, actRes]) => {
         setSummary(sumRes.data.data);
-        setTrends(trendRes.data.data.series);
-        setActivities(actRes.data.data.items);
+        setTrends(trendRes.data?.data ?? []);
+        setActivities(actRes.data.data?.items ?? []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
   // Melt trends for multi-line Area chart
-  const areaData = trends.flatMap((t) => [
+  const areaData = (trends ?? []).flatMap((t) => [
     { date: t.date, type: "API 调用", value: t.apiCalls },
     { date: t.date, type: "检索调用", value: t.retrievalCalls },
     { date: t.date, type: "问答调用", value: t.chatCalls },
@@ -54,7 +54,10 @@ export default function DashboardPage() {
     angleField: "value",
     colorField: "type",
     radius: 0.85,
-    label: { type: "outer", content: "{percentage}" },
+    label: {
+      position: "outside",
+      formatter: (_: Record<string, unknown>, datum: Record<string, number>) => `${((datum.value / pieData.reduce((s, i) => s + i.value, 0)) * 100).toFixed(0)}%`,
+    },
     interactions: [{ type: "element-active" }],
     color: CHART_COLORS,
   };

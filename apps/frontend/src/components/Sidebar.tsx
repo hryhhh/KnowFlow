@@ -34,7 +34,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        Knowledge AI
+        KnowBase X
         <span>LangChain.js 实践台</span>
       </div>
       <nav className="sidebar-nav">

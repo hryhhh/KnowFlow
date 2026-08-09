@@ -1,5 +1,5 @@
-# Knowledge AI — 后端服务 Dockerfile
-# 构建上下文：仓库根目录 (knowledge-ai/)
+# KnowBase X — 后端服务 Dockerfile
+# 构建上下文：仓库根目录 (knowbase-x/)
 FROM node:22-alpine AS base
 WORKDIR /app
 RUN corepack enable
@@ -12,8 +12,8 @@ RUN pnpm install --no-frozen-lockfile
 
 # 复制全部源码并构建
 COPY . .
-RUN pnpm --filter @knowledge-ai/rag-engine build
-RUN pnpm --filter @knowledge-ai/server build
+RUN pnpm --filter @knowbase-x/rag-engine build
+RUN pnpm --filter @knowbase-x/server build
 
 ENV NODE_ENV=production
 ENV PORT=3000
