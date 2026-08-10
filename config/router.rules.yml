@@ -1,0 +1,37 @@
+rules:
+  - id: kb-docs
+    pattern: "\\b(文档|资料|手册|kbId:)\\b"
+    intent: "kb_document"
+    targetAgent: "ragflow"
+    priority: 100
+    minScore: 0.95
+    enabled: true
+
+  - id: db-stats
+    pattern: "\\b(多少|统计|数量|列表|top\\b)"
+    intent: "db_query"
+    targetAgent: "db-query"
+    priority: 90
+    minScore: 0.9
+    enabled: true
+
+  - id: web-latest
+    pattern: "\\b(最新|发布|新闻|动态|今天)\\b"
+    intent: "web_search"
+    targetAgent: "web-search"
+    priority: 80
+    minScore: 0.85
+    enabled: true
+
+  - id: combined-fallback
+    pattern: ""
+    intent: "fallback"
+    targetAgent: "llm-intent-classifier"
+    priority: 10
+    minScore: 0.0
+    enabled: true
+
+settings:
+  maxMatchedRules: 3
+  defaultAgentTimeoutMs: 3000
+  allowParallel: true

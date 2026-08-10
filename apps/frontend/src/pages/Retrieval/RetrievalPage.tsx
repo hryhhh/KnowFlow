@@ -5,6 +5,7 @@ import TopStepsBar from "../../components/TopStepsBar";
 import { retrievalApi } from "../../services/api";
 import { useKbStore } from "../../stores/kb-store";
 import type { SearchResultItem, SearchParams } from "../../types";
+import { Search, Settings2 } from "lucide-react";
 
 export default function RetrievalPage() {
   const { kbId } = useParams();
@@ -48,7 +49,9 @@ export default function RetrievalPage() {
 
       <div className="retrieval">
         <div className="params">
-          <h3 style={{ marginTop: 0, fontSize: 15, fontWeight: 600 }}>检索参数</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+            <Settings2 size={16} /> 检索参数
+          </h3>
           <p style={{ color: "var(--text-sub)", fontSize: 12, margin: "0 0 16px" }}>
             调整检索参数，预览知识库命中效果
           </p>
@@ -102,14 +105,17 @@ export default function RetrievalPage() {
 
         <div className="results">
           <div className="toolbar">
-            <input
-              className="search-input"
-              style={{ flex: 1 }}
-              placeholder="输入查询词，回车检索"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && search()}
-            />
+            <div style={{ display: "flex", alignItems: "center", border: "1px solid var(--border-strong)", borderRadius: "var(--radius)", background: "var(--panel)", overflow: "hidden", flex: 1 }}>
+              <Search size={16} style={{ padding: "0 8px", color: "var(--text-subtle)", borderRight: "1px solid var(--border)", flexShrink: 0 }} />
+              <input
+                className="search-input"
+                style={{ flex: 1, border: "none", borderRadius: 0, boxShadow: "none", width: "auto", minWidth: 0 }}
+                placeholder="输入查询词，回车检索"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && search()}
+              />
+            </div>
             <button
               className="btn primary"
               onClick={search}

@@ -7,6 +7,7 @@ import StatusBadge from "../../components/StatusBadge";
 import { docApi } from "../../services/api";
 import { useKbStore } from "../../stores/kb-store";
 import type { DocListItem } from "../../types";
+import { Upload, Search, Trash2 } from "lucide-react";
 
 export default function DocumentList() {
   const { kbId } = useParams();
@@ -77,7 +78,7 @@ export default function DocumentList() {
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
         >
-          {uploading ? "上传中…" : "↑ 上传文档"}
+          <Upload size={16} /> {uploading ? "上传中…" : "上传文档"}
         </button>
         <input
           ref={fileRef}
@@ -93,12 +94,16 @@ export default function DocumentList() {
           支持 CSV / XLSX / PDF / Word
         </span>
         <span className="spacer" />
-        <input
-          className="search-input"
-          placeholder="搜索文件名"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div style={{ display: "flex", alignItems: "center", border: "1px solid var(--border-strong)", borderRadius: "var(--radius)", background: "var(--panel)", overflow: "hidden" }}>
+          <Search size={16} style={{ padding: "0 8px", color: "var(--text-subtle)", borderRight: "1px solid var(--border)", flexShrink: 0 }} />
+          <input
+            className="search-input"
+            style={{ border: "none", borderRadius: 0, boxShadow: "none", width: 200 }}
+            placeholder="搜索文件名"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
       </div>
 
       {error && <div className="badge failed" style={{ marginBottom: 12, display: "inline-block" }}>{error}</div>}
@@ -173,7 +178,7 @@ export default function DocumentList() {
                       style={{ marginLeft: 6 }}
                       onClick={() => deleteDoc(d.kbId, d.id)}
                     >
-                      删除
+                      <Trash2 size={14} /> 删除
                     </button>
                   </td>
                 </tr>

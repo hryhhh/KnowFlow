@@ -3,6 +3,7 @@ import type { KbListItem } from "../types";
 import { kbApi } from "../services/api";
 
 const CURRENT_KB_KEY = "knowbase_current_kb";
+const DEFAULT_KB_ID_KEY = "knowbase_default_kb_id";
 
 function loadCurrentKB(): KbListItem | null {
   try {
@@ -25,18 +26,41 @@ function saveCurrentKB(kb: KbListItem | null): void {
   }
 }
 
+function loadDefaultKBId(): string | null {
+  try {
+    return localStorage.getItem(DEFAULT_KB_ID_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function saveDefaultKBId(kbId: string | null): void {
+  try {
+    if (kbId) {
+      localStorage.setItem(DEFAULT_KB_ID_KEY, kbId);
+    } else {
+      localStorage.removeItem(DEFAULT_KB_ID_KEY);
+    }
+  } catch {
+    // ignore
+  }
+}
+
 interface KbStore {
   list: KbListItem[];
   current: KbListItem | null;
+  defaultKbId: string | null;
   loading: boolean;
   fetch: (search?: string) => Promise<void>;
   select: (kb: KbListItem | null) => void;
   refreshCurrent: () => Promise<void>;
+  setDefaultKb: (kbId: string) => void;
 }
 
 export const useKbStore = create<KbStore>((set, get) => ({
   list: [],
   current: loadCurrentKB(),
+  defaultKbId: loadDefaultKBId(),
   loading: false,
   fetch: async (search?: string) => {
     set({ loading: true });
@@ -61,5 +85,25 @@ export const useKbStore = create<KbStore>((set, get) => ({
     const updated = res.data.data.find((k) => k.id === cur.id) ?? cur;
     saveCurrentKB(updated);
     set({ current: updated });
+  },
+  setDefaultKb: (kbId: string) => {
+    // 传入空字符串表示取消默认
+    if (!kbId) {
+      saveDefaultKBId(null);
+      const { list } = get();
+      const updatedList = list.map((k) => ({ ...k, isDefault: false }));
+      set({ list: updatedList, defaultKbId: null });
+      return;
+    }
+    saveDefaultKBId(kbId);
+    const { list } = get();
+    const kb = list.find((k) => k.id === kbId);
+    if (kb) {
+      const updatedList = list.map((k) => ({
+        ...k,
+        isDefault: k.id === kbId,
+      }));
+      set({ list: updatedList, defaultKbId: kbId, current: { ...kb, isDefault: true } });
+    }
   },
 }));

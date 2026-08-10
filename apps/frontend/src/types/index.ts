@@ -6,6 +6,7 @@ export interface KbListItem {
   documentCount: number;
   chunkCount: number;
   createdAt: string;
+  isDefault?: boolean;
 }
 
 export interface DocListItem {

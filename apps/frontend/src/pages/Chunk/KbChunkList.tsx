@@ -6,6 +6,7 @@ import ChunkModal from "./ChunkModal";
 import { chunkApi } from "../../services/api";
 import { useKbStore } from "../../stores/kb-store";
 import type { ChunkCard } from "../../types";
+import { Plus, Pencil, Trash2, Search } from "lucide-react";
 
 export default function KbChunkList() {
   const { kbId } = useParams();
@@ -63,11 +64,14 @@ export default function KbChunkList() {
 
       <div className="toolbar">
         <button className="btn primary" onClick={() => setShowModal(true)}>
-          + 新增切片
+          <Plus size={16} /> 新增切片
         </button>
         <span style={{ color: "var(--text-sub)" }}>共 {total} 个切片</span>
         <span className="spacer" />
-        <input className="search-input" placeholder="搜索切片 ID" />
+        <div style={{ display: "flex", alignItems: "center", border: "1px solid var(--border-strong)", borderRadius: "var(--radius)", background: "var(--panel)", overflow: "hidden" }}>
+          <Search size={16} style={{ padding: "0 8px", color: "var(--text-subtle)", borderRight: "1px solid var(--border)", flexShrink: 0 }} />
+          <input className="search-input" style={{ border: "none", borderRadius: 0, boxShadow: "none", width: 200 }} placeholder="搜索切片 ID" />
+        </div>
       </div>
 
       {chunks.length === 0 ? (
@@ -104,14 +108,14 @@ export default function KbChunkList() {
                     className="act-btn"
                     onClick={() => { setEditingChunk(c); setShowModal(true); }}
                   >
-                    编辑
+                    <Pencil size={14} /> 编辑
                   </button>
                   <button
                     className="act-btn danger"
                     style={{ marginLeft: 6 }}
                     onClick={() => handleDelete(c.id)}
                   >
-                    删除
+                    <Trash2 size={14} /> 删除
                   </button>
                 </td>
               </tr>

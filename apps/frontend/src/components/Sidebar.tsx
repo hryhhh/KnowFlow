@@ -1,35 +1,27 @@
 import { NavLink } from "react-router-dom";
 import { useKbStore } from "../stores/kb-store";
+import {
+  LayoutDashboard,
+  Database,
+  FileText,
+  Layers,
+  Search,
+  MessageSquare,
+} from "lucide-react";
+
+const NAV_ITEMS = [
+  { to: "/dashboard", label: "工作台", icon: LayoutDashboard },
+  { to: "/knowledge-bases", label: "知识库管理", icon: Database },
+  { to: "documents", label: "文档管理", icon: FileText },
+  { to: "chunks", label: "切片管理", icon: Layers },
+  { to: "retrieval", label: "知识检索", icon: Search },
+  { to: "chat", label: "知识问答", icon: MessageSquare },
+];
 
 export default function Sidebar() {
   const current = useKbStore((s) => s.current);
 
   const base = current ? `/knowledge-bases/${current.id}` : null;
-
-  const items = [
-    { to: "/dashboard", label: "工作台" },
-    { to: "/knowledge-bases", label: "知识库管理" },
-    {
-      to: base ? `${base}/documents` : "#",
-      label: "文档管理",
-      disabled: !base,
-    },
-    {
-      to: base ? `${base}/chunks` : "#",
-      label: "切片管理",
-      disabled: !base,
-    },
-    {
-      to: base ? `${base}/retrieval` : "#",
-      label: "知识检索",
-      disabled: !base,
-    },
-    {
-      to: base ? `${base}/chat` : "#",
-      label: "知识问答",
-      disabled: !base,
-    },
-  ];
 
   return (
     <aside className="sidebar">
@@ -38,20 +30,25 @@ export default function Sidebar() {
         <span>LangChain.js 实践台</span>
       </div>
       <nav className="sidebar-nav">
-        {items.map((it) => (
-          <NavLink
-            key={it.label}
-            to={it.disabled ? "#" : it.to}
-            className={({ isActive }) =>
-              "nav-item" + (isActive && !it.disabled ? " active" : "") + (it.disabled ? " disabled" : "")
-            }
-            onClick={(e) => {
-              if (it.disabled) e.preventDefault();
-            }}
-          >
-            <span>{it.label}</span>
-          </NavLink>
-        ))}
+        {NAV_ITEMS.map((it) => {
+          const to = it.to.startsWith("/") ? it.to : (base ? `${base}/${it.to}` : "#");
+          const disabled = !base;
+          return (
+            <NavLink
+              key={it.label}
+              to={disabled ? "#" : to}
+              className={({ isActive }) =>
+                "nav-item" + (isActive && !disabled ? " active" : "") + (disabled ? " disabled" : "")
+              }
+              onClick={(e) => {
+                if (disabled) e.preventDefault();
+              }}
+            >
+              <it.icon size={16} />
+              <span>{it.label}</span>
+            </NavLink>
+          );
+        })}
       </nav>
       <div className="sidebar-stats">
         <div>

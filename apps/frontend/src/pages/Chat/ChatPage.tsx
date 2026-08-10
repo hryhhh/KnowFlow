@@ -9,6 +9,7 @@ import { apiServiceApi } from "../../services/api";
 import type { ApiServiceItem } from "../../types";
 import CreateServiceModal from "./CreateServiceModal";
 import ApiUsagePanel from "./ApiUsagePanel";
+import { Send, Bot } from "lucide-react";
 
 export default function ChatPage() {
   const { kbId } = useParams();
@@ -134,7 +135,7 @@ export default function ChatPage() {
           <div className="messages">
             {messages.length === 0 ? (
               <div className="empty">
-                
+                <Bot size={40} strokeWidth={1.5} style={{ color: "var(--text-subtle)", marginBottom: 12 }} />
                 <p style={{ fontWeight: 500, fontSize: 15 }}>知识库助手</p>
                 <p>我可以阅读知识库的资料并使用自然语言回答你的问题</p>
               </div>
@@ -159,6 +160,7 @@ export default function ChatPage() {
               onClick={onSubmit}
               disabled={isStreaming}
             >
+              <Send size={16} />
               {isStreaming ? "回答中…" : "发送"}
             </button>
           </div>
