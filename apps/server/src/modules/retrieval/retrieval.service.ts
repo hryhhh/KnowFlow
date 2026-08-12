@@ -23,7 +23,7 @@ export class RetrievalService {
     const startTime = Date.now();
     const params: SearchParams = {
       topK: dto.topK ?? 10,
-      minScore: dto.minScore ?? 0.70,
+      minScore: dto.minScore ?? (Number(process.env.DEFAULT_MIN_SCORE) || 0.70),
       useReranker: dto.useReranker ?? false,
       denseWeight: dto.denseWeight ?? 0.5,
     };

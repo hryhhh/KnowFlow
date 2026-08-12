@@ -46,8 +46,6 @@ export interface StreamCallbacks {
   onToken: (token: string) => void;
   onDone: () => void;
   onError: (error: Error) => void;
-  /** 内部事件回调（agent 状态、traceId 等），不显示给用户 */
-  onMeta?: (event: { type: string; value?: any; agent?: string; traceId?: string }) => void;
 }
 
 /** Embedding 配置 */

@@ -11,9 +11,8 @@ import * as path from "node:path";
 import * as iconv from "iconv-lite";
 import { Document } from "./entities/document.entity";
 import { Chunk } from "../chunk/entities/chunk.entity";
-import { detectFileType } from "@knowbase-x/rag-engine";
-import { ingestDocument } from "@knowbase-x/rag-engine";
-import type { RAGPipelineConfig } from "@knowbase-x/rag-engine";
+import { detectFileType, ingestDocument } from "@knowbase-x/rag-engine";
+import type { RAGPipelineConfig, ParseStrategy } from "@knowbase-x/rag-engine";
 import { RAG_CONFIG } from "../../config/rag-config.provider";
 
 export interface DocListItem {
@@ -65,6 +64,10 @@ export class DocumentService {
 
     const savedPath = this.saveFile(kbId, decodedName, file.buffer);
 
+    // 将字符串策略转换为类型，默认为 basic
+    const parseStrategy: ParseStrategy =
+      processStrategy === "mineru" ? "mineru" : "basic";
+
     const doc = this.docRepo.create({
       kbId,
       name: decodedName,
@@ -83,6 +86,7 @@ export class DocumentService {
         savedPath,
         kbId,
         this.ragConfig,
+        parseStrategy,
       );
 
       // 落库切片元信息

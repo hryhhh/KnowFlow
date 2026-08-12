@@ -6,14 +6,12 @@ import {
   HttpExceptionFilter,
   AllExceptionsFilter,
 } from "./common/filters/http-exception.filter";
-import { TraceIdInterceptor } from "./modules/agents/interceptor/trace-id.interceptor";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix("api");
   app.enableCors();
-  app.useGlobalInterceptors(new TraceIdInterceptor());
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,

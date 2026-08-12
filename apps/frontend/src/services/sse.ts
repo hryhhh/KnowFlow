@@ -5,8 +5,6 @@ export interface StreamHandlers {
   onToken: (token: string) => void;
   onDone: () => void;
   onError: (message: string) => void;
-  /** 兜底回调：处理未知事件类型（如 agent_start/agent_done/trace 等） */
-  onMeta?: (event: { type: string; value: any; agent?: string; traceId?: string }) => void;
 }
 
 /**
@@ -68,14 +66,6 @@ export async function streamChat(
           case "error":
             handlers.onError(event.value as string);
             break;
-          default:
-            // 未知事件类型 → 兜底回调
-            handlers.onMeta?.({
-              type: event.type,
-              value: event.value,
-              agent: event.agent,
-              traceId: event.traceId,
-            });
         }
       } catch {
         // 忽略无法解析的行

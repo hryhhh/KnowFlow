@@ -1,4 +1,4 @@
-# KnowBase X — 基础设施 (PostgreSQL + pgvector + Redis)
+# KnowBase X — 基础设施 (PostgreSQL + pgvector + Redis + MinerU)
 version: '3.8'
 
 services:
@@ -40,10 +40,72 @@ services:
     networks:
       - kb-network
 
+  # ─── MinerU 文档解析服务（可选，按需启用） ───
+  # 启动方式：
+  #   CPU 模式：docker compose --profile mineru-cpu up -d
+  #   GPU 模式：docker compose --profile mineru-gpu up -d
+  # 注意：MinerU 镜像需自行构建（官方无预构建 Docker Hub 镜像）
+  #   wget https://gcore.jsdelivr.net/gh/opendatalab/MinerU@master/docker/global/Dockerfile
+  #   docker build -t ${MINERU_IMAGE:-kb-mineru:local} -f Dockerfile .
+
+  mineru-api:
+    image: ${MINERU_IMAGE:-kb-mineru:local}
+    container_name: kb-mineru-api
+    restart: unless-stopped
+    profiles: ["mineru-cpu"]
+    entrypoint: ["mineru-api"]
+    command: ["--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "${MINERU_PORT:-8000}:8000"
+    environment:
+      MINERU_MODEL_SOURCE: ${MINERU_MODEL_SOURCE:-local}
+      MINERU_BACKEND: ${MINERU_BACKEND:-pipeline}
+      MINERU_EFFORT: ${MINERU_EFFORT:-medium}
+    volumes:
+      - mineru_models:/root/.cache/mineru
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kb-network
+
+  # GPU 版本（仅在有 NVIDIA GPU 的机器上使用）
+  mineru-api-gpu:
+    image: ${MINERU_IMAGE:-kb-mineru:local}
+    container_name: kb-mineru-api-gpu
+    restart: unless-stopped
+    profiles: ["mineru-gpu"]
+    ports:
+      - "${MINERU_PORT:-8000}:8000"
+    environment:
+      MINERU_MODEL_SOURCE: ${MINERU_MODEL_SOURCE:-local}
+      MINERU_BACKEND: ${MINERU_BACKEND:-hybrid-engine}
+    volumes:
+      - mineru_models:/root/.cache/mineru
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${MINERU_GPU_COUNT:-1}
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kb-network
+    ipc: host
+
 volumes:
   pgvector_data:
     driver: local
   redis_data:
+    driver: local
+  mineru_models:
     driver: local
 
 networks:

@@ -6,6 +6,9 @@ import { loadXLSX } from "./xlsx-loader.js";
 import { loadPDF } from "./pdf-loader.js";
 import { loadWord } from "./word-loader.js";
 
+/** 文档解析策略 */
+export type ParseStrategy = "mineru" | "basic";
+
 /** 根据文件名推断文档类型 */
 export function detectFileType(filename: string): FileType {
   const ext = path.extname(filename).toLowerCase();
@@ -21,11 +24,12 @@ export function detectFileType(filename: string): FileType {
 }
 
 /**
- * 统一文档加载入口：根据类型分发到对应 Loader。
+ * 统一文档加载入口：根据类型和策略分发到对应 Loader。
  */
 export async function loadDocument(
   filePath: string,
   fileType?: FileType,
+  parseStrategy?: ParseStrategy,
 ): Promise<LoadResult> {
   const detectedType = fileType ?? detectFileType(filePath);
   let documents: Document[] = [];
@@ -38,7 +42,9 @@ export async function loadDocument(
       documents = await loadXLSX({ filePath });
       break;
     case "pdf":
-      documents = await loadPDF(filePath);
+      documents = await loadPDF(filePath, {
+        backend: parseStrategy === "mineru" ? undefined : undefined,
+      });
       break;
     case "word":
       documents = await loadWord(filePath);

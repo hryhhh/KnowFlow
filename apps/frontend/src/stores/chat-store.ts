@@ -12,7 +12,6 @@ interface ChatStore {
   sources: SourceRef[];
   searchParams: SearchParams;
   isStreaming: boolean;
-  agentStatus: null | "db-query" | "web-search" | "ragflow";
   // 方法
   loadSessions: (kbId: string) => Promise<void>;
   createSession: (kbId: string, firstMessage: string) => Promise<string>;
@@ -30,12 +29,11 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   sources: [],
   searchParams: {
     topK: 10,
-    minScore: 0.70,
+    minScore: 0.20,
     useReranker: false,
     denseWeight: 0.5,
   },
   isStreaming: false,
-  agentStatus: null,
 
   loadSessions: async (kbId) => {
     const res = await sessionApi.list(kbId);
@@ -83,7 +81,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       messages: [...s.messages, userMsg],
       sources: [],
       isStreaming: true,
-      agentStatus: null,
     }));
 
     const params = get().searchParams;
@@ -97,30 +94,26 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       },
       onToken: (token) => {
         assistant += token;
-        set((s) => ({
-          messages: [
-            ...s.messages.slice(0, -1),
-            { role: "assistant" as const, content: assistant, sources },
-          ],
-        }));
+        set((s) => {
+          const msgs = [...s.messages];
+          const last = msgs[msgs.length - 1];
+          if (last && last.role === "assistant") {
+            msgs[msgs.length - 1] = { role: "assistant", content: assistant, sources };
+          } else {
+            msgs.push({ role: "assistant", content: assistant, sources });
+          }
+          return { messages: msgs };
+        });
       },
       onDone: () => set({ isStreaming: false }),
       onError: (msg) => {
         set((s) => ({
           isStreaming: false,
-          agentStatus: null,
           messages: [
             ...s.messages.slice(0, -1),
-            { role: "assistant" as const, content: `⚠️ ${msg}`, sources },
+            { role: "assistant", content: `⚠️ ${msg}`, sources },
           ],
         }));
-      },
-      onMeta: (meta) => {
-        if (meta.type === "agent_start" && meta.agent) {
-          set({ agentStatus: meta.agent as ChatStore["agentStatus"] });
-        } else if (meta.type === "agent_done") {
-          set({ agentStatus: null });
-        }
       },
     }, { sessionId });
 
@@ -141,7 +134,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       messages: [],
       sources: [],
       isStreaming: false,
-      agentStatus: null,
       currentSessionId: null,
       sessions: [],
     }),

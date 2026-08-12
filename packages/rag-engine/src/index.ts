@@ -1,8 +1,9 @@
 // Loaders
-export { loadCSV, loadXLSX, loadPDF, loadWord, loadDocument, detectFileType } from "./loaders/index.js";
+export { loadCSV, loadXLSX, loadPDF, loadWord, loadDocument, detectFileType, type ParseStrategy } from "./loaders/index.js";
 
 // Splitters
 export { splitDocuments, splitText } from "./splitters/recursive-splitter.js";
+export { splitMarkdownDocuments } from "./splitters/markdown-splitter.js";
 export { SemanticSplitter } from "./splitters/semantic-splitter.js";
 
 // Embeddings
