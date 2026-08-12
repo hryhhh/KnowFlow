@@ -32,3 +32,11 @@ coverage/
 
 # Uploads
 apps/server/uploads/
+
+# Playwright MCP
+.playwright-mcp/
+
+# Screenshots
+*.png
+uploads/
+*.traineddata

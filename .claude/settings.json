@@ -1,6 +1,9 @@
 {
   "permissions": {
     "allow": [
+      "Read",
+      "Glob",
+      "Grep",
       "Bash(xargs ls)",
       "Bash(npx tsc *)",
       "Bash(pnpm install *)",
@@ -19,7 +22,18 @@
       "Bash(node -e \"const p = require\\('/home/hhhry/projects/knowledge-ai-main/apps/frontend/node_modules/@ant-design/charts/package.json'\\); console.log\\(p.version\\)\")",
       "Bash(npx vite *)",
       "Bash(npx playwright *)",
-      "Bash(pkill -f \"vite\")"
+      "Bash(pkill -f \"vite\")",
+      "Bash(xargs ls -la)",
+      "Bash(ps -p 107165 -o pid,command)",
+      "Bash(git check-ignore *)",
+      "Bash(xargs -I{} stat --format='%Y %n' {})",
+      "Bash(git ls-files *)",
+      "Bash(cat .claude/settings.local.json 2>/dev/null | python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('screenshotPath',{}\\), indent=2\\)\\)\" 2>/dev/null; echo \"---\"; find ~/.claude -name \"*.png\" 2>/dev/null | head -5; echo \"---\"; find /tmp -name \"chat*.png\" 2>/dev/null | head -5; echo \"---\"; find ~/.cache -name \"chat*.png\" 2>/dev/null | head -5)",
+      "Read(//home/hhhry/.claude/**)",
+      "Read(//tmp/**)",
+      "Read(//home/hhhry/.cache/**)",
+      "Bash(find ~/.claude -name \"*.png\" -newer /tmp 2>/dev/null; echo \"---\"; find ~ -maxdepth 3 -name \"chat*.png\" 2>/dev/null)",
+      "Read(//home/hhhry/**)"
     ]
   }
 }

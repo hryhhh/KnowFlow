@@ -1,37 +1,86 @@
+# Agent 路由规则配置
+# 策略：默认走 RAGFlow，RAGFlow 无结果时才走 DB Query / Web Search
+
 rules:
-  - id: kb-docs
-    pattern: "\\b(文档|资料|手册|kbId:)\\b"
-    intent: "kb_document"
+  # ==================== RAGFlow 知识库检索（最高优先级） ====================
+  # 所有查询优先走 RAGFlow
+  - id: ragflow-default
+    pattern: "(.*)"
+    intent: "ragflow_default"
     targetAgent: "ragflow"
     priority: 100
-    minScore: 0.95
+    minScore: 0.10
     enabled: true
 
-  - id: db-stats
-    pattern: "\\b(多少|统计|数量|列表|top\\b)"
-    intent: "db_query"
+  # ==================== DB Query 数据库查询 ====================
+  # 意图：从数据库查询精确统计/列表数据
+  - id: db-query-count
+    pattern: "(知识库.*?数量|知识库.*?多少|文档.*?总数|文档.*?数量|切片.*?多少|切片.*?总数|知识库.*?合计|知识库.*?累计|多少.*?知识库|多少.*?文档|多少.*?切片|总计|总共有|合计.*?条|累计.*?条|总数.*?条|汇总.*?数量|汇总.*?统计)"
+    intent: "db_count"
     targetAgent: "db-query"
     priority: 90
-    minScore: 0.9
+    minScore: 0.80
     enabled: true
 
-  - id: web-latest
-    pattern: "\\b(最新|发布|新闻|动态|今天)\\b"
-    intent: "web_search"
+  - id: db-query-list
+    pattern: "(列表|清单|汇总|有哪些|全部.*?|.*?列表|.*?列表|全部用户|全部订单|.*?统计)"
+    intent: "db_list"
+    targetAgent: "db-query"
+    priority: 88
+    minScore: 0.75
+    enabled: true
+
+  - id: db-query-stat
+    pattern: "(统计|分析|趋势|排行|排名|Top.*?[1-9]|.*?排行榜|.*?趋势|.*?增长|.*?变化)"
+    intent: "db_stat"
+    targetAgent: "db-query"
+    priority: 85
+    minScore: 0.75
+    enabled: true
+
+  - id: db-query-person
+    pattern: "(.*?学号|.*?身份证|.*?手机号|.*?电话|.*?邮箱|.*?联系方式|.*?住址|.*?姓名.*?信息)"
+    intent: "db_person"
+    targetAgent: "db-query"
+    priority: 85
+    minScore: 0.75
+    enabled: true
+
+  # ==================== Web Search 联网搜索 ====================
+  # 意图：需要实时/外部信息的查询
+  - id: web-search-news
+    pattern: "(新闻|动态|最新消息|最新发布|.*?快讯|.*?热点|.*?趋势)"
+    intent: "web_news"
     targetAgent: "web-search"
     priority: 80
-    minScore: 0.85
+    minScore: 0.70
     enabled: true
 
-  - id: combined-fallback
-    pattern: ""
-    intent: "fallback"
-    targetAgent: "llm-intent-classifier"
-    priority: 10
-    minScore: 0.0
+  - id: web-search-weather
+    pattern: "(天气|气温|降雨|风力|雾霾|紫外线|空气质量)"
+    intent: "web_weather"
+    targetAgent: "web-search"
+    priority: 78
+    minScore: 0.70
+    enabled: true
+
+  - id: web-search-realtime
+    pattern: "(今天|昨天|最近|当前|现在|实时|刚刚|最新(?!库)|今天.*?怎么样|最近.*?怎么样)"
+    intent: "web_realtime"
+    targetAgent: "web-search"
+    priority: 75
+    minScore: 0.70
+    enabled: true
+
+  - id: web-search-general
+    pattern: "(科普|介绍.*原理|什么是.*原理|原理.*是什么|什么是.*机制|机制.*是什么|怎么运行|如何工作|工作原理|基本概念|基本定义)"
+    intent: "web_general"
+    targetAgent: "web-search"
+    priority: 70
+    minScore: 0.65
     enabled: true
 
 settings:
-  maxMatchedRules: 3
+  maxMatchedRules: 5
   defaultAgentTimeoutMs: 3000
   allowParallel: true

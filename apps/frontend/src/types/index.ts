@@ -71,6 +71,16 @@ export interface CreateApiResult {
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  sources?: SourceRef[];
+  createdAt?: string;
+}
+
+export interface SessionListItem {
+  id: string;
+  kbId: string;
+  title: string;
+  messageCount: number;
+  createdAt: string;
 }
 
 export interface SseEvent {

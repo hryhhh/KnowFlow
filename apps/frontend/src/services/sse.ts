@@ -5,6 +5,8 @@ export interface StreamHandlers {
   onToken: (token: string) => void;
   onDone: () => void;
   onError: (message: string) => void;
+  /** 兜底回调：处理未知事件类型（如 agent_start/agent_done/trace 等） */
+  onMeta?: (event: { type: string; value: any; agent?: string; traceId?: string }) => void;
 }
 
 /**
@@ -16,21 +18,24 @@ export async function streamChat(
   query: string,
   params: SearchParams,
   handlers: StreamHandlers,
-): Promise<void> {
+  options?: { sessionId?: string },
+): Promise<{ sessionId: string }> {
   const response = await fetch("/api/chat/stream", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ kbId, query, params }),
+    body: JSON.stringify({ kbId, query, sessionId: options?.sessionId, params }),
   });
 
   if (!response.ok || !response.body) {
     handlers.onError(`请求失败: ${response.status}`);
-    return;
+    return { sessionId: "" };
   }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+
+  let sessionId = options?.sessionId ?? "";
 
   while (true) {
     const { done, value } = await reader.read();
@@ -48,6 +53,9 @@ export async function streamChat(
       try {
         const event = JSON.parse(payload);
         switch (event.type) {
+          case "session_id":
+            sessionId = event.value as string;
+            break;
           case "sources":
             handlers.onSources(event.value as SourceRef[]);
             break;
@@ -60,10 +68,20 @@ export async function streamChat(
           case "error":
             handlers.onError(event.value as string);
             break;
+          default:
+            // 未知事件类型 → 兜底回调
+            handlers.onMeta?.({
+              type: event.type,
+              value: event.value,
+              agent: event.agent,
+              traceId: event.traceId,
+            });
         }
       } catch {
         // 忽略无法解析的行
       }
     }
   }
+
+  return { sessionId };
 }

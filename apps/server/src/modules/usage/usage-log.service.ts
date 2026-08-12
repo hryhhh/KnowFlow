@@ -15,6 +15,7 @@ export class UsageLogService {
     type: UsageType;
     kbId?: string | null;
     apiKeyId?: string | null;
+    traceId?: string | null;
     duration?: number;
     status?: string;
   }): Promise<void> {
@@ -22,6 +23,7 @@ export class UsageLogService {
       type: params.type,
       kbId: params.kbId ?? null,
       apiKeyId: params.apiKeyId ?? null,
+      traceId: params.traceId ?? null,
       duration: params.duration ?? 0,
       status: params.status ?? "success",
     });
@@ -49,7 +51,6 @@ export class UsageLogService {
       .orderBy("date", "ASC")
       .getRawMany();
 
-    // Ensure all 7 dates are present, filling missing ones with zeros
     const map = new Map<string, Record<string, string | number>>();
     for (const row of rows ?? []) {
       map.set(row.date, row);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 import { useParams } from "react-router-dom";
 import PageHeader from "../../components/PageHeader";
 import TopStepsBar from "../../components/TopStepsBar";
@@ -9,19 +9,29 @@ import { apiServiceApi } from "../../services/api";
 import type { ApiServiceItem } from "../../types";
 import CreateServiceModal from "./CreateServiceModal";
 import ApiUsagePanel from "./ApiUsagePanel";
-import { Send, Bot } from "lucide-react";
+import { Send, Bot, Loader2, MessageSquare, Trash2 } from "lucide-react";
 
 export default function ChatPage() {
   const { kbId } = useParams();
   const current = useKbStore((s) => s.current);
-  const { messages, sources, searchParams, isStreaming, send, setParams } =
-    useChatStore();
+  const {
+    messages,
+    sources,
+    searchParams,
+    isStreaming,
+    sessions,
+    currentSessionId,
+    send,
+    setParams,
+    loadSessions,
+    switchSession,
+    deleteSession,
+  } = useChatStore();
   const [input, setInput] = useState("");
   const [services, setServices] = useState<ApiServiceItem[]>([]);
   const [showCreate, setShowCreate] = useState(false);
-  const [selectedService, setSelectedService] = useState<ApiServiceItem | null>(
-    null,
-  );
+  const [selectedService, setSelectedService] = useState<ApiServiceItem | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const loadServices = async () => {
     const res = await apiServiceApi.list();
@@ -33,10 +43,47 @@ export default function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (kbId) {
+      loadSessions(kbId);
+      // 如果当前没有会话，创建一个新的
+      if (sessions.length === 0) {
+        // 不自动创建，让用户手动创建或发送第一条消息
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kbId]);
+
   const onSubmit = () => {
     if (!kbId || !input.trim()) return;
     send(kbId, input.trim());
     setInput("");
+  };
+
+  const handleDeleteSession = async (e: React.MouseEvent, sessionId: string) => {
+    e.stopPropagation();
+    if (confirmDeleteId === sessionId) {
+      await deleteSession(sessionId);
+      setConfirmDeleteId(null);
+    } else {
+      setConfirmDeleteId(sessionId);
+      setTimeout(() => setConfirmDeleteId(null), 3000);
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return "刚刚";
+    if (minutes < 60) return `${minutes}分钟前`;
+    if (hours < 24) return `${hours}小时前`;
+    if (days < 7) return `${days}天前`;
+    return date.toLocaleDateString("zh-CN");
   };
 
   return (
@@ -45,7 +92,125 @@ export default function ChatPage() {
       <TopStepsBar active={2} />
 
       <div className="chat">
-        {/* 左：参数 */}
+        {/* 左：会话历史 + 引用来源 */}
+        <div className="left-panel">
+          {/* 上：会话历史 */}
+          <div className="session-history">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>
+                <MessageSquare size={16} style={{ marginRight: 6, verticalAlign: "middle" }} />
+                会话历史
+              </h3>
+              <button
+                className="btn"
+                style={{ padding: "4px 10px", fontSize: 12, height: 28 }}
+                onClick={() => loadSessions(kbId ?? "")}
+                title="刷新会话列表"
+              >
+                刷新
+              </button>
+            </div>
+            <div className="session-list">
+              {sessions.length === 0 ? (
+                <p style={{ fontSize: 12, color: "var(--text-sub)", margin: 0 }}>
+                  暂无历史会话
+                </p>
+              ) : (
+                sessions.map((session) => (
+                  <div
+                    key={session.id}
+                    className={`session-item ${session.id === currentSessionId ? "active" : ""}`}
+                    onClick={() => switchSession(session.id)}
+                  >
+                    <div className="session-item-content">
+                      <div className="session-item-title">{session.title}</div>
+                      <div className="session-item-time">
+                        {formatTime(session.createdAt)} · {session.messageCount} 条消息
+                      </div>
+                    </div>
+                    <button
+                      className="session-item-delete"
+                      onClick={(e) => handleDeleteSession(e, session.id)}
+                      title={confirmDeleteId === session.id ? "确认删除" : "删除会话"}
+                    >
+                      {confirmDeleteId === session.id ? "确认?" : <Trash2 size={14} />}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* 下：引用来源 */}
+          <div className="sources">
+            <h3 style={{ marginTop: 0, fontSize: 15, fontWeight: 600 }}>引用来源</h3>
+            <p style={{ color: "var(--text-sub)", fontSize: 12, margin: "0 0 12px" }}>
+              回答使用到的命中切片将显示在此
+            </p>
+            {sources.length === 0 ? (
+              <p style={{ fontSize: 12, color: "var(--text-sub)" }}>暂无来源</p>
+            ) : (
+              sources.map((s, i) => (
+                <div key={i} className="source-item">
+                  <div>
+                    <span className="score">{s.sourceFile}</span> · score{" "}
+                    {s.score.toFixed(4)}
+                  </div>
+                  <pre>{s.content}</pre>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* 中：对话 */}
+        <div className="conversation">
+          <div className="messages">
+            {messages.length === 0 ? (
+              <div className="empty">
+                <Bot size={40} strokeWidth={1.5} style={{ color: "var(--text-subtle)", marginBottom: 12 }} />
+                <p style={{ fontWeight: 500, fontSize: 15 }}>知识库助手</p>
+                <p>我可以阅读知识库的资料并使用自然语言回答你的问题</p>
+                <p style={{ fontSize: 12, color: "var(--text-subtle)", marginTop: 8 }}>
+                  开始对话后将自动创建新会话
+                </p>
+              </div>
+            ) : (
+              <>
+                {messages.map((m, i) => (
+                  <div key={i} className={"msg " + m.role}>
+                    {m.content}
+                  </div>
+                ))}
+                {isStreaming && (
+                  <div className="msg assistant thinking">
+                    <Loader2 size={16} className="thinking-icon" />
+                    <span>正在思考…</span>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          <div className="chat-input">
+            <input
+              className="input"
+              placeholder="我可以阅读知识库的资料并使用自然语言回答你的问题"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && onSubmit()}
+            />
+            <button
+              className="btn primary"
+              onClick={onSubmit}
+              disabled={isStreaming}
+            >
+              <Send size={16} />
+              {isStreaming ? "回答中…" : "发送"}
+            </button>
+          </div>
+        </div>
+
+        {/* 右：参数设置 */}
         <div className="params" style={panelStyle}>
           <h3 style={{ marginTop: 0, fontSize: 15, fontWeight: 600 }}>模型回答参数</h3>
           <p style={{ color: "var(--text-sub)", fontSize: 12, margin: "0 0 16px" }}>
@@ -96,100 +261,8 @@ export default function ChatPage() {
             <button className="btn" onClick={() => setShowCreate(true)}>
               创建服务调用
             </button>
-            <button className="btn" onClick={() => setSelectedService(null)}>
-              API 调用
-            </button>
-          </div>
-
-          {services.length === 0 ? (
-            <p style={{ fontSize: 12, color: "var(--text-sub)" }}>
-              暂无服务调用，创建后可生成 API Key 并对外提供接口
-            </p>
-          ) : (
-            services.map((s) => (
-              <div
-                key={s.id}
-                style={{
-                  border: "1px solid var(--border)",
-                  borderRadius: "var(--radius)",
-                  padding: 10,
-                  marginBottom: 8,
-                  fontSize: 12,
-                  cursor: "pointer",
-                  background:
-                    selectedService?.id === s.id ? "var(--primary-soft)" : "#fff",
-                }}
-                onClick={() => setSelectedService(s)}
-              >
-                <b>{s.serviceName}</b>
-                <div style={{ color: "var(--text-sub)" }}>
-                  {s.keyPrefix} · {s.callCount} 次调用
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* 中：对话 */}
-        <div className="conversation">
-          <div className="messages">
-            {messages.length === 0 ? (
-              <div className="empty">
-                <Bot size={40} strokeWidth={1.5} style={{ color: "var(--text-subtle)", marginBottom: 12 }} />
-                <p style={{ fontWeight: 500, fontSize: 15 }}>知识库助手</p>
-                <p>我可以阅读知识库的资料并使用自然语言回答你的问题</p>
-              </div>
-            ) : (
-              messages.map((m, i) => (
-                <div key={i} className={"msg " + m.role}>
-                  {m.content}
-                </div>
-              ))
-            )}
-          </div>
-          <div className="chat-input">
-            <input
-              className="input"
-              placeholder="我可以阅读知识库的资料并使用自然语言回答你的问题"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && onSubmit()}
-            />
-            <button
-              className="btn primary"
-              onClick={onSubmit}
-              disabled={isStreaming}
-            >
-              <Send size={16} />
-              {isStreaming ? "回答中…" : "发送"}
-            </button>
           </div>
         </div>
-
-        {/* 右：引用来源 / API 调用 */}
-        {selectedService ? (
-          <ApiUsagePanel service={selectedService} />
-        ) : (
-          <div className="sources">
-            <h3 style={{ marginTop: 0, fontSize: 15, fontWeight: 600 }}>引用来源</h3>
-            <p style={{ color: "var(--text-sub)", fontSize: 12, margin: "0 0 12px" }}>
-              回答使用到的命中切片将显示在此
-            </p>
-            {sources.length === 0 ? (
-              <p style={{ fontSize: 12, color: "var(--text-sub)" }}>暂无来源</p>
-            ) : (
-              sources.map((s, i) => (
-                <div key={i} className="source-item">
-                  <div>
-                    <span className="score">{s.sourceFile}</span> · score{" "}
-                    {s.score.toFixed(4)}
-                  </div>
-                  <pre>{s.content}</pre>
-                </div>
-              ))
-            )}
-          </div>
-        )}
       </div>
 
       {showCreate && (
@@ -220,7 +293,7 @@ function ParamRow({
   children,
 }: {
   label: string;
-  children: ReactNode;
+  children: React.ReactNode;
 }) {
   return (
     <div className="param-row">

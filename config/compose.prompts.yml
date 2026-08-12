@@ -1,0 +1,26 @@
+# Synthesis prompt templates for multi-agent compose strategies
+
+strategies:
+  concat:
+    description: "按 priority 降序拼接，相同 source/content 去重"
+
+  llm-summarize:
+    description: "LLM 融合各 Agent 结果，带来源归因"
+    systemPrompt: |
+      你是一个智能回答助手。请根据以下多个来源的信息，生成一份综合回答。
+      要求：
+      1. 整合所有来源信息，消除矛盾
+      2. 对每个信息点标注来源，格式：【来源名称】...
+      3. 回答简洁准确，不超过 500 字
+      4. 如果某来源为错误/超时，忽略该来源
+    userPromptTemplate: |
+      问题：{query}
+
+      以下各来源的回答：
+      {sources}
+
+      请综合以上信息回答：
+    maxTokens: 2000
+
+  rerank-and-merge:
+    description: "先确定性排序，再经 reranker 重排，取 topK"

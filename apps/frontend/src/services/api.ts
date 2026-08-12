@@ -10,6 +10,8 @@ import type {
   DashboardSummary,
   TrendPoint,
   ActivityItem,
+  ChatMessage,
+  SessionListItem,
 } from "../types";
 
 const api = axios.create({ baseURL: "/api" });
@@ -89,6 +91,17 @@ export const dashboardApi = {
   summary: () => api.get<Resp<DashboardSummary>>("/dashboard/summary"),
   trends: () => api.get<Resp<TrendPoint[]>>("/dashboard/usage-trends"),
   activities: () => api.get<Resp<{ items: ActivityItem[] }>>("/dashboard/recent-activities"),
+};
+
+export const sessionApi = {
+  list: (kbId: string) =>
+    api.get<Resp<SessionListItem[]>>(`/chat/sessions`, { params: { kbId } }),
+  create: (body: { kbId: string; firstMessage: string }) =>
+    api.post<Resp<{ id: string; title: string; createdAt: string }>>(`/chat/sessions`, body),
+  messages: (sessionId: string) =>
+    api.get<Resp<ChatMessage[]>>(`/chat/sessions/${sessionId}/messages`),
+  remove: (sessionId: string) =>
+    api.delete(`/chat/sessions/${sessionId}`),
 };
 
 export default api;

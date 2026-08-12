@@ -14,6 +14,7 @@
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
   },
   "dependencies": {
+    "@knowbase-x/agents": "workspace:*",
     "@knowbase-x/rag-engine": "workspace:*",
     "@langchain/openai": "1.5.3",
     "@nestjs/common": "^11.0.1",
@@ -22,9 +23,13 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^11.0.0",
     "@types/iconv-lite": "^0.0.1",
+    "@types/js-yaml": "^4.0.9",
+    "axios": "^1.19.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "iconv-lite": "^0.7.3",
+    "js-yaml": "^4.3.1",
+    "nanoid": "^3.3.18",
     "pg": "8.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",

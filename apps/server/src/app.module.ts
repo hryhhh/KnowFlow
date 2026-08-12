@@ -11,6 +11,8 @@ import { ChatModule } from "./modules/chat/chat.module";
 import { ApiServiceModule } from "./modules/api-service/api-service.module";
 import { DashboardModule } from "./modules/dashboard/dashboard.module";
 import { UsageLogModule } from "./modules/usage/usage-log.module";
+import { AgentModule } from "./modules/agents/agent.module";
+import { SessionModule } from "./modules/session/session.module";
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { UsageLogModule } from "./modules/usage/usage-log.module";
     ApiServiceModule,
     DashboardModule,
     UsageLogModule,
+    AgentModule,
+    SessionModule,
   ],
 })
 export class AppModule {}
