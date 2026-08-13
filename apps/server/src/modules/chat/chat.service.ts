@@ -65,7 +65,7 @@ export class ChatService {
 
       const normalizedParams: SearchParams = {
         topK: params.topK ?? 10,
-        minScore: params.minScore ?? (Number(process.env.DEFAULT_MIN_SCORE) || 0.70),
+        minScore: params.minScore ?? (Number(process.env.DEFAULT_MIN_SCORE) || 0.10),
         useReranker: params.useReranker ?? false,
         denseWeight: params.denseWeight ?? 0.5,
       };

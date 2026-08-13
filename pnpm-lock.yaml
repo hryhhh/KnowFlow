@@ -175,6 +175,9 @@ importers:
       '@langchain/textsplitters':
         specifier: 1.0.1
         version: 1.0.1(@langchain/core@1.2.1(openai@6.49.0(ws@8.21.3)(zod@4.4.3))(ws@8.21.3))
+      adm-zip:
+        specifier: ^0.6.0
+        version: 0.6.0
       d3-dsv:
         specifier: 3.0.1
         version: 3.0.1
@@ -209,9 +212,6 @@ importers:
       '@types/uuid':
         specifier: 10.0.0
         version: 10.0.0
-      adm-zip:
-        specifier: ^0.6.0
-        version: 0.6.0
       tsx:
         specifier: ^4.23.11
         version: 4.23.11

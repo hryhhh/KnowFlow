@@ -1,6 +1,6 @@
 import path from "node:path";
 import { OpenAIEmbeddings } from "@langchain/openai";
-import { loadDocument, type ParseStrategy } from "./loaders/index.js";
+import { loadDocument, type ParseStrategy, type LoadDocumentOptions } from "./loaders/index.js";
 import { splitDocuments } from "./splitters/recursive-splitter.js";
 import { splitMarkdownDocuments } from "./splitters/markdown-splitter.js";
 import { getEmbeddings } from "./embeddings/openai-embeddings.js";
@@ -29,7 +29,8 @@ import type {
  * 文件 → 加载 → 切片 → 向量化 → PGVector 存储
  *
  * @param parseStrategy 解析策略：
- *   - "mineru"：调用 MinerU API 解析为结构化 Markdown，再用 MarkdownSplitter 按标题分层切片
+ *   - "mineru"：调用本地自托管 MinerU API，解析为结构化 Markdown，再用 MarkdownSplitter 切片
+ *   - "mineru-agent"：调用 MinerU Agent 轻量解析 API（云端免登录），结果经 MarkdownSplitter 切片
  *   - "basic"：使用基础加载器 + RecursiveCharacterTextSplitter（兜底）
  *
  * 返回切片列表，供服务端落库（文档/切片元信息）。
@@ -39,13 +40,14 @@ export async function ingestDocument(
   kbId: string,
   config: RAGPipelineConfig,
   parseStrategy: ParseStrategy = "basic",
+  agentOptions?: LoadDocumentOptions["agentOptions"],
 ): Promise<{ chunkCount: number; chunks: TextChunk[] }> {
   // 1. 加载
-  const { documents } = await loadDocument(filePath, undefined, parseStrategy);
+  const { documents } = await loadDocument(filePath, undefined, parseStrategy, agentOptions);
 
   // 2. 切片（根据策略选择不同切片器）
   let chunks: TextChunk[];
-  if (parseStrategy === "mineru") {
+  if (parseStrategy === "mineru" || parseStrategy === "mineru-agent") {
     const mdDocs = await splitMarkdownDocuments(documents, {
       chunkSize: config.chunkSize,
       chunkOverlap: config.chunkOverlap,

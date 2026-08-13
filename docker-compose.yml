@@ -62,7 +62,7 @@ services:
       MINERU_BACKEND: ${MINERU_BACKEND:-pipeline}
       MINERU_EFFORT: ${MINERU_EFFORT:-medium}
     volumes:
-      - mineru_models:/root/.cache/mineru
+      - mineru_models:/root/.cache/huggingface/hub
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 10s
@@ -83,7 +83,7 @@ services:
       MINERU_MODEL_SOURCE: ${MINERU_MODEL_SOURCE:-local}
       MINERU_BACKEND: ${MINERU_BACKEND:-hybrid-engine}
     volumes:
-      - mineru_models:/root/.cache/mineru
+      - mineru_models:/root/.cache/huggingface/hub
     deploy:
       resources:
         reservations:

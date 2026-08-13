@@ -33,7 +33,10 @@
       "Read(//tmp/**)",
       "Read(//home/hhhry/.cache/**)",
       "Bash(find ~/.claude -name \"*.png\" -newer /tmp 2>/dev/null; echo \"---\"; find ~ -maxdepth 3 -name \"chat*.png\" 2>/dev/null)",
-      "Read(//home/hhhry/**)"
+      "Read(//home/hhhry/**)",
+      "Bash(grep -v \".md$\")",
+      "Bash(grep -v \".json$\")",
+      "Bash(grep -v \".yaml$\")"
     ]
   }
 }

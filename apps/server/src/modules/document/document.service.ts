@@ -64,9 +64,11 @@ export class DocumentService {
 
     const savedPath = this.saveFile(kbId, decodedName, file.buffer);
 
-    // 将字符串策略转换为类型，默认为 basic
+    // 默认使用 MinerU Agent 轻量解析 API；可指定 mineru（自托管）或 basic（兜底）
     const parseStrategy: ParseStrategy =
-      processStrategy === "mineru" ? "mineru" : "basic";
+      processStrategy === "mineru" || processStrategy === "mineru-agent"
+        ? processStrategy
+        : "mineru-agent";
 
     const doc = this.docRepo.create({
       kbId,

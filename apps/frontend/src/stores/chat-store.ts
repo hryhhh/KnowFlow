@@ -29,7 +29,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   sources: [],
   searchParams: {
     topK: 10,
-    minScore: 0.20,
+    minScore: 0.10,
     useReranker: false,
     denseWeight: 0.5,
   },

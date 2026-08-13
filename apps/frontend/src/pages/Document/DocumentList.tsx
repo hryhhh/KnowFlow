@@ -1,13 +1,22 @@
 import { useEffect, useState, useRef } from "react";
 import type { ChangeEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Select } from "antd";
 import PageHeader from "../../components/PageHeader";
 import TopStepsBar from "../../components/TopStepsBar";
 import StatusBadge from "../../components/StatusBadge";
 import { docApi } from "../../services/api";
 import { useKbStore } from "../../stores/kb-store";
 import type { DocListItem } from "../../types";
-import { Upload, Search, Trash2 } from "lucide-react";
+import { Upload, Search, Trash2, Cpu } from "lucide-react";
+
+type ParseStrategy = "mineru" | "mineru-agent" | "basic";
+
+const STRATEGY_OPTIONS: { value: ParseStrategy; label: string }[] = [
+  { value: "mineru-agent", label: "mineru-agent（默认）" },
+  { value: "mineru", label: "mineru（自托管）" },
+  { value: "basic", label: "basic（兜底）" },
+];
 
 export default function DocumentList() {
   const { kbId } = useParams();
@@ -19,6 +28,7 @@ export default function DocumentList() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [dragOver, setDragOver] = useState(false);
+  const [selectedStrategy, setSelectedStrategy] = useState<ParseStrategy>("mineru-agent");
 
   const load = async () => {
     if (!kbId) return;
@@ -31,6 +41,13 @@ export default function DocumentList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kbId, search]);
 
+  // Auto-polling every 5s to reflect upload/processing status changes
+  useEffect(() => {
+    if (!kbId) return;
+    const interval = setInterval(() => load(), 5000);
+    return () => clearInterval(interval);
+  }, [kbId, search]);
+
   const fileRef = useRef<HTMLInputElement>(null);
 
   const onUpload = async (file: File) => {
@@ -38,7 +55,7 @@ export default function DocumentList() {
     setUploading(true);
     setError("");
     try {
-      await docApi.upload(kbId, file);
+      await docApi.upload(kbId, file, selectedStrategy);
       await load();
       await refreshCurrent();
     } catch (err) {
@@ -93,6 +110,16 @@ export default function DocumentList() {
         <span style={{ color: "var(--text-sub)", fontSize: 12 }}>
           支持 CSV / XLSX / PDF / Word
         </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <Cpu size={14} style={{ color: "var(--text-subtle)", flexShrink: 0 }} />
+          <Select
+            value={selectedStrategy}
+            onChange={(v) => setSelectedStrategy(v as ParseStrategy)}
+            options={STRATEGY_OPTIONS}
+            style={{ width: 190 }}
+            size="small"
+          />
+        </div>
         <span className="spacer" />
         <div style={{ display: "flex", alignItems: "center", border: "1px solid var(--border-strong)", borderRadius: "var(--radius)", background: "var(--panel)", overflow: "hidden" }}>
           <Search size={16} style={{ padding: "0 8px", color: "var(--text-subtle)", borderRight: "1px solid var(--border)", flexShrink: 0 }} />
