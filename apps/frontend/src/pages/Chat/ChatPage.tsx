@@ -9,7 +9,7 @@ import { apiServiceApi } from "../../services/api";
 import type { ApiServiceItem } from "../../types";
 import CreateServiceModal from "./CreateServiceModal";
 import ApiUsagePanel from "./ApiUsagePanel";
-import { Send, Bot, Loader2, MessageSquare, Trash2 } from "lucide-react";
+import { Send, Bot, Loader2, MessageSquare, Trash2, Trash, Plus } from "lucide-react";
 
 export default function ChatPage() {
   const { kbId } = useParams();
@@ -26,6 +26,8 @@ export default function ChatPage() {
     loadSessions,
     switchSession,
     deleteSession,
+    clearAllSessions,
+    createSession,
   } = useChatStore();
   const [input, setInput] = useState("");
   const [services, setServices] = useState<ApiServiceItem[]>([]);
@@ -60,6 +62,17 @@ export default function ChatPage() {
     setInput("");
   };
 
+  const handleClearAll = async () => {
+    if (!kbId) return;
+    if (!confirm("确认删除全部会话记录？此操作不可恢复。")) return;
+    await clearAllSessions(kbId);
+  };
+
+  const handleCreateSession = async () => {
+    if (!kbId || isStreaming) return;
+    await createSession(kbId, "");
+  };
+
   const handleDeleteSession = async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     if (confirmDeleteId === sessionId) {
@@ -72,9 +85,10 @@ export default function ChatPage() {
   };
 
   const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
+    // 用 Date.parse 获取 UTC 时间戳，避免 ISO 字符串时区解析歧义
+    const dateTs = Date.parse(dateStr);
+    const nowTs = Date.now();
+    const diff = nowTs - dateTs;
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
@@ -83,7 +97,7 @@ export default function ChatPage() {
     if (minutes < 60) return `${minutes}分钟前`;
     if (hours < 24) return `${hours}小时前`;
     if (days < 7) return `${days}天前`;
-    return date.toLocaleDateString("zh-CN");
+    return new Date(dateTs).toLocaleDateString("zh-CN");
   };
 
   return (
@@ -101,14 +115,28 @@ export default function ChatPage() {
                 <MessageSquare size={16} style={{ marginRight: 6, verticalAlign: "middle" }} />
                 会话历史
               </h3>
+              <div style={{ display: "flex", gap: 6 }}>
               <button
                 className="btn"
                 style={{ padding: "4px 10px", fontSize: 12, height: 28 }}
-                onClick={() => loadSessions(kbId ?? "")}
-                title="刷新会话列表"
+                onClick={handleCreateSession}
+                disabled={isStreaming}
+                title="新建空白会话"
               >
-                刷新
+                <Plus size={12} style={{ marginRight: 4 }} />
+                新建
               </button>
+              <button
+                className="btn"
+                style={{ padding: "4px 10px", fontSize: 12, height: 28 }}
+                onClick={handleClearAll}
+                title="清空全部会话记录"
+                disabled={sessions.length === 0}
+              >
+                <Trash size={12} style={{ marginRight: 4 }} />
+                清空
+              </button>
+            </div>
             </div>
             <div className="session-list">
               {sessions.length === 0 ? (

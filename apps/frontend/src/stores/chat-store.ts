@@ -17,6 +17,7 @@ interface ChatStore {
   createSession: (kbId: string, firstMessage: string) => Promise<string>;
   switchSession: (sessionId: string) => Promise<void>;
   deleteSession: (sessionId: string) => Promise<void>;
+  clearAllSessions: (kbId: string) => Promise<void>;
   send: (kbId: string, query: string) => Promise<void>;
   setParams: (params: Partial<SearchParams>) => void;
   reset: () => void;
@@ -43,9 +44,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   createSession: async (kbId, firstMessage) => {
     const res = await sessionApi.create({ kbId, firstMessage });
     const newSession = res.data.data;
+    const displayTitle = newSession.title || "新会话";
     set((s) => ({
-      sessions: [{ ...newSession, messageCount: 1, id: newSession.id } as SessionListItem, ...s.sessions],
+      sessions: [{ ...newSession, title: displayTitle, messageCount: 0, id: newSession.id } as SessionListItem, ...s.sessions],
       currentSessionId: newSession.id,
+      messages: [],
+      sources: [],
+      isStreaming: false,
     }));
     return newSession.id;
   },
@@ -64,6 +69,11 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       currentSessionId: s.currentSessionId === sessionId ? null : s.currentSessionId,
       messages: s.currentSessionId === sessionId ? [] : s.messages,
     }));
+  },
+
+  clearAllSessions: async (kbId) => {
+    await sessionApi.clearAll(kbId);
+    set({ sessions: [], currentSessionId: null, messages: [], sources: [] });
   },
 
   send: async (kbId, query) => {

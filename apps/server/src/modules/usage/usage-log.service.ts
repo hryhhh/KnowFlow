@@ -18,6 +18,10 @@ export class UsageLogService {
     traceId?: string | null;
     duration?: number;
     status?: string;
+    triggeredLlmArbitration?: boolean;
+    ragIncludedBy?: string | null;
+    composeUsedRagPriority?: boolean;
+    llmArbitrationAgent?: string | null;
   }): Promise<void> {
     await this.repo.insert({
       type: params.type,
@@ -26,6 +30,10 @@ export class UsageLogService {
       traceId: params.traceId ?? null,
       duration: params.duration ?? 0,
       status: params.status ?? "success",
+      triggeredLlmArbitration: params.triggeredLlmArbitration ?? false,
+      ragIncludedBy: params.ragIncludedBy ?? null,
+      composeUsedRagPriority: params.composeUsedRagPriority ?? false,
+      llmArbitrationAgent: params.llmArbitrationAgent ?? null,
     });
   }
 

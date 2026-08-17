@@ -30,6 +30,13 @@ export class SessionService {
     private readonly messageRepo: Repository<SessionMessage>,
   ) {}
 
+  /** PostgreSQL timestamp without time zone 列以 CST 存储，需偏移 8 小时转 UTC ISO */
+  private toUtcISO(date: Date | string): string {
+    const d = date instanceof Date ? date : new Date(date);
+    // CST+8 = UTC-8, 加上 8 小时得到 UTC 时间
+    return new Date(d.getTime() + 8 * 3600000).toISOString();
+  }
+
   async list(kbId: string): Promise<SessionListItem[]> {
     const sessions = await this.sessionRepo.find({
       where: { kbId },
@@ -44,12 +51,12 @@ export class SessionService {
       .createQueryBuilder("msg")
       .select("msg.sessionId", "sessionId")
       .addSelect("COUNT(*)", "count")
-      .whereInIds(sessionIds)
+      .where("msg.sessionId IN (:...ids)", { ids: sessionIds })
       .groupBy("msg.sessionId")
       .getRawMany();
 
     const countMap = new Map<string, number>(
-      counts.map((row) => [row.msg_sessionid, parseInt(row.msg_count, 10)])
+      counts.map((row) => [row.sessionId, parseInt(row.count, 10)])
     );
 
     return sessions.map((s) => ({
@@ -57,7 +64,7 @@ export class SessionService {
       kbId: s.kbId,
       title: s.title,
       messageCount: countMap.get(s.id) ?? 0,
-      createdAt: s.createdAt.toISOString(),
+      createdAt: this.toUtcISO(s.createdAt),
     }));
   }
 
@@ -81,7 +88,7 @@ export class SessionService {
       role: m.role,
       content: m.content,
       sources: m.sources,
-      createdAt: m.createdAt.toISOString(),
+      createdAt: this.toUtcISO(m.createdAt),
     }));
   }
 
@@ -100,5 +107,14 @@ export class SessionService {
     if (!session) throw new NotFoundException(`会话不存在: ${id}`);
     await this.messageRepo.delete({ sessionId: id });
     await this.sessionRepo.remove(session);
+  }
+
+  /** 删除指定知识库下的所有会话及消息 */
+  async clearAll(kbId: string): Promise<void> {
+    const sessions = await this.sessionRepo.find({ where: { kbId } });
+    for (const session of sessions) {
+      await this.messageRepo.delete({ sessionId: session.id });
+    }
+    await this.sessionRepo.delete({ kbId });
   }
 }

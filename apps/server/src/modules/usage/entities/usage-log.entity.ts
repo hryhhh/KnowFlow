@@ -36,6 +36,22 @@ export class UsageLog {
   @Column({ length: 16, default: "success" })
   status: string;
 
+  /** 是否触发了 LLM 置信度仲裁 */
+  @Column({ type: "boolean", default: false })
+  triggeredLlmArbitration: boolean;
+
+  /** ragflow 被加入候选的原因：strict_rule | soft_rule | always_include | llm | none */
+  @Column({ type: "varchar", length: 32, nullable: true })
+  ragIncludedBy: string | null;
+
+  /** 合成阶段是否采用了 rag-priority 策略 */
+  @Column({ type: "boolean", default: false })
+  composeUsedRagPriority: boolean;
+
+  /** 仲裁时 LLM 返回的目标 Agent（仅仲裁触发时有值） */
+  @Column({ type: "varchar", length: 64, nullable: true })
+  llmArbitrationAgent: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 }

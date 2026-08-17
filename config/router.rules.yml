@@ -1,86 +1,128 @@
-# Agent 路由规则配置
-# 策略：默认走 RAGFlow，RAGFlow 无结果时才走 DB Query / Web Search
+# Agent 路由规则配置（v2.1 最终版）
+# 匹配逻辑：按 priority 降序遍历，命中后取前 maxMatchedRules 条目标 Agent 并行调度
+# 核心设计：db-stats 要求紧跟业务实体词才触发，避免「知识库有多少文档」被误抢
 
 rules:
-  # ==================== RAGFlow 知识库检索（最高优先级） ====================
-  # 所有查询优先走 RAGFlow
-  - id: ragflow-default
-    pattern: "(.*)"
-    intent: "ragflow_default"
+  # ==================== RAGFlow 知识库内容检索 ====================
+  # 含明确知识库内容关键词 → 严格命中，priority 最高
+  - id: kb-docs-strict
+    pattern: "(文档内容|资料内容|手册内容|有没有.*?文档|有没有.*?资料|文档里.*?说|资料里.*?说|知识库内容|知识库里的|知识库中的|知识.*?是什么|知识.*?内容|关于.*?知识|资料.*?内容)"
+    intent: "ragflow_kb_strict"
     targetAgent: "ragflow"
     priority: 100
-    minScore: 0.10
+    minScore: 0.90
     enabled: true
 
-  # ==================== DB Query 数据库查询 ====================
-  # 意图：从数据库查询精确统计/列表数据
-  - id: db-query-count
-    pattern: "(知识库.*?数量|知识库.*?多少|文档.*?总数|文档.*?数量|切片.*?多少|切片.*?总数|知识库.*?合计|知识库.*?累计|多少.*?知识库|多少.*?文档|多少.*?切片|总计|总共有|合计.*?条|累计.*?条|总数.*?条|汇总.*?数量|汇总.*?统计)"
+  # ==================== DB Query — 统计数量 ====================
+  # 关键改进：用 (?=.*?(业务实体词)) 正向断言，要求「多少/统计」后面必须紧跟
+  # 客户/员工/订单/学生/用户 等业务实体词才命中，否则让 ragflow-soft 兜底
+  - id: db-stats
+    pattern: "(多少|统计|数量|总计|合计|累计|总共有)(?=.*?(客户|员工|订单|学生|用户|产品|项目|合同|公司|供应商|人数))"
     intent: "db_count"
     targetAgent: "db-query"
     priority: 90
-    minScore: 0.80
+    minScore: 0.85
     enabled: true
 
-  - id: db-query-list
-    pattern: "(列表|清单|汇总|有哪些|全部.*?|.*?列表|.*?列表|全部用户|全部订单|.*?统计)"
+  # ==================== DB Query — 列表清单 ====================
+  - id: db-list
+    pattern: "(列出|清单|全部.*?|列表)"
     intent: "db_list"
     targetAgent: "db-query"
     priority: 88
-    minScore: 0.75
+    minScore: 0.85
     enabled: true
 
-  - id: db-query-stat
-    pattern: "(统计|分析|趋势|排行|排名|Top.*?[1-9]|.*?排行榜|.*?趋势|.*?增长|.*?变化)"
+  # ==================== DB Query — 统计分析 ====================
+  - id: db-stat
+    pattern: "(趋势|排行|排名|[Tt]op\\d+|排行榜|增长|变化)"
     intent: "db_stat"
     targetAgent: "db-query"
     priority: 85
-    minScore: 0.75
+    minScore: 0.85
     enabled: true
 
-  - id: db-query-person
-    pattern: "(.*?学号|.*?身份证|.*?手机号|.*?电话|.*?邮箱|.*?联系方式|.*?住址|.*?姓名.*?信息)"
+  # ==================== DB Query — 个人信息查询 ====================
+  # 注意：resolveTemplate 对学号/身份证等返回 null，触发 RAG 降级
+  # 因此这类查询实际会由 ragflow 承接回答
+  - id: db-person
+    pattern: "(学号|身份证|手机号|电话|邮箱|联系方式|住址)"
     intent: "db_person"
     targetAgent: "db-query"
     priority: 85
-    minScore: 0.75
+    minScore: 0.85
     enabled: true
 
-  # ==================== Web Search 联网搜索 ====================
-  # 意图：需要实时/外部信息的查询
-  - id: web-search-news
-    pattern: "(新闻|动态|最新消息|最新发布|.*?快讯|.*?热点|.*?趋势)"
+  # ==================== Web Search — 新闻资讯 ====================
+  - id: web-news
+    pattern: "(新闻|动态|快讯|热点|最新发布|最新.*?发布)"
     intent: "web_news"
     targetAgent: "web-search"
     priority: 80
-    minScore: 0.70
+    minScore: 0.85
     enabled: true
 
-  - id: web-search-weather
-    pattern: "(天气|气温|降雨|风力|雾霾|紫外线|空气质量)"
+  # ==================== Web Search — 天气气象 ====================
+  - id: web-weather
+    pattern: "(天气|气温|降雨|风力|雾霾|空气质量)"
     intent: "web_weather"
     targetAgent: "web-search"
     priority: 78
-    minScore: 0.70
+    minScore: 0.85
     enabled: true
 
-  - id: web-search-realtime
-    pattern: "(今天|昨天|最近|当前|现在|实时|刚刚|最新(?!库)|今天.*?怎么样|最近.*?怎么样)"
+  # ==================== Web Search — 实时动态 ====================
+  - id: web-realtime
+    pattern: "(今天|昨天|最近|当前|现在|实时|刚刚)(?!.*?(发布|新闻|动态|快讯))"
     intent: "web_realtime"
     targetAgent: "web-search"
     priority: 75
-    minScore: 0.70
+    minScore: 0.80
     enabled: true
 
-  - id: web-search-general
-    pattern: "(科普|介绍.*原理|什么是.*原理|原理.*是什么|什么是.*机制|机制.*是什么|怎么运行|如何工作|工作原理|基本概念|基本定义)"
+  # ==================== Web Search — 概念科普 ====================
+  - id: web-general
+    pattern: "(什么是|科普|原理|工作机制|怎么运行|如何工作|工作原理|怎么工作|是什么原理)"
     intent: "web_general"
     targetAgent: "web-search"
     priority: 70
-    minScore: 0.65
+    minScore: 0.80
+    enabled: true
+
+  # ==================== RAGFlow 语义软规则 ====================
+  # 覆盖无明确关键词但明显在查询知识库内容的用户意图
+  # 仅当没有任何 high-priority 规则命中时才成为主候选
+  - id: ragflow-soft
+    pattern: "(有没有.*?知识|能不能.*?找到|怎么查|在哪里.*?找|如何查询|.*?内容.*?怎么样|.*?文档.*?讲|.*?资料.*?说|.*?知识库.*?有没有|.*?知识库.*?有.*?(什么|相关)|.*?资料.*?怎么样|.*?资料.*?有没有|.*?知识.*?(什么|内容)|.*?关于.*?知识|.*?知识.*?是什么|.*?资料.*?讲了|.*?资料.*?内容|.*?文档.*?什么|.*?知识点|.*?介绍|.*?说明|.*?这个.*?知识)"
+    intent: "ragflow_soft"
+    targetAgent: "ragflow"
+    priority: 30
+    minScore: 0.70
+    enabled: true
+
+  # ==================== LLM 意图兜底 ====================
+  # pattern 为空时跳过正则匹配，由 IntentRouter 调用 LLM 做意图分类
+  - id: llm-fallback
+    pattern: ""
+    intent: "llm_fallback"
+    targetAgent: "llm-intent-classifier"
+    priority: 10
+    minScore: 0.0
     enabled: true
 
 settings:
-  maxMatchedRules: 5
-  defaultAgentTimeoutMs: 3000
+  # 最多同时命中的规则数（决定并行度），建议 ≤ 3
+  maxMatchedRules: 3
+  # 全局默认超时（ms）— RAG 链路通常需 3-8s，设 30s 兜底
+  defaultAgentTimeoutMs: 30000
+  # 是否允许并行执行多个 Agent
   allowParallel: true
+  # 始终包含的 Agent：确保知识库检索不遗漏
+  # 效果：db-person 命中时也会并行执行 ragflow，
+  #       resolveTemplate 返回 null 时由 ragflow 兜底回答
+  alwaysIncludeAgents: ["ragflow"]
+  # 置信度仲裁阈值：最高命中规则 priority ≤ 此值时触发 LLM 仲裁
+  # 当前配置：只有 soft 规则(p30)或 llm-fallback(p10)命中时才触发
+  routerConfidenceThreshold: 70
+  # 合成策略：rag-priority — RAGFlow 有效时优先展示，其他 Agent 作补充
+  composeStrategy: "rag-priority"

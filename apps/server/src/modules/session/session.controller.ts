@@ -45,4 +45,11 @@ export class SessionController {
   async remove(@Param("id") id: string): Promise<void> {
     await this.service.remove(id);
   }
+
+  @Delete()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async clearAll(@Query("kbId") kbId: string): Promise<void> {
+    if (!kbId) throw new Error("kbId is required");
+    await this.service.clearAll(kbId);
+  }
 }

@@ -102,6 +102,8 @@ export const sessionApi = {
     api.get<Resp<ChatMessage[]>>(`/chat/sessions/${sessionId}/messages`),
   remove: (sessionId: string) =>
     api.delete(`/chat/sessions/${sessionId}`),
+  clearAll: (kbId: string) =>
+    api.delete(`/chat/sessions`, { params: { kbId } }),
 };
 
 export default api;
