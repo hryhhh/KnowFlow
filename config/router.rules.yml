@@ -13,9 +13,19 @@ rules:
     minScore: 0.90
     enabled: true
 
-  # ==================== DB Query — 统计数量 ====================
+  # ==================== DB Query — 统计数量（数据库实体） ====================
+  # 覆盖文档/切片/知识库本身的数量查询（不含外部业务实体）
+  - id: db-stats-entity
+    pattern: "(多少|总计|合计|累计|总共有|总数|数量|统计)(?=.*?(文档|切片|知识库|chunk|doc|kb))"
+    intent: "db_count_entity"
+    targetAgent: "db-query"
+    priority: 89
+    minScore: 0.85
+    enabled: true
+
+  # ==================== DB Query — 统计数量（业务实体） ====================
   # 关键改进：用 (?=.*?(业务实体词)) 正向断言，要求「多少/统计」后面必须紧跟
-  # 客户/员工/订单/学生/用户 等业务实体词才命中，否则让 ragflow-soft 兜底
+  # 客户/员工/订单/学生/用户 等业务实体词才命中，避免与 db-stats-entity 冲突
   - id: db-stats
     pattern: "(多少|统计|数量|总计|合计|累计|总共有)(?=.*?(客户|员工|订单|学生|用户|产品|项目|合同|公司|供应商|人数))"
     intent: "db_count"
@@ -35,7 +45,7 @@ rules:
 
   # ==================== DB Query — 统计分析 ====================
   - id: db-stat
-    pattern: "(趋势|排行|排名|[Tt]op\\d+|排行榜|增长|变化)"
+    pattern: "(趋势|排行|排名|[Tt]op\\d+|排行榜|增长|变化|最多|最少|最高|最低)"
     intent: "db_stat"
     targetAgent: "db-query"
     priority: 85

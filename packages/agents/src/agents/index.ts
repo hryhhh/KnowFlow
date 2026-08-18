@@ -101,23 +101,43 @@ export class DbQueryAgent implements Agent {
     if (q.includes("总数") || q.includes("总共有") || q.includes("合计") || q.includes("累计") ||
         /多少.*?(知识库|文档|切片|用户|员工|客户)/.test(q) ||
         /知识库.*?多少/.test(q) || /文档.*?多少/.test(q)) {
-      if (q.includes("知识库") || q.includes("kb")) return "kb_stats";
-      if (q.includes("文档") || q.includes("doc")) return "doc_stats";
+      // 优先判断更具体的实体，避免"知识库总共有多少文档"误匹配为 kb_stats
       if (q.includes("切片") || q.includes("chunk")) return "chunk_stats";
+      if (q.includes("文档") || q.includes("doc")) return "doc_stats";
+      if (q.includes("知识库") || q.includes("kb")) return "kb_stats";
       return "kb_stats";
     }
 
     // 列表类
-    if (q.includes("列出") || q.includes("清单") || q.includes("有哪些") || q.includes("全部") || q.includes("列表")) {
+    if (q.includes("列出") || q.includes("清单") || q.includes("全部") || q.includes("列表")) {
+      // 优先判断更具体的实体，避免"列出知识库中的文档"误匹配为 kb_list
+      if (q.includes("文档") || q.includes("doc")) return "doc_list";
+      if (q.includes("切片") || q.includes("chunk")) return "doc_list";
       if (q.includes("知识库") || q.includes("kb")) return "kb_list";
       return "doc_list";
     }
 
-    // 统计/排行/趋势类
-    if (q.includes("统计") || q.includes("分析") || q.includes("趋势") || q.includes("排行") || q.includes("排名") || /top\d+/i.test(q)) {
-      if (q.includes("文档") || q.includes("切片")) return "doc_creation_trend";
-      if (q.includes("排行") || q.includes("排名")) return "top_docs_by_chunks";
-      return "kb_stats";
+    // 排行/排名类
+    if (q.includes("排行") || q.includes("排名") || /top\d+/i.test(q)) {
+      return "top_docs_by_chunks";
+    }
+
+    // 统计/趋势类（趋势优先于纯统计，避免"文档创建趋势"误入 doc_stats）
+    if (q.includes("趋势") || q.includes("增长") || q.includes("变化")) {
+      return "doc_creation_trend";
+    }
+    if (q.includes("统计") || q.includes("分析")) {
+      if (q.includes("切片") || q.includes("chunk")) return "chunk_stats";
+      if (q.includes("文档") || q.includes("doc")) return "doc_stats";
+      if (q.includes("知识库") || q.includes("kb")) return "kb_stats";
+      return "doc_creation_trend";
+    }
+
+    // 有哪些 — 需区分对象
+    if (q.includes("有哪些")) {
+      if (q.includes("切片数最多") || q.includes("切片多")) return "top_docs_by_chunks";
+      if (q.includes("知识库")) return "kb_list";
+      return "doc_list";
     }
 
     // 个人查询 — 当前无对应模板，返回 null 触发 RAG 降级
