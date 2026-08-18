@@ -6,7 +6,9 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "build:watch": "tsc -p tsconfig.json --watch"
+    "build:watch": "tsc -p tsconfig.json --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "license": "ISC",
   "dependencies": {
@@ -29,7 +31,9 @@
     "@types/pdf-parse": "^1.1.5",
     "@types/pg": "8.20.0",
     "@types/uuid": "10.0.0",
+    "@vitest/ui": "^4.1.10",
     "tsx": "^4.23.11",
-    "typescript": "5.7.3"
+    "typescript": "5.7.3",
+    "vitest": "^4.1.10"
   }
 }

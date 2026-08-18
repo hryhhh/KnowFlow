@@ -7,6 +7,7 @@ import {
   Layers,
   Search,
   MessageSquare,
+  Settings2,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { to: "chunks", label: "切片管理", icon: Layers },
   { to: "retrieval", label: "知识检索", icon: Search },
   { to: "chat", label: "知识问答", icon: MessageSquare },
+  { to: "api-test", label: "API 测试", icon: Settings2 },
 ];
 
 export default function Sidebar() {

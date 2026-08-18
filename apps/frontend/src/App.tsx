@@ -8,6 +8,7 @@ import ChunkList from "./pages/Chunk/ChunkList";
 import KbChunkList from "./pages/Chunk/KbChunkList";
 import RetrievalPage from "./pages/Retrieval/RetrievalPage";
 import ChatPage from "./pages/Chat/ChatPage";
+import ApiTestPage from "./pages/ApiTest/ApiTestPage";
 import { useKbStore } from "./stores/kb-store";
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
           element={<RetrievalPage />}
         />
         <Route path="knowledge-bases/:kbId/chat" element={<ChatPage />} />
+        <Route path="knowledge-bases/:kbId/api-test" element={<ApiTestPage />} />
       </Route>
     </Routes>
   );

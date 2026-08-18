@@ -40,3 +40,8 @@ apps/server/uploads/
 *.png
 uploads/
 *.traineddata
+.last-run.json
+
+# Test results
+test-results/
+**/test-results/

@@ -12,6 +12,7 @@ export { getEmbeddings, embedDocuments, embedQuery } from "./embeddings/openai-e
 // Stores
 export {
   createPGVectorStore,
+  ensureCachedPGVectorStore,
   addDocumentsToPG,
   searchSimilarityWithScore,
 } from "./stores/pgvector-store.js";
@@ -25,7 +26,7 @@ export { similaritySearch, type VectorStoreLike } from "./retrievers/similarity-
 export { hybridSearch } from "./retrievers/hybrid-retriever.js";
 
 // Rerankers
-export { rerank } from "./rerankers/cross-encoder-reranker.js";
+export { rerank } from "./rerankers/bi-encoder-reranker.js";
 
 // LLM
 export { streamChat, buildContext, DEFAULT_SYSTEM_PROMPT } from "./llm/chat-service.js";

@@ -25,6 +25,9 @@ const DEFAULT_TABLE_CONFIG: Required<Omit<PGVectorTableConfig, "tableName">> & {
   distanceStrategy: "cosine",
 };
 
+/** 按 DB 配置缓存 PGVectorStore 实例，避免每次检索新建连接 */
+const storeCache = new Map<string, PGVectorStore>();
+
 /**
  * 创建 PGVector 持久化向量库。
  */
@@ -53,6 +56,20 @@ export async function createPGVectorStore(
   };
 
   return PGVectorStore.initialize(embeddings, config);
+}
+
+/** 初始化并缓存 store */
+export async function ensureCachedPGVectorStore(
+  embeddings: OpenAIEmbeddings,
+  dbConfig: PGConfig,
+  tableConfig?: PGVectorTableConfig,
+): Promise<PGVectorStore> {
+  const key = `${dbConfig.host}:${dbConfig.database}:${tableConfig?.tableName ?? DEFAULT_TABLE_CONFIG.tableName}`;
+  if (!storeCache.has(key)) {
+    const store = await createPGVectorStore(embeddings, dbConfig, tableConfig);
+    storeCache.set(key, store);
+  }
+  return storeCache.get(key)!;
 }
 
 /** 将切片写入向量库 */

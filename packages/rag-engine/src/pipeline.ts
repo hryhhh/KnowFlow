@@ -1,19 +1,18 @@
 import path from "node:path";
-import { OpenAIEmbeddings } from "@langchain/openai";
+
 import { loadDocument, type ParseStrategy, type LoadDocumentOptions } from "./loaders/index.js";
 import { splitDocuments } from "./splitters/recursive-splitter.js";
 import { splitMarkdownDocuments } from "./splitters/markdown-splitter.js";
 import { getEmbeddings } from "./embeddings/openai-embeddings.js";
 import {
-  createPGVectorStore,
+  ensureCachedPGVectorStore,
   addDocumentsToPG,
 } from "./stores/pgvector-store.js";
 import {
   similaritySearch,
-  type VectorStoreLike,
 } from "./retrievers/similarity-retriever.js";
 import { hybridSearch } from "./retrievers/hybrid-retriever.js";
-import { rerank } from "./rerankers/cross-encoder-reranker.js";
+import { rerank } from "./rerankers/bi-encoder-reranker.js";
 import { streamChat, buildContext } from "./llm/chat-service.js";
 import type {
   RAGPipelineConfig,
@@ -69,14 +68,41 @@ export async function ingestDocument(
     c.metadata = { ...c.metadata, kbId, source: path.basename(filePath) };
   });
 
-  // 4. 向量化 + 存储
+  // 4. 向量化 + 存储（缓存 store 复用连接）
   const embeddings = getEmbeddings(config.embedding);
-  const store = await createPGVectorStore(embeddings, config.pg, {
+  const store = await ensureCachedPGVectorStore(embeddings, config.pg, {
     tableName: config.pgTableName,
   });
   await addDocumentsToPG(store, chunks);
 
   return { chunkCount: chunks.length, chunks };
+}
+
+/**
+ * 执行向量检索（混合或纯相似度），过滤低质量结果并可选重排。
+ */
+async function performSearch(
+  query: string,
+  filter: { kbId: string },
+  params: SearchParams,
+  config: RAGPipelineConfig,
+): Promise<RetrievalResult[]> {
+  const embeddings = getEmbeddings(config.embedding);
+  const store = await ensureCachedPGVectorStore(embeddings, config.pg, {
+    tableName: config.pgTableName,
+  });
+
+  let results: RetrievalResult[] = params.useReranker
+    ? await hybridSearch({ ...params, query, filter }, store, config.embedding)
+    : await similaritySearch({ ...params, query, filter }, store, config.embedding);
+
+  results = results.filter((r) => r.score >= params.minScore);
+
+  if (params.useReranker && results.length > 0) {
+    results = await rerank(query, results, config.embedding, { topK: params.topK });
+  }
+
+  return results;
 }
 
 /**
@@ -88,24 +114,7 @@ export async function retrieve(
   params: SearchParams,
   config: RAGPipelineConfig,
 ): Promise<RetrievalResult[]> {
-  const embeddings = getEmbeddings(config.embedding);
-  const store: VectorStoreLike = await createPGVectorStore(embeddings, config.pg, {
-    tableName: config.pgTableName,
-  });
-
-  const filter = { kbId };
-
-  let results: RetrievalResult[] = params.useReranker
-    ? await hybridSearch({ ...params, query, filter }, store, config.embedding)
-    : await similaritySearch({ ...params, query, filter }, store, config.embedding);
-
-  results = results.filter((r) => r.score >= params.minScore);
-
-  if (params.useReranker && results.length > 0) {
-    results = await rerank({ query, results, topK: params.topK });
-  }
-
-  return results;
+  return performSearch(query, { kbId }, params, config);
 }
 
 /**
@@ -119,26 +128,7 @@ export async function retrieveAndChat(
   config: RAGPipelineConfig,
   callbacks: StreamCallbacks,
 ): Promise<void> {
-  const embeddings = getEmbeddings(config.embedding);
-  const store: VectorStoreLike = await createPGVectorStore(embeddings, config.pg, {
-    tableName: config.pgTableName,
-  });
-
-  const filter = { kbId };
-
-  let results: RetrievalResult[] = params.useReranker
-    ? await hybridSearch(
-        { ...params, query, filter },
-        store,
-        config.embedding,
-      )
-    : await similaritySearch(
-        { ...params, query, filter },
-        store,
-        config.embedding,
-      );
-
-  results = results.filter((r) => r.score >= params.minScore);
+  const results = await performSearch(query, { kbId }, params, config);
 
   // 推送引用来源
   const sources: SourceRef[] = results.map((r) => ({
@@ -147,11 +137,6 @@ export async function retrieveAndChat(
     score: r.score,
   }));
   callbacks.onSources(sources);
-
-  // 可选重排序
-  if (params.useReranker && results.length > 0) {
-    results = await rerank({ query, results, topK: params.topK });
-  }
 
   const context = buildContext(results);
   await streamChat(

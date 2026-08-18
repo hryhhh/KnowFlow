@@ -36,7 +36,14 @@
       "Read(//home/hhhry/**)",
       "Bash(grep -v \".md$\")",
       "Bash(grep -v \".json$\")",
-      "Bash(grep -v \".yaml$\")"
+      "Bash(grep -v \".yaml$\")",
+      "Bash(awk '{print $1, $2, $9, $11}')",
+      "Bash(cat /proc/741371/cmdline 2>/dev/null | tr '\\\\0' ' '; echo; cat /proc/374918/cmdline 2>/dev/null | tr '\\\\0' ' ')",
+      "Read(//proc/741371/**)",
+      "Read(//proc/374918/**)",
+      "Bash(ps -p 741371 -o pid,ppid,cmd,etime --no-headers)",
+      "Bash(ps -p 338469,374918,741371 -o pid,ppid,etime,cmd --no-headers)",
+      "Bash(kill 338469 374918)"
     ]
   }
 }
