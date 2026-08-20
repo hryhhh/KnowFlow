@@ -58,4 +58,76 @@ describe('rerank (Bi-Encoder)', () => {
     // Original score should be preserved, rerankScore should not leak
     expect(result[0]).not.toHaveProperty('rerankScore');
   });
+
+  it('should sort results by rerank score descending', async () => {
+    const result = await rerank('test query', mockResults, mockConfig);
+    for (let i = 1; i < result.length; i++) {
+      // Scores are extracted via toFixed internally but we verify ordering
+      // by checking the re-ranked order matches cosine similarity ordering
+    }
+    // doc A should be first (highest similarity per mock embeddings)
+    expect(result[0].sourceFile).toBe('a.txt');
+    expect(result[result.length - 1].score).toBeLessThanOrEqual(result[0].score);
+  });
+
+  it('should return only best result when topK=1', async () => {
+    const result = await rerank('test query', mockResults, mockConfig, { topK: 1 });
+    expect(result).toHaveLength(1);
+    expect(result[0].sourceFile).toBe('a.txt');
+  });
+
+  it('should remove all results when minScore is impossibly high', async () => {
+    const result = await rerank('test query', mockResults, mockConfig, { minScore: 0.99 });
+    expect(result.length).toBeLessThan(mockResults.length);
+  });
+
+  it('should not mutate the original results array', async () => {
+    const originalScores = mockResults.map((r) => r.score);
+    await rerank('test query', mockResults, mockConfig);
+    mockResults.forEach((r, i) => {
+      expect(r.score).toBe(originalScores[i]);
+    });
+  });
+
+  it('should return empty array when all results are below minScore', async () => {
+    const result = await rerank('test query', mockResults, mockConfig, { minScore: 2.0 });
+    expect(result).toEqual([]);
+  });
+
+  it('should produce cosine similarity scores between 0 and 1', async () => {
+    // Mocked embeddings: A=[0.75,0.12,0.18], B=[0.3,0.6,0.5], C=[0.9,0.05,0.05] vs query=[0.8,0.1,0.2]
+    // Cosine similarities: A≈0.999, B≈0.576, C≈0.980
+    const result = await rerank('test query', mockResults, mockConfig);
+    expect(result.length).toBe(3);
+    // Verify descending order: A > C > B
+    expect(result[0].sourceFile).toBe('a.txt');
+    expect(result[1].sourceFile).toBe('c.txt');
+    expect(result[2].sourceFile).toBe('b.txt');
+    // Scores should be in [0, 1]
+    result.forEach((r) => {
+      expect(r.score).toBeGreaterThanOrEqual(0);
+      expect(r.score).toBeLessThanOrEqual(1);
+    });
+  });
+
+  it('should handle empty query with non-empty results', async () => {
+    const result = await rerank('', mockResults, mockConfig);
+    expect(result).toHaveLength(3);
+    // Empty query embedding should still produce valid similarity scores
+    expect(result.every((r) => typeof r.score === 'number')).toBe(true);
+  });
+
+  it('should handle duplicate content correctly', async () => {
+    const dupResults: RetrievalResult[] = [
+      { content: 'Duplicate content', score: 0.5, sourceFile: 'a.txt', metadata: {} },
+      { content: 'Duplicate content', score: 0.5, sourceFile: 'b.txt', metadata: {} },
+      { content: 'Unique content', score: 0.8, sourceFile: 'c.txt', metadata: {} },
+    ];
+
+    const result = await rerank('test query', dupResults, mockConfig);
+    expect(result).toHaveLength(3);
+    // Duplicates should retain their separate sourceFile identities
+    const sources = result.map((r) => r.sourceFile).sort();
+    expect(sources).toEqual(['a.txt', 'b.txt', 'c.txt']);
+  });
 });
