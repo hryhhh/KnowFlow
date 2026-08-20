@@ -5,14 +5,17 @@ WORKDIR /app
 RUN corepack enable
 
 # 仅复制依赖清单以利用层缓存
-COPY pnpm-workspace.yaml package.json tsconfig.base.json ./
-COPY packages/knowledge-engine/package.json packages/knowledge-engine/package.json
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
+COPY packages/rag-engine/package.json packages/rag-engine/package.json
+COPY packages/agents/package.json packages/agents/package.json
 COPY apps/server/package.json apps/server/package.json
-RUN pnpm install --no-frozen-lockfile
+ENV CI=true
+RUN pnpm install --frozen-lockfile
 
 # 复制全部源码并构建
 COPY . .
 RUN pnpm --filter @knowbase-x/rag-engine build
+RUN pnpm --filter @knowbase-x/agents build
 RUN pnpm --filter @knowbase-x/server build
 
 ENV NODE_ENV=production

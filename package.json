@@ -9,7 +9,16 @@
     "start:dev": "pnpm --filter @knowbase-x/rag-engine build && pnpm --filter @knowbase-x/server start:dev",
     "start:frontend": "pnpm --filter @knowbase-x/frontend dev",
     "infra:up": "docker compose up -d",
-    "infra:down": "docker compose down"
+    "infra:down": "docker compose down",
+    "test": "pnpm --filter @knowbase-x/agents test && pnpm --filter @knowbase-x/rag-engine test && pnpm --filter @knowbase-x/server test",
+    "test:watch": "pnpm --filter @knowbase-x/agents test --watch && pnpm --filter @knowbase-x/rag-engine test --watch && pnpm --filter @knowbase-x/server test --watch",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,cjs,json,md,yml,yaml,css,scss}\" --ignore-path .gitignore",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,cjs,json,md,yml,yaml,css,scss}\" --ignore-path .gitignore",
+    "infra:test:up": "docker compose -f docker-compose.test.yml up -d",
+    "infra:test:down": "docker compose -f docker-compose.test.yml down -v",
+    "test:integration": "docker compose -f docker-compose.test.yml up -d && pnpm --filter @knowbase-x/server test:integration && docker compose -f docker-compose.test.yml down -v",
+    "test:ci": "pnpm test && pnpm format:check",
+    "prepare": "husky"
   },
   "keywords": [
     "knowledge",
@@ -21,6 +30,9 @@
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "@types/node": "^26.2.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
+    "prettier": "^3.9.6",
     "typescript": "5.7.3",
     "vitest": "^4.1.10"
   }

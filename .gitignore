@@ -45,3 +45,6 @@ uploads/
 # Test results
 test-results/
 **/test-results/
+
+# Worktrees (development branches)
+test-worktree/

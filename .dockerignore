@@ -1,0 +1,17 @@
+node_modules
+**/node_modules
+.pnpm-store
+**/.pnpm-store
+.git
+.claude
+.playwright-mcp
+**/dist
+**/*.tsbuildinfo
+uploads
+**/uploads
+.env
+.env.*
+!.env.example
+coverage
+test-results
+**/test-results

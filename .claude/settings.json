@@ -43,7 +43,10 @@
       "Read(//proc/374918/**)",
       "Bash(ps -p 741371 -o pid,ppid,cmd,etime --no-headers)",
       "Bash(ps -p 338469,374918,741371 -o pid,ppid,etime,cmd --no-headers)",
-      "Bash(kill 338469 374918)"
+      "Bash(kill 338469 374918)",
+      "Bash(# Check if these are inside containers or on host *)",
+      "Read(//proc/482735/**)",
+      "Bash(docker network *)"
     ]
   }
 }

@@ -1,5 +1,4 @@
 # KnowBase X — 基础设施 (PostgreSQL + pgvector + Redis + MinerU)
-version: '3.8'
 
 services:
   postgres-vector:
@@ -7,7 +6,7 @@ services:
     container_name: kb-pgvector
     restart: unless-stopped
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - '${POSTGRES_PORT:-5433}:5432'
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
@@ -16,7 +15,7 @@ services:
       - pgvector_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: [ 'CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres}' ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,15 +27,71 @@ services:
     container_name: kb-redis
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - '${REDIS_PORT:-6379}:6379'
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ 'CMD', 'redis-cli', 'ping' ]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - kb-network
+
+  server:
+    profiles: [ 'app' ]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.server
+    container_name: kb-server
+    restart: unless-stopped
+    ports:
+      - '${SERVER_PORT:-3000}:3000'
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_HOST: postgres-vector
+      DATABASE_PORT: '5432'
+      DATABASE_USER: ${POSTGRES_USER:-postgres}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-change-me-in-production}
+      DATABASE_NAME: ${POSTGRES_DB:-knowledge_rag}
+      DATABASE_SSL: ${DATABASE_SSL:-false}
+      REDIS_HOST: redis
+      REDIS_PORT: '${REDIS_PORT:-6379}'
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_BASE_URL: ${LLM_BASE_URL}
+      LLM_MODEL: ${LLM_MODEL:-qwen3.7-plus}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-v4}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1024}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-100}
+      DEFAULT_CHUNK_SIZE: ${DEFAULT_CHUNK_SIZE:-1000}
+      DEFAULT_CHUNK_OVERLAP: ${DEFAULT_CHUNK_OVERLAP:-200}
+      DEFAULT_TOP_K: ${DEFAULT_TOP_K:-10}
+      DEFAULT_MIN_SCORE: ${DEFAULT_MIN_SCORE:-0.70}
+      DEFAULT_DENSE_WEIGHT: ${DEFAULT_DENSE_WEIGHT:-0.50}
+      API_KEY_PREFIX: ${API_KEY_PREFIX:-ek_}
+    depends_on:
+      postgres-vector:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - kb-network
+    volumes:
+      - uploads_data:/app/apps/server/uploads
+
+  frontend:
+    profiles: [ 'app' ]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: kb-frontend
+    restart: unless-stopped
+    ports:
+      - '${FRONTEND_PORT:-5173}:80'
+    depends_on:
+      - server
     networks:
       - kb-network
 
@@ -52,11 +107,11 @@ services:
     image: ${MINERU_IMAGE:-kb-mineru:local}
     container_name: kb-mineru-api
     restart: unless-stopped
-    profiles: ["mineru-cpu"]
-    entrypoint: ["mineru-api"]
-    command: ["--host", "0.0.0.0", "--port", "8000"]
+    profiles: [ 'mineru-cpu' ]
+    entrypoint: [ 'mineru-api' ]
+    command: [ '--host', '0.0.0.0', '--port', '8000' ]
     ports:
-      - "${MINERU_PORT:-8000}:8000"
+      - '${MINERU_PORT:-8000}:8000'
     environment:
       MINERU_MODEL_SOURCE: ${MINERU_MODEL_SOURCE:-local}
       MINERU_BACKEND: ${MINERU_BACKEND:-pipeline}
@@ -64,7 +119,7 @@ services:
     volumes:
       - mineru_models:/root/.cache/huggingface/hub
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      test: [ 'CMD-SHELL', 'curl -f http://localhost:8000/health || exit 1' ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -76,9 +131,9 @@ services:
     image: ${MINERU_IMAGE:-kb-mineru:local}
     container_name: kb-mineru-api-gpu
     restart: unless-stopped
-    profiles: ["mineru-gpu"]
+    profiles: [ 'mineru-gpu' ]
     ports:
-      - "${MINERU_PORT:-8000}:8000"
+      - '${MINERU_PORT:-8000}:8000'
     environment:
       MINERU_MODEL_SOURCE: ${MINERU_MODEL_SOURCE:-local}
       MINERU_BACKEND: ${MINERU_BACKEND:-hybrid-engine}
@@ -90,9 +145,9 @@ services:
           devices:
             - driver: nvidia
               count: ${MINERU_GPU_COUNT:-1}
-              capabilities: [gpu]
+              capabilities: [ gpu ]
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      test: [ 'CMD-SHELL', 'curl -f http://localhost:8000/health || exit 1' ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -104,6 +159,8 @@ volumes:
   pgvector_data:
     driver: local
   redis_data:
+    driver: local
+  uploads_data:
     driver: local
   mineru_models:
     driver: local
