@@ -1,4 +1,4 @@
-import type { RetrievalResult } from "../types.js";
+import type { RetrievalResult } from '../types.js';
 
 export interface RerankInput {
   query: string;

@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from 'axios';
 import type {
   KbListItem,
   DocListItem,
@@ -12,9 +12,9 @@ import type {
   ActivityItem,
   ChatMessage,
   SessionListItem,
-} from "../types";
+} from '../types';
 
-const api = axios.create({ baseURL: "/api" });
+const api = axios.create({ baseURL: '/api' });
 
 interface Resp<T> {
   code: number;
@@ -23,9 +23,9 @@ interface Resp<T> {
 
 export const kbApi = {
   list: (search?: string) =>
-    api.get<Resp<KbListItem[]>>("/knowledge-bases", { params: { search } }),
+    api.get<Resp<KbListItem[]>>('/knowledge-bases', { params: { search } }),
   create: (body: { name: string; description?: string; type?: string }) =>
-    api.post<Resp<KbListItem>>("/knowledge-bases", body),
+    api.post<Resp<KbListItem>>('/knowledge-bases', body),
   update: (id: string, body: Partial<KbListItem>) =>
     api.put<Resp<KbListItem>>(`/knowledge-bases/${id}`, body),
   remove: (id: string) => api.delete(`/knowledge-bases/${id}`),
@@ -38,13 +38,11 @@ export const docApi = {
     }),
   upload: (kbId: string, file: File, processStrategy?: string) => {
     const form = new FormData();
-    form.append("file", file);
-    if (processStrategy) form.append("processStrategy", processStrategy);
-    return api.post<Resp<DocListItem>>(
-      `/knowledge-bases/${kbId}/documents`,
-      form,
-      { headers: { "Content-Type": "multipart/form-data" } },
-    );
+    form.append('file', file);
+    if (processStrategy) form.append('processStrategy', processStrategy);
+    return api.post<Resp<DocListItem>>(`/knowledge-bases/${kbId}/documents`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
   },
   remove: (kbId: string, docId: string) =>
     api.delete(`/knowledge-bases/${kbId}/documents/${docId}`),
@@ -52,15 +50,13 @@ export const docApi = {
 
 export const chunkApi = {
   byDoc: (docId: string, pageSize = 10, page = 1) =>
-    api.get<Resp<{ total: number; items: ChunkCard[] }>>(
-      `/documents/${docId}/chunks`,
-      { params: { pageSize, page } },
-    ),
+    api.get<Resp<{ total: number; items: ChunkCard[] }>>(`/documents/${docId}/chunks`, {
+      params: { pageSize, page },
+    }),
   byKb: (kbId: string, pageSize = 10, page = 1) =>
-    api.get<Resp<{ total: number; items: ChunkCard[] }>>(
-      `/knowledge-bases/${kbId}/chunks`,
-      { params: { pageSize, page } },
-    ),
+    api.get<Resp<{ total: number; items: ChunkCard[] }>>(`/knowledge-bases/${kbId}/chunks`, {
+      params: { pageSize, page },
+    }),
   create: (docId: string, body: { content: string; title?: string }) =>
     api.post<Resp<ChunkCard>>(`/documents/${docId}/chunks`, body),
   update: (chunkId: string, body: { content: string; title?: string }) =>
@@ -70,40 +66,34 @@ export const chunkApi = {
 
 export const retrievalApi = {
   search: (kbId: string, query: string, params: SearchParams) =>
-    api.post<Resp<{ results: SearchResultItem[]; searchHistory: unknown[] }>>(
-      "/retrieval/search",
-      { kbId, query, ...params },
-    ),
+    api.post<Resp<{ results: SearchResultItem[]; searchHistory: unknown[] }>>('/retrieval/search', {
+      kbId,
+      query,
+      ...params,
+    }),
 };
 
 export const apiServiceApi = {
-  list: () => api.get<Resp<ApiServiceItem[]>>("/api-services"),
-  create: (body: {
-    serviceName: string;
-    description?: string;
-    kbId: string;
-    creator?: string;
-  }) => api.post<Resp<CreateApiResult>>("/api-services", body),
+  list: () => api.get<Resp<ApiServiceItem[]>>('/api-services'),
+  create: (body: { serviceName: string; description?: string; kbId: string; creator?: string }) =>
+    api.post<Resp<CreateApiResult>>('/api-services', body),
   remove: (id: string) => api.delete(`/api-services/${id}`),
 };
 
 export const dashboardApi = {
-  summary: () => api.get<Resp<DashboardSummary>>("/dashboard/summary"),
-  trends: () => api.get<Resp<TrendPoint[]>>("/dashboard/usage-trends"),
-  activities: () => api.get<Resp<{ items: ActivityItem[] }>>("/dashboard/recent-activities"),
+  summary: () => api.get<Resp<DashboardSummary>>('/dashboard/summary'),
+  trends: () => api.get<Resp<TrendPoint[]>>('/dashboard/usage-trends'),
+  activities: () => api.get<Resp<{ items: ActivityItem[] }>>('/dashboard/recent-activities'),
 };
 
 export const sessionApi = {
-  list: (kbId: string) =>
-    api.get<Resp<SessionListItem[]>>(`/chat/sessions`, { params: { kbId } }),
+  list: (kbId: string) => api.get<Resp<SessionListItem[]>>(`/chat/sessions`, { params: { kbId } }),
   create: (body: { kbId: string; firstMessage: string }) =>
     api.post<Resp<{ id: string; title: string; createdAt: string }>>(`/chat/sessions`, body),
   messages: (sessionId: string) =>
     api.get<Resp<ChatMessage[]>>(`/chat/sessions/${sessionId}/messages`),
-  remove: (sessionId: string) =>
-    api.delete(`/chat/sessions/${sessionId}`),
-  clearAll: (kbId: string) =>
-    api.delete(`/chat/sessions`, { params: { kbId } }),
+  remove: (sessionId: string) => api.delete(`/chat/sessions/${sessionId}`),
+  clearAll: (kbId: string) => api.delete(`/chat/sessions`, { params: { kbId } }),
 };
 
 export default api;

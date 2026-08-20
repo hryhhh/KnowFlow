@@ -1,7 +1,7 @@
-import type { Document } from "@langchain/core/documents";
+import type { Document } from '@langchain/core/documents';
 
 /** 文档类型 */
-export type FileType = "csv" | "xlsx" | "pdf" | "word";
+export type FileType = 'csv' | 'xlsx' | 'pdf' | 'word';
 
 /** 文档加载结果 */
 export interface LoadResult {

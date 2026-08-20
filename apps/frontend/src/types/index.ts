@@ -13,7 +13,7 @@ export interface DocListItem {
   id: string;
   kbId: string;
   name: string;
-  status: "pending" | "processing" | "success" | "failed";
+  status: 'pending' | 'processing' | 'success' | 'failed';
   strategy: string;
   chunkCount: number;
   importMethod: string;
@@ -69,7 +69,7 @@ export interface CreateApiResult {
 }
 
 export interface ChatMessage {
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   content: string;
   sources?: SourceRef[];
   createdAt?: string;
@@ -84,7 +84,7 @@ export interface SessionListItem {
 }
 
 export interface SseEvent {
-  type: "sources" | "token" | "done" | "error";
+  type: 'sources' | 'token' | 'done' | 'error';
   value: unknown;
 }
 

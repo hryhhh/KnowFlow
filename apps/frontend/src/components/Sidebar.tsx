@@ -1,5 +1,5 @@
-import { NavLink } from "react-router-dom";
-import { useKbStore } from "../stores/kb-store";
+import { NavLink } from 'react-router-dom';
+import { useKbStore } from '../stores/kb-store';
 import {
   LayoutDashboard,
   Database,
@@ -8,16 +8,16 @@ import {
   Search,
   MessageSquare,
   Settings2,
-} from "lucide-react";
+} from 'lucide-react';
 
 const NAV_ITEMS = [
-  { to: "/dashboard", label: "工作台", icon: LayoutDashboard },
-  { to: "/knowledge-bases", label: "知识库管理", icon: Database },
-  { to: "documents", label: "文档管理", icon: FileText },
-  { to: "chunks", label: "切片管理", icon: Layers },
-  { to: "retrieval", label: "知识检索", icon: Search },
-  { to: "chat", label: "知识问答", icon: MessageSquare },
-  { to: "api-test", label: "API 测试", icon: Settings2 },
+  { to: '/dashboard', label: '工作台', icon: LayoutDashboard },
+  { to: '/knowledge-bases', label: '知识库管理', icon: Database },
+  { to: 'documents', label: '文档管理', icon: FileText },
+  { to: 'chunks', label: '切片管理', icon: Layers },
+  { to: 'retrieval', label: '知识检索', icon: Search },
+  { to: 'chat', label: '知识问答', icon: MessageSquare },
+  { to: 'api-test', label: 'API 测试', icon: Settings2 },
 ];
 
 export default function Sidebar() {
@@ -28,19 +28,20 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        KnowBase X
-        <span>LangChain.js 实践台</span>
+        KnowBase X<span>LangChain.js 实践台</span>
       </div>
       <nav className="sidebar-nav">
         {NAV_ITEMS.map((it) => {
-          const to = it.to.startsWith("/") ? it.to : (base ? `${base}/${it.to}` : "#");
+          const to = it.to.startsWith('/') ? it.to : base ? `${base}/${it.to}` : '#';
           const disabled = !base;
           return (
             <NavLink
               key={it.label}
-              to={disabled ? "#" : to}
+              to={disabled ? '#' : to}
               className={({ isActive }) =>
-                "nav-item" + (isActive && !disabled ? " active" : "") + (disabled ? " disabled" : "")
+                'nav-item' +
+                (isActive && !disabled ? ' active' : '') +
+                (disabled ? ' disabled' : '')
               }
               onClick={(e) => {
                 if (disabled) e.preventDefault();
@@ -54,7 +55,7 @@ export default function Sidebar() {
       </nav>
       <div className="sidebar-stats">
         <div>
-          当前知识库：<b style={{ color: "#fff" }}>{current ? current.name : "未选择"}</b>
+          当前知识库：<b style={{ color: '#fff' }}>{current ? current.name : '未选择'}</b>
         </div>
         {current && (
           <>

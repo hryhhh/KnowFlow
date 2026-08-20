@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import { kbApi } from "../../services/api";
-import { useKbStore } from "../../stores/kb-store";
-import type { KbListItem } from "../../types";
+import { useState, useEffect } from 'react';
+import { kbApi } from '../../services/api';
+import { useKbStore } from '../../stores/kb-store';
+import type { KbListItem } from '../../types';
 
 export default function EditKBModal({
   onClose,
@@ -10,8 +10,8 @@ export default function EditKBModal({
   onClose: () => void;
   kb?: KbListItem | null;
 }) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const fetch = useKbStore((s) => s.fetch);
 
   useEffect(() => {
@@ -34,10 +34,14 @@ export default function EditKBModal({
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>编辑知识库</h3>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose}>
+            ×
+          </button>
         </div>
         <div className="field">
-          <label>知识库名称 <span className="required">*</span></label>
+          <label>
+            知识库名称 <span className="required">*</span>
+          </label>
           <input
             className="input"
             value={name}

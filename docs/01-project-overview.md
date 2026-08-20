@@ -8,25 +8,25 @@ KnowBase X 是一个**检索增强生成（RAG）**驱动的智能知识库系�
 
 ### 核心工作流（4 步）
 
-| 步骤 | 名称 | 说明 |
-|------|------|------|
-| 第 1 步 | 创建知识库 | 按业务场景组织知识库，沉淀可检索资料 |
-| 第 2 步 | 上传文档 | CSV / XLSX / PDF / Word → Loader 解析 → Splitter 切片 |
-| 第 3 步 | 检索问答 | 调试 topK、阈值、切片命中与答案引用，支持流式输出 |
-| 第 4 步 | API 调用 | 通过 SSE 接口集成到真实业务流程 |
+| 步骤    | 名称       | 说明                                                  |
+| ------- | ---------- | ----------------------------------------------------- |
+| 第 1 步 | 创建知识库 | 按业务场景组织知识库，沉淀可检索资料                  |
+| 第 2 步 | 上传文档   | CSV / XLSX / PDF / Word → Loader 解析 → Splitter 切片 |
+| 第 3 步 | 检索问答   | 调试 topK、阈值、切片命中与答案引用，支持流式输出     |
+| 第 4 步 | API 调用   | 通过 SSE 接口集成到真实业务流程                       |
 
 ## 二、技术栈
 
-| 层级 | 技术 | 版本/说明 |
-|------|------|-----------|
-| 前端框架 | React 19 + Vite 8 | SPA 单页应用 |
-| 后端框架 | NestJS 11 | Express 平台，模块化架构 |
-| RAG 引擎 | LangChain.js (@langchain/*) | 文档加载 → 切片 → Embedding → 向量存储 → 检索 |
-| 向量数据库 | PostgreSQL + pgvector (pg16) | 持久化向量存储 |
-| 缓存层 | Redis 8 | 会话缓存 / 任务队列 |
-| LLM 服务 | OpenAI 兼容接口 (阿里云 MaaS) | qwen3.7-plus / text-embedding-v4 |
-| 包管理 | pnpm workspace | Monorepo 管理 |
-| 语言 | TypeScript 6+ | 全栈 TS |
+| 层级       | 技术                          | 版本/说明                                     |
+| ---------- | ----------------------------- | --------------------------------------------- |
+| 前端框架   | React 19 + Vite 8             | SPA 单页应用                                  |
+| 后端框架   | NestJS 11                     | Express 平台，模块化架构                      |
+| RAG 引擎   | LangChain.js (@langchain/*)   | 文档加载 → 切片 → Embedding → 向量存储 → 检索 |
+| 向量数据库 | PostgreSQL + pgvector (pg16)  | 持久化向量存储                                |
+| 缓存层     | Redis 8                       | 会话缓存 / 任务队列                           |
+| LLM 服务   | OpenAI 兼容接口 (阿里云 MaaS) | qwen3.7-plus / text-embedding-v4              |
+| 包管理     | pnpm workspace                | Monorepo 管理                                 |
+| 语言       | TypeScript 6+                 | 全栈 TS                                       |
 
 ## 三、系统架构
 
@@ -184,14 +184,14 @@ knowbase-x/
 
 ## 六、开发计划
 
-| 阶段 | 内容 | 产物 |
-|------|------|------|
-| Phase 0 | 设计文档 | `docs/*.md` (当前阶段) |
-| Phase 1 | 项目脚手架 | monorepo 结构、依赖安装、基础配置 |
-| Phase 2 | RAG Engine 核心 | 文档加载、切片、向量化、向量存储、检索 |
-| Phase 3 | 后端 API | NestJS 模块、数据库表、RESTful 接口、SSE |
-| Phase 4 | 前端 UI | 页面路由、组件、交互逻辑、状态管理 |
-| Phase 5 | 集联调 & 部署 | 前后端联调、Docker 部署、API 文档 |
+| 阶段    | 内容            | 产物                                     |
+| ------- | --------------- | ---------------------------------------- |
+| Phase 0 | 设计文档        | `docs/*.md` (当前阶段)                   |
+| Phase 1 | 项目脚手架      | monorepo 结构、依赖安装、基础配置        |
+| Phase 2 | RAG Engine 核心 | 文档加载、切片、向量化、向量存储、检索   |
+| Phase 3 | 后端 API        | NestJS 模块、数据库表、RESTful 接口、SSE |
+| Phase 4 | 前端 UI         | 页面路由、组件、交互逻辑、状态管理       |
+| Phase 5 | 集联调 & 部署   | 前后端联调、Docker 部署、API 文档        |
 
 ## 七、参考资料
 

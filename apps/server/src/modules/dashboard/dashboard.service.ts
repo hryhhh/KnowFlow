@@ -1,10 +1,10 @@
-import { Injectable } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { KnowledgeBase } from "../knowledge-base/entities/knowledge-base.entity";
-import { Document } from "../document/entities/document.entity";
-import { Chunk } from "../chunk/entities/chunk.entity";
-import { UsageLogService } from "../usage/usage-log.service";
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { KnowledgeBase } from '../knowledge-base/entities/knowledge-base.entity';
+import { Document } from '../document/entities/document.entity';
+import { Chunk } from '../chunk/entities/chunk.entity';
+import { UsageLogService } from '../usage/usage-log.service';
 
 @Injectable()
 export class DashboardService {
@@ -23,8 +23,8 @@ export class DashboardService {
       this.kbRepo.count(),
       this.docRepo.count(),
       this.chunkRepo.count(),
-      this.docRepo.count({ where: { status: "processing" } }),
-      this.docRepo.count({ where: { status: "failed" } }),
+      this.docRepo.count({ where: { status: 'processing' } }),
+      this.docRepo.count({ where: { status: 'failed' } }),
     ]);
     return {
       knowledgeBaseCount: kbCount,
@@ -43,23 +43,23 @@ export class DashboardService {
 
   async getRecentActivities() {
     const [kbs, docs] = await Promise.all([
-      this.kbRepo.find({ order: { createdAt: "DESC" }, take: 5 }),
-      this.docRepo.find({ order: { createdAt: "DESC" }, take: 5 }),
+      this.kbRepo.find({ order: { createdAt: 'DESC' }, take: 5 }),
+      this.docRepo.find({ order: { createdAt: 'DESC' }, take: 5 }),
     ]);
     const kbItems = kbs.map((kb) => ({
       id: kb.id,
       title: `创建知识库「${kb.name}」`,
-      type: "kb",
-      agent: "系统",
+      type: 'kb',
+      agent: '系统',
       duration: 0,
-      status: "success",
+      status: 'success',
       createdAt: kb.createdAt.toISOString(),
     }));
     const docItems = docs.map((d) => ({
       id: d.id,
       title: `上传文档「${d.name}」`,
-      type: "doc",
-      agent: d.status === "success" ? "Loader" : "系统",
+      type: 'doc',
+      agent: d.status === 'success' ? 'Loader' : '系统',
       duration: 0,
       status: d.status,
       createdAt: d.createdAt.toISOString(),

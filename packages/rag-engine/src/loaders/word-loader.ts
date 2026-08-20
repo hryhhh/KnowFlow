@@ -1,5 +1,5 @@
-import { DocxLoader } from "@langchain/community/document_loaders/fs/docx";
-import type { Document } from "@langchain/core/documents";
+import { DocxLoader } from '@langchain/community/document_loaders/fs/docx';
+import type { Document } from '@langchain/core/documents';
 
 /**
  * 解析 Word (.docx) 文件。

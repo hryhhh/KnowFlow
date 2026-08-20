@@ -5,8 +5,8 @@
 templates:
   # ==================== 统计类 ====================
   - id: kb_stats
-    description: "统计知识库信息（总数、状态分布）"
-    queryTemplate: "SELECT COUNT(*) AS total FROM knowledge_bases WHERE status = $1"
+    description: '统计知识库信息（总数、状态分布）'
+    queryTemplate: 'SELECT COUNT(*) AS total FROM knowledge_bases WHERE status = $1'
     params:
       - name: status
         type: string
@@ -14,29 +14,29 @@ templates:
     requiredFields: []
 
   - id: doc_stats
-    description: "统计文档信息（总数、按状态分布）"
-    queryTemplate: "SELECT COUNT(*) AS total FROM documents WHERE \"kbId\" = $1 AND status = $2"
+    description: '统计文档信息（总数、按状态分布）'
+    queryTemplate: 'SELECT COUNT(*) AS total FROM documents WHERE "kbId" = $1 AND status = $2'
     params:
       - name: kbId
         type: uuid
-        description: "知识库 ID"
+        description: '知识库 ID'
       - name: status
         type: string
         description: "文档状态，默认 'processed'"
-    requiredFields: ["kbId"]
+    requiredFields: ['kbId']
 
   - id: chunk_stats
-    description: "统计切片信息（总数）"
-    queryTemplate: "SELECT COUNT(*) AS total FROM chunks WHERE \"kbId\" = $1"
+    description: '统计切片信息（总数）'
+    queryTemplate: 'SELECT COUNT(*) AS total FROM chunks WHERE "kbId" = $1'
     params:
       - name: kbId
         type: uuid
-        description: "知识库 ID"
-    requiredFields: ["kbId"]
+        description: '知识库 ID'
+    requiredFields: ['kbId']
 
   # ==================== 列表类 ====================
   - id: doc_list
-    description: "列出知识库下的文档"
+    description: '列出知识库下的文档'
     queryTemplate: |
       SELECT id, name, status, "chunkCount", "createdAt"
       FROM documents
@@ -46,14 +46,14 @@ templates:
     params:
       - name: kbId
         type: uuid
-        description: "知识库 ID"
+        description: '知识库 ID'
       - name: limit
         type: integer
-        description: "返回数量上限"
-    requiredFields: ["kbId"]
+        description: '返回数量上限'
+    requiredFields: ['kbId']
 
   - id: kb_list
-    description: "列出所有知识库"
+    description: '列出所有知识库'
     queryTemplate: |
       SELECT id, name, type, status, "createdAt"
       FROM knowledge_bases
@@ -62,12 +62,12 @@ templates:
     params:
       - name: limit
         type: integer
-        description: "返回数量上限"
+        description: '返回数量上限'
     requiredFields: []
 
   # ==================== 趋势/排行类 ====================
   - id: doc_creation_trend
-    description: "文档创建趋势（按周统计）"
+    description: '文档创建趋势（按周统计）'
     queryTemplate: |
       SELECT DATE_TRUNC('week', "createdAt") AS week, COUNT(*) AS count
       FROM documents
@@ -78,17 +78,17 @@ templates:
     params:
       - name: kbId
         type: uuid
-        description: "知识库 ID"
+        description: '知识库 ID'
       - name: since
         type: date
-        description: "起始日期"
+        description: '起始日期'
       - name: limit
         type: integer
-        description: "返回周数"
-    requiredFields: ["kbId"]
+        description: '返回周数'
+    requiredFields: ['kbId']
 
   - id: top_docs_by_chunks
-    description: "切片数最多的文档排行"
+    description: '切片数最多的文档排行'
     queryTemplate: |
       SELECT id, name, "chunkCount"
       FROM documents
@@ -98,8 +98,8 @@ templates:
     params:
       - name: kbId
         type: uuid
-        description: "知识库 ID"
+        description: '知识库 ID'
       - name: limit
         type: integer
-        description: "返回数量"
-    requiredFields: ["kbId"]
+        description: '返回数量'
+    requiredFields: ['kbId']

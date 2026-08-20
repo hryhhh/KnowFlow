@@ -1,7 +1,7 @@
-import { create } from "zustand";
-import type { ChatMessage, SourceRef, SearchParams, SessionListItem } from "../types";
-import { streamChat } from "../services/sse";
-import { sessionApi } from "../services/api";
+import { create } from 'zustand';
+import type { ChatMessage, SourceRef, SearchParams, SessionListItem } from '../types';
+import { streamChat } from '../services/sse';
+import { sessionApi } from '../services/api';
 
 interface ChatStore {
   // 会话列表
@@ -30,7 +30,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   sources: [],
   searchParams: {
     topK: 10,
-    minScore: 0.10,
+    minScore: 0.1,
     useReranker: false,
     denseWeight: 0.5,
   },
@@ -44,9 +44,17 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   createSession: async (kbId, firstMessage) => {
     const res = await sessionApi.create({ kbId, firstMessage });
     const newSession = res.data.data;
-    const displayTitle = newSession.title || "新会话";
+    const displayTitle = newSession.title || '新会话';
     set((s) => ({
-      sessions: [{ ...newSession, title: displayTitle, messageCount: 0, id: newSession.id } as SessionListItem, ...s.sessions],
+      sessions: [
+        {
+          ...newSession,
+          title: displayTitle,
+          messageCount: 0,
+          id: newSession.id,
+        } as SessionListItem,
+        ...s.sessions,
+      ],
       currentSessionId: newSession.id,
       messages: [],
       sources: [],
@@ -86,7 +94,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
 
     // 添加用户消息到本地状态
-    const userMsg: ChatMessage = { role: "user", content: query };
+    const userMsg: ChatMessage = { role: 'user', content: query };
     set((s) => ({
       messages: [...s.messages, userMsg],
       sources: [],
@@ -94,38 +102,44 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }));
 
     const params = get().searchParams;
-    let assistant = "";
+    let assistant = '';
     let sources: SourceRef[] = [];
 
-    const result = await streamChat(kbId, query, params, {
-      onSources: (s) => {
-        sources = s;
-        set({ sources: s });
+    const result = await streamChat(
+      kbId,
+      query,
+      params,
+      {
+        onSources: (s) => {
+          sources = s;
+          set({ sources: s });
+        },
+        onToken: (token) => {
+          assistant += token;
+          set((s) => {
+            const msgs = [...s.messages];
+            const last = msgs[msgs.length - 1];
+            if (last && last.role === 'assistant') {
+              msgs[msgs.length - 1] = { role: 'assistant', content: assistant, sources };
+            } else {
+              msgs.push({ role: 'assistant', content: assistant, sources });
+            }
+            return { messages: msgs };
+          });
+        },
+        onDone: () => set({ isStreaming: false }),
+        onError: (msg) => {
+          set((s) => ({
+            isStreaming: false,
+            messages: [
+              ...s.messages.slice(0, -1),
+              { role: 'assistant', content: `⚠️ ${msg}`, sources },
+            ],
+          }));
+        },
       },
-      onToken: (token) => {
-        assistant += token;
-        set((s) => {
-          const msgs = [...s.messages];
-          const last = msgs[msgs.length - 1];
-          if (last && last.role === "assistant") {
-            msgs[msgs.length - 1] = { role: "assistant", content: assistant, sources };
-          } else {
-            msgs.push({ role: "assistant", content: assistant, sources });
-          }
-          return { messages: msgs };
-        });
-      },
-      onDone: () => set({ isStreaming: false }),
-      onError: (msg) => {
-        set((s) => ({
-          isStreaming: false,
-          messages: [
-            ...s.messages.slice(0, -1),
-            { role: "assistant", content: `⚠️ ${msg}`, sources },
-          ],
-        }));
-      },
-    }, { sessionId });
+      { sessionId },
+    );
 
     // 更新会话的消息数量
     set((s) => ({
@@ -137,8 +151,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }));
   },
 
-  setParams: (params) =>
-    set((s) => ({ searchParams: { ...s.searchParams, ...params } })),
+  setParams: (params) => set((s) => ({ searchParams: { ...s.searchParams, ...params } })),
   reset: () =>
     set({
       messages: [],

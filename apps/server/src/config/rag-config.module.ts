@@ -1,5 +1,5 @@
-import { Global, Module } from "@nestjs/common";
-import { RAG_CONFIG, createRagConfig } from "./rag-config.provider";
+import { Global, Module } from '@nestjs/common';
+import { RAG_CONFIG, createRagConfig } from './rag-config.provider';
 
 @Global()
 @Module({

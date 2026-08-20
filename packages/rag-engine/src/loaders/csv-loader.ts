@@ -1,5 +1,5 @@
-import { CSVLoader } from "@langchain/community/document_loaders/fs/csv";
-import type { Document } from "@langchain/core/documents";
+import { CSVLoader } from '@langchain/community/document_loaders/fs/csv';
+import type { Document } from '@langchain/core/documents';
 
 export interface CSVLoadOptions {
   filePath: string;

@@ -57,26 +57,26 @@ SSE 流式返回 → 前端渲染
 
 ### 路由规则示例
 
-| 规则 | 匹配关键词 | 目标 Agent | 优先级 |
-|------|-----------|-----------|--------|
-| `kb-docs-strict` | 文档内容、资料内容、知识是什么 | ragflow | 100 |
-| `db-stats` | 多少/统计 + 客户/员工/订单等 | db-query | 90 |
-| `web-news` | 新闻、动态、热点 | web-search | 80 |
-| `ragflow-soft` | 有没有知识、怎么查 | ragflow | 30 |
+| 规则             | 匹配关键词                     | 目标 Agent | 优先级 |
+| ---------------- | ------------------------------ | ---------- | ------ |
+| `kb-docs-strict` | 文档内容、资料内容、知识是什么 | ragflow    | 100    |
+| `db-stats`       | 多少/统计 + 客户/员工/订单等   | db-query   | 90     |
+| `web-news`       | 新闻、动态、热点               | web-search | 80     |
+| `ragflow-soft`   | 有没有知识、怎么查             | ragflow    | 30     |
 
 > 完整规则见 [config/router.rules.yml](config/router.rules.yml)。  
 > 关键设计：`db-stats` 使用正向断言确保"多少"后紧跟业务实体词才触发，避免误路由。
 
 ## 技术栈
 
-| 层级 | 技术 |
-|------|------|
-| 前端 | React 19 + Vite + Ant Design + Zustand |
-| 后端 | NestJS 11 (Express) + TypeORM + PostgreSQL/pgvector |
-| RAG 引擎 | `packages/rag-engine` — 加载/切片/Embedding/向量存储/检索 |
-| Agent 编排 | `packages/agents` — IntentRouter / Dispatcher / Compose |
-| 文档解析 | MinerU（可选，CPU/GPU 双模式） |
-| 基础设施 | Docker Compose: PostgreSQL 16 + pgvector, Redis 8 |
+| 层级       | 技术                                                      |
+| ---------- | --------------------------------------------------------- |
+| 前端       | React 19 + Vite + Ant Design + Zustand                    |
+| 后端       | NestJS 11 (Express) + TypeORM + PostgreSQL/pgvector       |
+| RAG 引擎   | `packages/rag-engine` — 加载/切片/Embedding/向量存储/检索 |
+| Agent 编排 | `packages/agents` — IntentRouter / Dispatcher / Compose   |
+| 文档解析   | MinerU（可选，CPU/GPU 双模式）                            |
+| 基础设施   | Docker Compose: PostgreSQL 16 + pgvector, Redis 8         |
 
 ## 项目结构
 
@@ -133,18 +133,18 @@ pnpm start:frontend    # 另开终端：启动前端 (:5173)
 
 参考 [.env.example](.env.example)，主要配置项：
 
-| 变量 | 说明 | 必填 |
-|------|------|------|
-| `LLM_API_KEY` | LLM API 密钥 | ✅ |
-| `LLM_BASE_URL` | OpenAI 兼容接口地址 | ✅ |
-| `LLM_MODEL` | 模型名称（如 qwen3.7-plus） | ✅ |
-| `EMBEDDING_MODEL` | Embedding 模型 | ✅ |
-| `EMBEDDING_DIMENSIONS` | 向量维度（需与模型一致） | ✅ |
-| `DATABASE_PASSWORD` | PostgreSQL 密码 | ✅ |
-| `AGENTS_ENABLED` | 启用多 Agent 编排（`true`/`false`） | ❌ |
-| `AGENT_COMPOSE_STRATEGY` | 组合策略：`rag-priority` / `concat` / `llm-summarize` | ❌ |
-| `WEB_SEARCH_PROVIDER` | 联网搜索 Provider：`tavily` / `serper` | ❌ |
-| `WEB_SEARCH_API_KEY` | 搜索 API 密钥 | ❌ |
+| 变量                     | 说明                                                  | 必填 |
+| ------------------------ | ----------------------------------------------------- | ---- |
+| `LLM_API_KEY`            | LLM API 密钥                                          | ✅   |
+| `LLM_BASE_URL`           | OpenAI 兼容接口地址                                   | ✅   |
+| `LLM_MODEL`              | 模型名称（如 qwen3.7-plus）                           | ✅   |
+| `EMBEDDING_MODEL`        | Embedding 模型                                        | ✅   |
+| `EMBEDDING_DIMENSIONS`   | 向量维度（需与模型一致）                              | ✅   |
+| `DATABASE_PASSWORD`      | PostgreSQL 密码                                       | ✅   |
+| `AGENTS_ENABLED`         | 启用多 Agent 编排（`true`/`false`）                   | ❌   |
+| `AGENT_COMPOSE_STRATEGY` | 组合策略：`rag-priority` / `concat` / `llm-summarize` | ❌   |
+| `WEB_SEARCH_PROVIDER`    | 联网搜索 Provider：`tavily` / `serper`                | ❌   |
+| `WEB_SEARCH_API_KEY`     | 搜索 API 密钥                                         | ❌   |
 
 ## 多 Agent 编排
 
@@ -162,15 +162,15 @@ WEB_SEARCH_API_KEY=xxx
 
 ## 核心 API
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET/POST | `/api/knowledge-bases` | 知识库列表 / 创建 |
-| GET/POST/DELETE | `/api/knowledge-bases/:kbId/documents` | 文档管理 |
-| GET | `/api/knowledge-bases/:kbId/chunks` | 切片列表 |
-| POST | `/api/retrieval/search` | 知识检索 |
-| POST(SSE) | `/api/chat/stream` | 知识问答（流式） |
-| POST(SSE) | `/api/agents/routeStream` | Agent 路由（流式） |
-| GET | `/api/agents/rules/reload` | 热重载路由规则 |
+| 方法            | 路径                                   | 说明               |
+| --------------- | -------------------------------------- | ------------------ |
+| GET/POST        | `/api/knowledge-bases`                 | 知识库列表 / 创建  |
+| GET/POST/DELETE | `/api/knowledge-bases/:kbId/documents` | 文档管理           |
+| GET             | `/api/knowledge-bases/:kbId/chunks`    | 切片列表           |
+| POST            | `/api/retrieval/search`                | 知识检索           |
+| POST(SSE)       | `/api/chat/stream`                     | 知识问答（流式）   |
+| POST(SSE)       | `/api/agents/routeStream`              | Agent 路由（流式） |
+| GET             | `/api/agents/rules/reload`             | 热重载路由规则     |
 
 > SSE 事件类型：`trace_id` / `agent_start` / `sources` / `token` / `agent_done` / `done` / `error`
 

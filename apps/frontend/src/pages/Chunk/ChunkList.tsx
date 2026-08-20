@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import PageHeader from "../../components/PageHeader";
-import TopStepsBar from "../../components/TopStepsBar";
-import ChunkModal from "./ChunkModal";
-import { chunkApi } from "../../services/api";
-import type { ChunkCard } from "../../types";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import PageHeader from '../../components/PageHeader';
+import TopStepsBar from '../../components/TopStepsBar';
+import ChunkModal from './ChunkModal';
+import { chunkApi } from '../../services/api';
+import type { ChunkCard } from '../../types';
+import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 
 export default function ChunkList() {
   const { docId, kbId } = useParams();
@@ -48,7 +48,7 @@ export default function ChunkList() {
   };
 
   const handleDelete = async (chunkId: string) => {
-    if (!window.confirm("确定要删除这个切片吗？")) return;
+    if (!window.confirm('确定要删除这个切片吗？')) return;
     await chunkApi.remove(chunkId);
     refresh();
   };
@@ -64,11 +64,32 @@ export default function ChunkList() {
         <button className="btn primary" onClick={() => setShowModal(true)}>
           <Plus size={16} /> 新增切片
         </button>
-        <span style={{ color: "var(--text-sub)" }}>共 {total} 个切片</span>
+        <span style={{ color: 'var(--text-sub)' }}>共 {total} 个切片</span>
         <span className="spacer" />
-        <div style={{ display: "flex", alignItems: "center", border: "1px solid var(--border-strong)", borderRadius: "var(--radius)", background: "var(--panel)", overflow: "hidden" }}>
-          <Search size={16} style={{ padding: "0 8px", color: "var(--text-subtle)", borderRight: "1px solid var(--border)", flexShrink: 0 }} />
-          <input className="search-input" style={{ border: "none", borderRadius: 0, boxShadow: "none", width: 200 }} placeholder="搜索切片 ID" />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            border: '1px solid var(--border-strong)',
+            borderRadius: 'var(--radius)',
+            background: 'var(--panel)',
+            overflow: 'hidden',
+          }}
+        >
+          <Search
+            size={16}
+            style={{
+              padding: '0 8px',
+              color: 'var(--text-subtle)',
+              borderRight: '1px solid var(--border)',
+              flexShrink: 0,
+            }}
+          />
+          <input
+            className="search-input"
+            style={{ border: 'none', borderRadius: 0, boxShadow: 'none', width: 200 }}
+            placeholder="搜索切片 ID"
+          />
         </div>
       </div>
 
@@ -92,18 +113,31 @@ export default function ChunkList() {
           <tbody>
             {chunks.map((c) => (
               <tr key={c.id}>
-                <td style={{ fontSize: 12, color: "var(--text-subtle)" }}>#{c.index + 1}</td>
-                <td><strong>{c.title || "—"}  </strong></td>
-                <td style={{ maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--text-sub)" }}>
+                <td style={{ fontSize: 12, color: 'var(--text-subtle)' }}>#{c.index + 1}</td>
+                <td>
+                  <strong>{c.title || '—'} </strong>
+                </td>
+                <td
+                  style={{
+                    maxWidth: 300,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    color: 'var(--text-sub)',
+                  }}
+                >
                   {c.contentPreview}
                 </td>
                 <td style={{ fontSize: 12 }}>{c.sourceFile}</td>
                 <td>{c.tokenCount}</td>
-                <td style={{ fontSize: 12, color: "var(--text-subtle)" }}>{c.updatedAt}</td>
+                <td style={{ fontSize: 12, color: 'var(--text-subtle)' }}>{c.updatedAt}</td>
                 <td>
                   <button
                     className="act-btn"
-                    onClick={() => { setEditingChunk(c); setShowModal(true); }}
+                    onClick={() => {
+                      setEditingChunk(c);
+                      setShowModal(true);
+                    }}
                   >
                     <Pencil size={14} /> 编辑
                   </button>
@@ -126,7 +160,9 @@ export default function ChunkList() {
           <button className="btn" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
             上一页
           </button>
-          <span>第 {page} / {pages} 页</span>
+          <span>
+            第 {page} / {pages} 页
+          </span>
           <button className="btn" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
             下一页
           </button>

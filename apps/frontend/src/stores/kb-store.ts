@@ -1,9 +1,9 @@
-import { create } from "zustand";
-import type { KbListItem } from "../types";
-import { kbApi } from "../services/api";
+import { create } from 'zustand';
+import type { KbListItem } from '../types';
+import { kbApi } from '../services/api';
 
-const CURRENT_KB_KEY = "knowbase_current_kb";
-const DEFAULT_KB_ID_KEY = "knowbase_default_kb_id";
+const CURRENT_KB_KEY = 'knowbase_current_kb';
+const DEFAULT_KB_ID_KEY = 'knowbase_default_kb_id';
 
 function loadCurrentKB(): KbListItem | null {
   try {

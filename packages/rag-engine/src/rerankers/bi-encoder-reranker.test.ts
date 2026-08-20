@@ -8,7 +8,7 @@ vi.mock('../embeddings/openai-embeddings.js', () => ({
     embedQuery: vi.fn().mockResolvedValue([0.8, 0.1, 0.2]),
     embedDocuments: vi.fn().mockResolvedValue([
       [0.75, 0.12, 0.18], // doc A: similar to query
-      [0.3, 0.6, 0.5],   // doc B: less similar
+      [0.3, 0.6, 0.5], // doc B: less similar
       [0.9, 0.05, 0.05], // doc C: most similar
     ]),
   })),

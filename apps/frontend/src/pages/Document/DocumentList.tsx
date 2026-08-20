@@ -1,21 +1,21 @@
-import { useEffect, useState, useRef } from "react";
-import type { ChangeEvent } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Select } from "antd";
-import PageHeader from "../../components/PageHeader";
-import TopStepsBar from "../../components/TopStepsBar";
-import StatusBadge from "../../components/StatusBadge";
-import { docApi } from "../../services/api";
-import { useKbStore } from "../../stores/kb-store";
-import type { DocListItem } from "../../types";
-import { Upload, Search, Trash2, Cpu } from "lucide-react";
+import { useEffect, useState, useRef } from 'react';
+import type { ChangeEvent } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Select } from 'antd';
+import PageHeader from '../../components/PageHeader';
+import TopStepsBar from '../../components/TopStepsBar';
+import StatusBadge from '../../components/StatusBadge';
+import { docApi } from '../../services/api';
+import { useKbStore } from '../../stores/kb-store';
+import type { DocListItem } from '../../types';
+import { Upload, Search, Trash2, Cpu } from 'lucide-react';
 
-type ParseStrategy = "mineru" | "mineru-agent" | "basic";
+type ParseStrategy = 'mineru' | 'mineru-agent' | 'basic';
 
 const STRATEGY_OPTIONS: { value: ParseStrategy; label: string }[] = [
-  { value: "mineru-agent", label: "mineru-agent（默认）" },
-  { value: "mineru", label: "mineru（自托管）" },
-  { value: "basic", label: "basic（兜底）" },
+  { value: 'mineru-agent', label: 'mineru-agent（默认）' },
+  { value: 'mineru', label: 'mineru（自托管）' },
+  { value: 'basic', label: 'basic（兜底）' },
 ];
 
 export default function DocumentList() {
@@ -24,11 +24,11 @@ export default function DocumentList() {
   const current = useKbStore((s) => s.current);
   const refreshCurrent = useKbStore((s) => s.refreshCurrent);
   const [docs, setDocs] = useState<DocListItem[]>([]);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
-  const [selectedStrategy, setSelectedStrategy] = useState<ParseStrategy>("mineru-agent");
+  const [selectedStrategy, setSelectedStrategy] = useState<ParseStrategy>('mineru-agent');
 
   const load = async () => {
     if (!kbId) return;
@@ -53,13 +53,13 @@ export default function DocumentList() {
   const onUpload = async (file: File) => {
     if (!kbId || !file) return;
     setUploading(true);
-    setError("");
+    setError('');
     try {
       await docApi.upload(kbId, file, selectedStrategy);
       await load();
       await refreshCurrent();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "上传失败");
+      setError(err instanceof Error ? err.message : '上传失败');
     } finally {
       setUploading(false);
     }
@@ -95,23 +95,21 @@ export default function DocumentList() {
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
         >
-          <Upload size={16} /> {uploading ? "上传中…" : "上传文档"}
+          <Upload size={16} /> {uploading ? '上传中…' : '上传文档'}
         </button>
         <input
           ref={fileRef}
           type="file"
           accept=".csv,.xlsx,.xls,.pdf,.docx,.doc"
-          style={{ display: "none" }}
+          style={{ display: 'none' }}
           onChange={(e: ChangeEvent<HTMLInputElement>) => {
             const file = e.target.files?.[0];
             if (file) onUpload(file);
           }}
         />
-        <span style={{ color: "var(--text-sub)", fontSize: 12 }}>
-          支持 CSV / XLSX / PDF / Word
-        </span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Cpu size={14} style={{ color: "var(--text-subtle)", flexShrink: 0 }} />
+        <span style={{ color: 'var(--text-sub)', fontSize: 12 }}>支持 CSV / XLSX / PDF / Word</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Cpu size={14} style={{ color: 'var(--text-subtle)', flexShrink: 0 }} />
           <Select
             value={selectedStrategy}
             onChange={(v) => setSelectedStrategy(v as ParseStrategy)}
@@ -121,11 +119,28 @@ export default function DocumentList() {
           />
         </div>
         <span className="spacer" />
-        <div style={{ display: "flex", alignItems: "center", border: "1px solid var(--border-strong)", borderRadius: "var(--radius)", background: "var(--panel)", overflow: "hidden" }}>
-          <Search size={16} style={{ padding: "0 8px", color: "var(--text-subtle)", borderRight: "1px solid var(--border)", flexShrink: 0 }} />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            border: '1px solid var(--border-strong)',
+            borderRadius: 'var(--radius)',
+            background: 'var(--panel)',
+            overflow: 'hidden',
+          }}
+        >
+          <Search
+            size={16}
+            style={{
+              padding: '0 8px',
+              color: 'var(--text-subtle)',
+              borderRight: '1px solid var(--border)',
+              flexShrink: 0,
+            }}
+          />
           <input
             className="search-input"
-            style={{ border: "none", borderRadius: 0, boxShadow: "none", width: 200 }}
+            style={{ border: 'none', borderRadius: 0, boxShadow: 'none', width: 200 }}
             placeholder="搜索文件名"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -133,7 +148,11 @@ export default function DocumentList() {
         </div>
       </div>
 
-      {error && <div className="badge failed" style={{ marginBottom: 12, display: "inline-block" }}>{error}</div>}
+      {error && (
+        <div className="badge failed" style={{ marginBottom: 12, display: 'inline-block' }}>
+          {error}
+        </div>
+      )}
 
       {/* 拖拽上传区 */}
       <div
@@ -142,21 +161,20 @@ export default function DocumentList() {
         onDragLeave={handleDragLeave}
         onClick={() => fileRef.current?.click()}
         style={{
-          border: `2px dashed ${dragOver ? "var(--primary)" : "var(--border-strong)"}`,
-          borderRadius: "var(--radius-lg)",
-          padding: "24px",
-          textAlign: "center",
-          margin: "0 0 16px",
-          cursor: "pointer",
-          background: dragOver ? "var(--primary-soft)" : "transparent",
-          transition: "all 0.2s",
+          border: `2px dashed ${dragOver ? 'var(--primary)' : 'var(--border-strong)'}`,
+          borderRadius: 'var(--radius-lg)',
+          padding: '24px',
+          textAlign: 'center',
+          margin: '0 0 16px',
+          cursor: 'pointer',
+          background: dragOver ? 'var(--primary-soft)' : 'transparent',
+          transition: 'all 0.2s',
         }}
       >
-        
-        <div style={{ color: "var(--text)", fontWeight: 500 }}>
-          {dragOver ? "拖放文件到此处上传" : "拖放文件到此处，或点击选择文件"}
+        <div style={{ color: 'var(--text)', fontWeight: 500 }}>
+          {dragOver ? '拖放文件到此处上传' : '拖放文件到此处，或点击选择文件'}
         </div>
-        <div style={{ fontSize: 12, color: "var(--text-subtle)", marginTop: 4 }}>
+        <div style={{ fontSize: 12, color: 'var(--text-subtle)', marginTop: 4 }}>
           支持 CSV / XLSX / PDF / DOCX / DOC 格式
         </div>
       </div>
@@ -189,10 +207,10 @@ export default function DocumentList() {
                   <td>
                     <StatusBadge status={d.status} />
                   </td>
-                  <td>{d.strategy || "—"}</td>
+                  <td>{d.strategy || '—'}</td>
                   <td>{d.chunkCount}</td>
                   <td>{d.importMethod}</td>
-                  <td style={{ color: "var(--text-subtle)", fontSize: 12 }}>{d.updatedAt}</td>
+                  <td style={{ color: 'var(--text-subtle)', fontSize: 12 }}>{d.updatedAt}</td>
                   <td>
                     <button
                       className="act-btn"
