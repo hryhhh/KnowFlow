@@ -4,23 +4,23 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
-} from "typeorm";
+} from 'typeorm';
 
-@Entity("knowledge_bases")
+@Entity('knowledge_bases')
 export class KnowledgeBase {
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ length: 128, unique: true })
   name: string;
 
-  @Column({ type: "text", nullable: true })
+  @Column({ type: 'text', nullable: true })
   description: string;
 
-  @Column({ length: 32, default: "free" })
+  @Column({ length: 32, default: 'free' })
   type: string;
 
-  @Column({ length: 32, default: "active" })
+  @Column({ length: 32, default: 'active' })
   status: string;
 
   @CreateDateColumn()

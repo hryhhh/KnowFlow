@@ -1,17 +1,17 @@
-import { Controller, Sse, Body, Headers, RequestMethod } from "@nestjs/common";
-import { Observable } from "rxjs";
-import { MessageEvent } from "http";
-import { ChatService } from "./chat.service";
-import type { ChatStreamBody } from "./chat.service";
+import { Controller, Sse, Body, Headers, RequestMethod } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { MessageEvent } from 'http';
+import { ChatService } from './chat.service';
+import type { ChatStreamBody } from './chat.service';
 
-@Controller("chat")
+@Controller('chat')
 export class ChatController {
   constructor(private readonly service: ChatService) {}
 
-  @Sse("stream", { method: RequestMethod.POST })
+  @Sse('stream', { method: RequestMethod.POST })
   stream(
     @Body() body: ChatStreamBody,
-    @Headers("x-trace-id") traceId?: string,
+    @Headers('x-trace-id') traceId?: string,
   ): Observable<MessageEvent> {
     const request: any = { traceId };
     return this.service.stream(body, request);

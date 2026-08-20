@@ -1,8 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { Chunk } from "./entities/chunk.entity";
-import { Document } from "../document/entities/document.entity";
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Chunk } from './entities/chunk.entity';
+import { Document } from '../document/entities/document.entity';
 
 export interface ChunkCard {
   id: string;
@@ -30,7 +30,7 @@ export class ChunkService {
   ): Promise<{ total: number; items: ChunkCard[] }> {
     const [items, total] = await this.chunkRepo.findAndCount({
       where: { docId },
-      order: { chunkIndex: "ASC" },
+      order: { chunkIndex: 'ASC' },
       take: pageSize,
       skip: (page - 1) * pageSize,
     });
@@ -50,33 +50,29 @@ export class ChunkService {
   ): Promise<{ total: number; items: ChunkCard[] }> {
     const [items, total] = await this.chunkRepo.findAndCount({
       where: { kbId },
-      order: { docId: "ASC", chunkIndex: "ASC" },
+      order: { docId: 'ASC', chunkIndex: 'ASC' },
       take: pageSize,
       skip: (page - 1) * pageSize,
     });
     return { total, items: items.map((c) => this.toCard(c)) };
   }
 
-  async create(
-    docId: string,
-    content: string,
-    title?: string,
-  ): Promise<ChunkCard> {
+  async create(docId: string, content: string, title?: string): Promise<ChunkCard> {
     const doc = await this.docRepo.findOne({ where: { id: docId } });
     if (!doc) throw new NotFoundException(`文档不存在: ${docId}`);
 
     const maxIndex = await this.chunkRepo
-      .createQueryBuilder("chunk")
-      .select("MAX(chunk.chunkIndex)", "max")
-      .where("chunk.docId = :docId", { docId })
+      .createQueryBuilder('chunk')
+      .select('MAX(chunk.chunkIndex)', 'max')
+      .where('chunk.docId = :docId', { docId })
       .getRawOne();
 
     const newChunk = this.chunkRepo.create({
       docId,
       kbId: doc.kbId,
-      chunkIndex: (maxIndex.max ?? -1) + 1,
+      chunkIndex: parseInt(maxIndex.max ?? '0', 10) + 1,
       content,
-      title: title || `切片 ${(maxIndex.max ?? -1) + 2}`,
+      title: title || `切片 ${parseInt(maxIndex.max ?? '0', 10) + 1}`,
       tokenCount: Math.ceil(content.length / 1.5),
       sourceFile: doc.name,
     });
@@ -108,14 +104,14 @@ export class ChunkService {
       index: c.chunkIndex,
       title: c.title || `doc_${c.docId.slice(0, 8)}-${c.chunkIndex}`,
       contentPreview: c.content,
-      sourceFile: c.sourceFile ?? "",
+      sourceFile: c.sourceFile ?? '',
       tokenCount: c.tokenCount,
       updatedAt: this.fmt(c.createdAt),
     };
   }
 
   private fmt(d: Date): string {
-    const p = (n: number) => String(n).padStart(2, "0");
+    const p = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
   }
 }

@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { ConversationSession } from "./entities/conversation-session.entity";
-import { SessionMessage } from "./entities/session-message.entity";
-import type { SourceRef } from "@knowbase-x/rag-engine";
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ConversationSession } from './entities/conversation-session.entity';
+import { SessionMessage } from './entities/session-message.entity';
+import type { SourceRef } from '@knowbase-x/rag-engine';
 
 export interface SessionListItem {
   id: string;
@@ -15,7 +15,7 @@ export interface SessionListItem {
 
 export interface SessionMessageItem {
   id: string;
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   content: string;
   sources: SourceRef[] | null;
   createdAt: string;
@@ -40,7 +40,7 @@ export class SessionService {
   async list(kbId: string): Promise<SessionListItem[]> {
     const sessions = await this.sessionRepo.find({
       where: { kbId },
-      order: { createdAt: "DESC" },
+      order: { createdAt: 'DESC' },
     });
 
     if (sessions.length === 0) return [];
@@ -48,15 +48,15 @@ export class SessionService {
     // 批量查询每个会话的消息数量，避免 N+1
     const sessionIds = sessions.map((s) => s.id);
     const counts = await this.messageRepo
-      .createQueryBuilder("msg")
-      .select("msg.sessionId", "sessionId")
-      .addSelect("COUNT(*)", "count")
-      .where("msg.sessionId IN (:...ids)", { ids: sessionIds })
-      .groupBy("msg.sessionId")
+      .createQueryBuilder('msg')
+      .select('msg.sessionId', 'sessionId')
+      .addSelect('COUNT(*)', 'count')
+      .where('msg.sessionId IN (:...ids)', { ids: sessionIds })
+      .groupBy('msg.sessionId')
       .getRawMany();
 
     const countMap = new Map<string, number>(
-      counts.map((row) => [row.sessionId, parseInt(row.count, 10)])
+      counts.map((row) => [row.sessionId, parseInt(row.count, 10)]),
     );
 
     return sessions.map((s) => ({
@@ -69,7 +69,7 @@ export class SessionService {
   }
 
   async create(kbId: string, firstMessage: string): Promise<ConversationSession> {
-    const title = firstMessage.length > 30 ? firstMessage.slice(0, 30) + "…" : firstMessage;
+    const title = firstMessage.length > 30 ? firstMessage.slice(0, 30) + '…' : firstMessage;
     const session = this.sessionRepo.create({ kbId, title });
     return this.sessionRepo.save(session);
   }
@@ -81,7 +81,7 @@ export class SessionService {
   async getMessages(sessionId: string): Promise<SessionMessageItem[]> {
     const messages = await this.messageRepo.find({
       where: { sessionId },
-      order: { createdAt: "ASC" },
+      order: { createdAt: 'ASC' },
     });
     return messages.map((m) => ({
       id: m.id,
@@ -94,7 +94,7 @@ export class SessionService {
 
   async addMessage(
     sessionId: string,
-    role: "user" | "assistant",
+    role: 'user' | 'assistant',
     content: string,
     sources?: SourceRef[],
   ): Promise<SessionMessage> {

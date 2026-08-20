@@ -1,10 +1,6 @@
-import type { Document } from "@langchain/core/documents";
-import type {
-  EmbeddingConfig,
-  RetrievalResult,
-  SearchParams,
-} from "../types.js";
-import { embedQuery } from "../embeddings/openai-embeddings.js";
+import type { Document } from '@langchain/core/documents';
+import type { EmbeddingConfig, RetrievalResult, SearchParams } from '../types.js';
+import { embedQuery } from '../embeddings/openai-embeddings.js';
 
 /** 兼容 PGVectorStore 与 MemoryVectorStore 的最小接口 */
 export interface VectorStoreLike {
@@ -40,7 +36,7 @@ export async function similaritySearch(
     .map(([doc, score]: [Document, number]) => ({
       content: doc.pageContent,
       score: Number(score.toFixed(7)),
-      sourceFile: (doc.metadata?.source as string) ?? "unknown",
+      sourceFile: (doc.metadata?.source as string) ?? 'unknown',
       metadata: (doc.metadata ?? {}) as Record<string, unknown>,
     }))
     .filter((r) => r.score >= params.minScore);

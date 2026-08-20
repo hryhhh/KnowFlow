@@ -1,7 +1,12 @@
-import { Injectable, Logger, Inject } from "@nestjs/common";
-import { RAG_CONFIG } from "../../config/rag-config.provider";
-import type { RAGPipelineConfig, SearchParams, SourceRef, StreamCallbacks } from "@knowbase-x/rag-engine";
-import { retrieveAndChat } from "@knowbase-x/rag-engine";
+import { Injectable, Logger, Inject } from '@nestjs/common';
+import { RAG_CONFIG } from '../../config/rag-config.provider';
+import type {
+  RAGPipelineConfig,
+  SearchParams,
+  SourceRef,
+  StreamCallbacks,
+} from '@knowbase-x/rag-engine';
+import { retrieveAndChat } from '@knowbase-x/rag-engine';
 import {
   DbQueryAgent,
   WebSearchAgent,
@@ -9,12 +14,12 @@ import {
   StreamAgentProxy,
   IntentRouter,
   Orchestrator,
-} from "@knowbase-x/agents";
-import type { Agent, AgentResult, RouteMetadata } from "@knowbase-x/agents";
-import { UsageLogService } from "../usage/usage-log.service";
-import { DbQueryService } from "./db-query.service";
-import { createSearchProvider } from "./providers/index";
-import * as path from "node:path";
+} from '@knowbase-x/agents';
+import type { Agent, AgentResult, RouteMetadata } from '@knowbase-x/agents';
+import { UsageLogService } from '../usage/usage-log.service';
+import { DbQueryService } from './db-query.service';
+import { createSearchProvider } from './providers/index';
+import * as path from 'node:path';
 
 /**
  * AgentChatService — 多 Agent 编排入口层
@@ -47,16 +52,13 @@ export class AgentChatService {
     private readonly usageLog: UsageLogService,
     private readonly dbQueryService: DbQueryService,
   ) {
-    this.agentsEnabled = process.env.AGENTS_ENABLED === "true";
-    this.composeStrategy = process.env.AGENT_COMPOSE_STRATEGY ?? "rag-priority";
-    this.allowParallel = process.env.AGENT_ROUTER_ALLOW_PARALLEL !== "false";
-    this.confidenceThreshold = parseInt(
-      process.env.AGENT_ROUTER_CONFIDENCE_THRESHOLD ?? "70",
-      10,
-    );
-    const rawAlwaysInclude = process.env.AGENT_ALWAYS_INCLUDE_AGENTS ?? "ragflow";
+    this.agentsEnabled = process.env.AGENTS_ENABLED === 'true';
+    this.composeStrategy = process.env.AGENT_COMPOSE_STRATEGY ?? 'rag-priority';
+    this.allowParallel = process.env.AGENT_ROUTER_ALLOW_PARALLEL !== 'false';
+    this.confidenceThreshold = parseInt(process.env.AGENT_ROUTER_CONFIDENCE_THRESHOLD ?? '70', 10);
+    const rawAlwaysInclude = process.env.AGENT_ALWAYS_INCLUDE_AGENTS ?? 'ragflow';
     this.alwaysIncludeAgents = rawAlwaysInclude
-      .split(",")
+      .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
 
@@ -76,12 +78,12 @@ export class AgentChatService {
     this.agentInstances.set(dbAgent.id, dbAgent);
 
     // 2. Web Search Agent
-    const providerName = process.env.WEB_SEARCH_PROVIDER ?? "tavily";
-    const apiKey = process.env.WEB_SEARCH_API_KEY ?? "";
+    const providerName = process.env.WEB_SEARCH_PROVIDER ?? 'tavily';
+    const apiKey = process.env.WEB_SEARCH_API_KEY ?? '';
 
     let webProvider: ReturnType<typeof createSearchProvider>;
     if (!apiKey) {
-      this.logger.warn("WEB_SEARCH_API_KEY 未配置，Web Search Agent 将返回空结果");
+      this.logger.warn('WEB_SEARCH_API_KEY 未配置，Web Search Agent 将返回空结果');
       webProvider = { search: async () => [] };
     } else {
       try {
@@ -96,8 +98,8 @@ export class AgentChatService {
       webProvider,
       { get: async () => null, set: async () => {} },
       {
-        cacheTtlSeconds: parseInt(process.env.WEB_SEARCH_CACHE_TTL_SECONDS ?? "3600"),
-        providerTimeoutMs: parseInt(process.env.WEB_SEARCH_PROVIDER_TIMEOUT_MS ?? "5000"),
+        cacheTtlSeconds: parseInt(process.env.WEB_SEARCH_CACHE_TTL_SECONDS ?? '3600'),
+        providerTimeoutMs: parseInt(process.env.WEB_SEARCH_PROVIDER_TIMEOUT_MS ?? '5000'),
         maxResults: 1,
       },
     );
@@ -112,12 +114,18 @@ export class AgentChatService {
         onDone,
         onError: (err) => onError(err),
       };
-      await retrieveAndChat(params.query, params.kbId, {
-        topK: params.topK ?? 10,
-        minScore: params.minScore ?? 0.70,
-        useReranker: params.useReranker ?? false,
-        denseWeight: params.denseWeight ?? 0.5,
-      }, this.ragConfig, callbacks);
+      await retrieveAndChat(
+        params.query,
+        params.kbId,
+        {
+          topK: params.topK ?? 10,
+          minScore: params.minScore ?? 0.7,
+          useReranker: params.useReranker ?? false,
+          denseWeight: params.denseWeight ?? 0.5,
+        },
+        this.ragConfig,
+        callbacks,
+      );
     });
     this.agentInstances.set(ragFlowAgent.id, ragFlowAgent);
 
@@ -136,12 +144,12 @@ export class AgentChatService {
         ? {
             apiKey: process.env.LLM_API_KEY,
             model: process.env.LLM_MODEL,
-            baseURL: process.env.LLM_BASE_URL ?? "",
+            baseURL: process.env.LLM_BASE_URL ?? '',
           }
         : undefined;
 
     this.router = new IntentRouter(
-      process.env.ROUTER_RULES_PATH ?? path.resolve(process.cwd(), "config/router.rules.yml"),
+      process.env.ROUTER_RULES_PATH ?? path.resolve(process.cwd(), 'config/router.rules.yml'),
       llmConfig,
     );
 
@@ -149,12 +157,12 @@ export class AgentChatService {
     this.orchestrator = new Orchestrator(
       this.router,
       allAgents,
-      this.composeStrategy as "concat" | "llm-summarize" | "rerank-and-merge" | "rag-priority",
+      this.composeStrategy as 'concat' | 'llm-summarize' | 'rerank-and-merge' | 'rag-priority',
       this.allowParallel,
     );
 
     this.logger.log(
-      `Agent 编排系统初始化完成 (enabled=true, agents: ${allAgents.map((a) => a.id).join(", ")}, strategy=${this.composeStrategy}, confidenceThreshold=${this.confidenceThreshold}, alwaysInclude=${this.alwaysIncludeAgents.join(",") || "none"})`,
+      `Agent 编排系统初始化完成 (enabled=true, agents: ${allAgents.map((a) => a.id).join(', ')}, strategy=${this.composeStrategy}, confidenceThreshold=${this.confidenceThreshold}, alwaysInclude=${this.alwaysIncludeAgents.join(',') || 'none'})`,
     );
   }
 
@@ -164,8 +172,8 @@ export class AgentChatService {
       process.env.DB_QUERIES_TEMPLATE_PATH ??
       path.resolve(__dirname, '../../../../../config/db-queries.yml');
     try {
-      const content = require("fs").readFileSync(templatePath, "utf-8");
-      const config = require("js-yaml").load(content) as { templates: any[] };
+      const content = require('fs').readFileSync(templatePath, 'utf-8');
+      const config = require('js-yaml').load(content) as { templates: any[] };
       for (const t of config.templates) {
         agent.registerTemplate(t);
       }
@@ -197,7 +205,7 @@ export class AgentChatService {
 
     if (!this.agentsEnabled || !this.orchestrator) {
       // 降级到传统 RAG
-      this.logger.debug("AGENTS_ENABLED=false，降级到传统 RAG 链路");
+      this.logger.debug('AGENTS_ENABLED=false，降级到传统 RAG 链路');
       retrieveAndChat(query, kbId, resolvedParams, this.ragConfig, callbacks);
       return;
     }
@@ -208,12 +216,12 @@ export class AgentChatService {
       const meta = result.metadata;
 
       // 推送 trace_id
-      callbacks.onMeta?.({ type: "trace_id", value: { traceId } });
+      callbacks.onMeta?.({ type: 'trace_id', value: { traceId } });
 
       // 推送可观测元数据（v2.1）
       if (meta.triggeredLlmArbitration) {
         callbacks.onMeta?.({
-          type: "llm_arbitration",
+          type: 'llm_arbitration',
           value: {
             triggered: true,
             agent: meta.llmArbitrationAgent,
@@ -221,22 +229,22 @@ export class AgentChatService {
           },
         });
       }
-      if (meta.ragIncludedBy !== "none") {
+      if (meta.ragIncludedBy !== 'none') {
         callbacks.onMeta?.({
-          type: "rag_included",
+          type: 'rag_included',
           value: { by: meta.ragIncludedBy },
         });
       }
       if (meta.composeUsedRagPriority) {
         callbacks.onMeta?.({
-          type: "compose_strategy",
-          value: { strategy: "rag-priority" },
+          type: 'compose_strategy',
+          value: { strategy: 'rag-priority' },
         });
       }
 
       for (const matched of result.matchedRules) {
         callbacks.onMeta?.({
-          type: "agent_start",
+          type: 'agent_start',
           value: { agent: matched.rule.targetAgent, traceId },
           agent: matched.rule.targetAgent,
         });
@@ -245,8 +253,8 @@ export class AgentChatService {
       // 推送来源
       if (result.sources && result.sources.length > 0) {
         const sources: SourceRef[] = result.sources.map((s) => ({
-          content: s.uri ?? "",
-          sourceFile: s.title ?? s.uri ?? "",
+          content: s.uri ?? '',
+          sourceFile: s.title ?? s.uri ?? '',
           score: 0.8,
         }));
         callbacks.onSources(sources);
@@ -257,7 +265,7 @@ export class AgentChatService {
       const chunkSize = 20;
       if (!content || content.trim().length === 0) {
         // 编排无有效结果，回退到传统 RAG
-        this.logger.debug("Agent 编排无有效结果，回退到传统 RAG");
+        this.logger.debug('Agent 编排无有效结果，回退到传统 RAG');
         retrieveAndChat(query, kbId, resolvedParams, this.ragConfig, callbacks);
         return;
       }
@@ -268,7 +276,7 @@ export class AgentChatService {
       // Agent 执行完成事件
       for (const agentResult of result.agentResults) {
         callbacks.onMeta?.({
-          type: "agent_done",
+          type: 'agent_done',
           value: {
             agent: agentResult.agent,
             status: agentResult.status,
@@ -282,12 +290,12 @@ export class AgentChatService {
 
       // 记录使用日志
       this.usageLog.record({
-        type: "agent",
+        type: 'agent',
         kbId,
         apiKeyId,
         traceId,
         duration: Date.now() - startTime,
-        status: "success",
+        status: 'success',
         triggeredLlmArbitration: meta.triggeredLlmArbitration,
         ragIncludedBy: meta.ragIncludedBy,
         composeUsedRagPriority: meta.composeUsedRagPriority,
@@ -298,19 +306,19 @@ export class AgentChatService {
       this.logger.error(`Agent 编排失败: ${errorMessage}`);
 
       callbacks.onMeta?.({
-        type: "agent_error",
+        type: 'agent_error',
         value: { error: errorMessage, traceId },
       });
 
       callbacks.onError(new Error(errorMessage));
 
       this.usageLog.record({
-        type: "agent",
+        type: 'agent',
         kbId,
         apiKeyId,
         traceId,
         duration: Date.now() - startTime,
-        status: "error",
+        status: 'error',
         triggeredLlmArbitration: false,
         ragIncludedBy: null,
         composeUsedRagPriority: false,
@@ -322,13 +330,9 @@ export class AgentChatService {
   /**
    * 同步编排入口（非流式）
    */
-  async orchestrate(
-    query: string,
-    kbId: string,
-    params: SearchParams | undefined,
-  ): Promise<any> {
+  async orchestrate(query: string, kbId: string, params: SearchParams | undefined): Promise<any> {
     if (!this.agentsEnabled || !this.orchestrator) {
-      return { agentsEnabled: false, message: "Agent 编排未启用" };
+      return { agentsEnabled: false, message: 'Agent 编排未启用' };
     }
 
     const startTime = Date.now();
@@ -353,14 +357,14 @@ export class AgentChatService {
   reloadRules(): void {
     if (this.router) {
       this.router.reload();
-      this.logger.log("路由规则已重新加载");
+      this.logger.log('路由规则已重新加载');
     }
   }
 
   private normalizeParams(params: SearchParams | undefined): SearchParams {
     return {
       topK: params?.topK ?? 10,
-      minScore: params?.minScore ?? 0.70,
+      minScore: params?.minScore ?? 0.7,
       useReranker: params?.useReranker ?? false,
       denseWeight: params?.denseWeight ?? 0.5,
     };

@@ -1,14 +1,10 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { KnowledgeBase } from "./entities/knowledge-base.entity";
-import { Document } from "../document/entities/document.entity";
-import { Chunk } from "../chunk/entities/chunk.entity";
-import { CreateKbDto, UpdateKbDto } from "./dto/create-kb.dto";
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { KnowledgeBase } from './entities/knowledge-base.entity';
+import { Document } from '../document/entities/document.entity';
+import { Chunk } from '../chunk/entities/chunk.entity';
+import { CreateKbDto, UpdateKbDto } from './dto/create-kb.dto';
 
 export interface KbListItem {
   id: string;
@@ -37,15 +33,15 @@ export class KnowledgeBaseService {
     const kb = this.kbRepo.create({
       name: dto.name,
       description: dto.description,
-      type: dto.type ?? "free",
+      type: dto.type ?? 'free',
     });
     return this.kbRepo.save(kb);
   }
 
   async findAll(search?: string): Promise<KbListItem[]> {
-    const qb = this.kbRepo.createQueryBuilder("kb");
-    if (search) qb.where("kb.name ILIKE :s", { s: `%${search}%` });
-    const list = await qb.orderBy("kb.createdAt", "DESC").getMany();
+    const qb = this.kbRepo.createQueryBuilder('kb');
+    if (search) qb.where('kb.name ILIKE :s', { s: `%${search}%` });
+    const list = await qb.orderBy('kb.createdAt', 'DESC').getMany();
 
     return Promise.all(list.map((kb) => this.toListItem(kb)));
   }
@@ -78,7 +74,7 @@ export class KnowledgeBaseService {
     return {
       id: kb.id,
       name: kb.name,
-      description: kb.description ?? "",
+      description: kb.description ?? '',
       type: kb.type,
       documentCount: docCount,
       chunkCount,
@@ -87,7 +83,7 @@ export class KnowledgeBaseService {
   }
 
   private fmt(d: Date): string {
-    const p = (n: number) => String(n).padStart(2, "0");
+    const p = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
   }
 }

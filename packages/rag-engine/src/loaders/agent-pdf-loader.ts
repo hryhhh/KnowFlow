@@ -1,16 +1,11 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-import type { Document } from "@langchain/core/documents";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import type { Document } from '@langchain/core/documents';
 
 /** Agent 轻量解析 API 配置 */
-const AGENT_API_BASE =
-  process.env.MINERU_AGENT_API_BASE_URL ?? "https://mineru.net/api/v1/agent";
-const AGENT_POLL_INTERVAL_MS = Number(
-  process.env.MINERU_AGENT_POLL_INTERVAL_MS ?? "3000",
-);
-const AGENT_POLL_TIMEOUT_S = Number(
-  process.env.MINERU_AGENT_POLL_TIMEOUT_S ?? "120",
-);
+const AGENT_API_BASE = process.env.MINERU_AGENT_API_BASE_URL ?? 'https://mineru.net/api/v1/agent';
+const AGENT_POLL_INTERVAL_MS = Number(process.env.MINERU_AGENT_POLL_INTERVAL_MS ?? '3000');
+const AGENT_POLL_TIMEOUT_S = Number(process.env.MINERU_AGENT_POLL_TIMEOUT_S ?? '120');
 
 /** Agent API 提交请求体 */
 interface AgentSubmitBody {
@@ -38,7 +33,7 @@ interface AgentPollResponse {
   msg: string;
   data: {
     task_id: string;
-    state: "waiting-file" | "uploading" | "pending" | "running" | "done" | "failed";
+    state: 'waiting-file' | 'uploading' | 'pending' | 'running' | 'done' | 'failed';
     markdown_url?: string;
     err_msg?: string;
     err_code?: number;
@@ -94,14 +89,12 @@ export async function loadPDFWithAgentAPI(
 
   // Step 2: PUT 上传文件
   const uploadRes = await fetch(file_url!, {
-    method: "PUT",
-    duplex: "half" as unknown as "half",
+    method: 'PUT',
+    duplex: 'half' as unknown as 'half',
     body: fs.createReadStream(absolutePath),
   });
   if (!uploadRes.ok) {
-    throw new Error(
-      `Agent API 文件上传失败 HTTP ${uploadRes.status}: ${await uploadRes.text()}`,
-    );
+    throw new Error(`Agent API 文件上传失败 HTTP ${uploadRes.status}: ${await uploadRes.text()}`);
   }
   console.log(`[agent-api] file uploaded, HTTP ${uploadRes.status}`);
 
@@ -115,9 +108,7 @@ export async function loadPDFWithAgentAPI(
   // Step 4: 下载 Markdown
   const mdRes = await fetch(markdownUrl);
   if (!mdRes.ok) {
-    throw new Error(
-      `Agent API Markdown 下载失败 HTTP ${mdRes.status}`,
-    );
+    throw new Error(`Agent API Markdown 下载失败 HTTP ${mdRes.status}`);
   }
   const markdown = await mdRes.text();
 
@@ -126,8 +117,8 @@ export async function loadPDFWithAgentAPI(
       pageContent: markdown,
       metadata: {
         source: fileName,
-        fileType: "pdf",
-        parser: "mineru-agent-api",
+        fileType: 'pdf',
+        parser: 'mineru-agent-api',
       },
     },
   ];
@@ -151,15 +142,13 @@ async function agentSubmit(
   if (options?.pageRange) body.page_range = options.pageRange;
 
   const res = await fetch(`${AGENT_API_BASE}/parse/file`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
 
   if (!res.ok) {
-    throw new Error(
-      `Agent API 提交失败 HTTP ${res.status}: ${await res.text()}`,
-    );
+    throw new Error(`Agent API 提交失败 HTTP ${res.status}: ${await res.text()}`);
   }
 
   const json = (await res.json()) as AgentSubmitResponse;
@@ -167,14 +156,12 @@ async function agentSubmit(
     throw new Error(`Agent API 提交错误: ${json.msg}`);
   }
   if (!json.data.file_url) {
-    throw new Error("Agent API 返回缺少 file_url");
+    throw new Error('Agent API 返回缺少 file_url');
   }
   return json;
 }
 
-async function agentPollResult(
-  task_id: string,
-): Promise<string | null> {
+async function agentPollResult(task_id: string): Promise<string | null> {
   const deadline = Date.now() + AGENT_POLL_TIMEOUT_S * 1000;
 
   while (Date.now() < deadline) {
@@ -185,15 +172,15 @@ async function agentPollResult(
     const json = (await res.json()) as AgentPollResponse;
     const state = json.data.state;
 
-    if (state === "done") {
+    if (state === 'done') {
       if (!json.data.markdown_url) {
-        throw new Error("Agent API 任务完成但缺少 markdown_url");
+        throw new Error('Agent API 任务完成但缺少 markdown_url');
       }
       return json.data.markdown_url;
     }
-    if (state === "failed") {
+    if (state === 'failed') {
       const errCode = json.data.err_code;
-      const errMsg = json.data.err_msg ?? "unknown";
+      const errMsg = json.data.err_msg ?? 'unknown';
       // 文件/页数超限，返回 null 让上层降级到基础解析
       if (errCode === -30001 || errCode === -30003) {
         console.warn(`[agent-api] 超出限制: ${errMsg}，将降级到基础 PDF 解析`);

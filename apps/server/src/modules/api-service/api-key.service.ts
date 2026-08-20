@@ -1,11 +1,11 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { createHash, randomBytes } from "node:crypto";
-import { ApiKey } from "./entities/api-key.entity";
-import { CreateApiServiceDto } from "./dto/create-api-service.dto";
-import type { ApiKeyClaim } from "../../common/decorators/current-api-key.decorator";
-import { UsageLogService } from "../usage/usage-log.service";
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { createHash, randomBytes } from 'node:crypto';
+import { ApiKey } from './entities/api-key.entity';
+import { CreateApiServiceDto } from './dto/create-api-service.dto';
+import type { ApiKeyClaim } from '../../common/decorators/current-api-key.decorator';
+import { UsageLogService } from '../usage/usage-log.service';
 
 export interface ApiServiceListItem {
   id: string;
@@ -33,16 +33,16 @@ export class ApiKeyService {
   ) {}
 
   private genKey(prefix: string): string {
-    const raw = randomBytes(24).toString("base64url").replace(/=/g, "").slice(0, 32);
+    const raw = randomBytes(24).toString('base64url').replace(/=/g, '').slice(0, 32);
     return `${prefix}${raw}`;
   }
 
   private hashKey(key: string): string {
-    return createHash("sha256").update(key).digest("hex");
+    return createHash('sha256').update(key).digest('hex');
   }
 
   async create(dto: CreateApiServiceDto): Promise<CreateResult> {
-    const plain = this.genKey(process.env.API_KEY_PREFIX ?? "ek_");
+    const plain = this.genKey(process.env.API_KEY_PREFIX ?? 'ek_');
     const apiKey = this.repo.create({
       serviceName: dto.serviceName,
       description: dto.description,
@@ -62,11 +62,11 @@ export class ApiKeyService {
   }
 
   async findAll(): Promise<ApiServiceListItem[]> {
-    const list = await this.repo.find({ order: { createdAt: "DESC" } });
+    const list = await this.repo.find({ order: { createdAt: 'DESC' } });
     return list.map((k) => ({
       id: k.id,
       serviceName: k.serviceName,
-      description: k.description ?? "",
+      description: k.description ?? '',
       keyPrefix: k.keyPrefix,
       kbId: k.kbId,
       callCount: Number(k.callCount ?? 0),
@@ -92,19 +92,19 @@ export class ApiKeyService {
 
   /** 校验通过后记入调用统计 */
   async recordCall(id: string, duration?: number): Promise<void> {
-    await this.repo.increment({ id }, "callCount", 1);
+    await this.repo.increment({ id }, 'callCount', 1);
     await this.repo.update({ id }, { lastCalledAt: new Date() });
     await this.usageLog.record({
-      type: "api",
+      type: 'api',
       kbId: null,
       apiKeyId: id,
       duration: duration ?? 0,
-      status: "success",
+      status: 'success',
     });
   }
 
   private fmt(d: Date): string {
-    const p = (n: number) => String(n).padStart(2, "0");
+    const p = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
   }
 }

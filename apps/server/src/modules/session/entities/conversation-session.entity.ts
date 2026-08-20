@@ -4,14 +4,14 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-} from "typeorm";
+} from 'typeorm';
 
-@Entity("conversation_sessions")
+@Entity('conversation_sessions')
 export class ConversationSession {
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: "uuid" })
+  @Column({ type: 'uuid' })
   kbId: string;
 
   @Column({ length: 256 })

@@ -1,5 +1,5 @@
-import * as XLSX from "xlsx";
-import { Document } from "@langchain/core/documents";
+import * as XLSX from 'xlsx';
+import { Document } from '@langchain/core/documents';
 
 export interface XLSXLoadOptions {
   filePath: string;
@@ -12,21 +12,19 @@ export interface XLSXLoadOptions {
  */
 export async function loadXLSX(options: XLSXLoadOptions): Promise<Document[]> {
   const workbook = XLSX.readFile(options.filePath);
-  const sheetNames = options.sheetName
-    ? [options.sheetName]
-    : workbook.SheetNames;
+  const sheetNames = options.sheetName ? [options.sheetName] : workbook.SheetNames;
 
   const documents: Document[] = [];
 
   for (const sheet of sheetNames) {
     const worksheet = workbook.Sheets[sheet];
     if (!worksheet) continue;
-    const rows: unknown[] = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+    const rows: unknown[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
     rows.forEach((row, index) => {
       const content = Object.entries(row as Record<string, unknown>)
         .map(([k, v]) => `${k}:${v}`)
-        .join("\n");
+        .join('\n');
       documents.push(
         new Document({
           pageContent: content,

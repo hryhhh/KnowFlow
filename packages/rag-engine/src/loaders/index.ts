@@ -1,14 +1,14 @@
-import path from "node:path";
-import type { Document } from "@langchain/core/documents";
-import type { FileType, LoadResult } from "../types.js";
-import { loadCSV } from "./csv-loader.js";
-import { loadXLSX } from "./xlsx-loader.js";
-import { loadPDF as loadPDFInternal } from "./pdf-loader.js";
-import { loadPDFWithAgentAPI } from "./agent-pdf-loader.js";
-import { loadWord } from "./word-loader.js";
+import path from 'node:path';
+import type { Document } from '@langchain/core/documents';
+import type { FileType, LoadResult } from '../types.js';
+import { loadCSV } from './csv-loader.js';
+import { loadXLSX } from './xlsx-loader.js';
+import { loadPDF as loadPDFInternal } from './pdf-loader.js';
+import { loadPDFWithAgentAPI } from './agent-pdf-loader.js';
+import { loadWord } from './word-loader.js';
 
 /** 文档解析策略 */
-export type ParseStrategy = "mineru" | "mineru-agent" | "basic";
+export type ParseStrategy = 'mineru' | 'mineru-agent' | 'basic';
 
 /** 文档加载选项 */
 export interface LoadDocumentOptions {
@@ -27,14 +27,14 @@ export interface LoadDocumentOptions {
 export function detectFileType(filename: string): FileType {
   const ext = path.extname(filename).toLowerCase();
   const map: Record<string, FileType> = {
-    ".csv": "csv",
-    ".xlsx": "xlsx",
-    ".xls": "xlsx",
-    ".pdf": "pdf",
-    ".docx": "word",
-    ".doc": "word",
+    '.csv': 'csv',
+    '.xlsx': 'xlsx',
+    '.xls': 'xlsx',
+    '.pdf': 'pdf',
+    '.docx': 'word',
+    '.doc': 'word',
   };
-  return map[ext] ?? "csv";
+  return map[ext] ?? 'csv';
 }
 
 /**
@@ -44,20 +44,20 @@ export async function loadDocument(
   filePath: string,
   fileType?: FileType,
   parseStrategy?: ParseStrategy,
-  agentOptions?: LoadDocumentOptions["agentOptions"],
+  agentOptions?: LoadDocumentOptions['agentOptions'],
 ): Promise<LoadResult> {
   const detectedType = fileType ?? detectFileType(filePath);
   let documents: Document[] = [];
 
   switch (detectedType) {
-    case "csv":
+    case 'csv':
       documents = await loadCSV({ filePath });
       break;
-    case "xlsx":
+    case 'xlsx':
       documents = await loadXLSX({ filePath });
       break;
-    case "pdf":
-      if (parseStrategy === "mineru-agent") {
+    case 'pdf':
+      if (parseStrategy === 'mineru-agent') {
         documents = (await loadPDFWithAgentAPI(filePath, agentOptions)) ?? [];
         // Agent API 返回 null 表示超出限制，自动降级到本地基础解析
         if (documents.length === 0) {
@@ -68,7 +68,7 @@ export async function loadDocument(
         documents = await loadPDFInternal(filePath);
       }
       break;
-    case "word":
+    case 'word':
       documents = await loadWord(filePath);
       break;
   }

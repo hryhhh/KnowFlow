@@ -1,19 +1,14 @@
-import path from "node:path";
+import path from 'node:path';
 
-import { loadDocument, type ParseStrategy, type LoadDocumentOptions } from "./loaders/index.js";
-import { splitDocuments } from "./splitters/recursive-splitter.js";
-import { splitMarkdownDocuments } from "./splitters/markdown-splitter.js";
-import { getEmbeddings } from "./embeddings/openai-embeddings.js";
-import {
-  ensureCachedPGVectorStore,
-  addDocumentsToPG,
-} from "./stores/pgvector-store.js";
-import {
-  similaritySearch,
-} from "./retrievers/similarity-retriever.js";
-import { hybridSearch } from "./retrievers/hybrid-retriever.js";
-import { rerank } from "./rerankers/bi-encoder-reranker.js";
-import { streamChat, buildContext } from "./llm/chat-service.js";
+import { loadDocument, type ParseStrategy, type LoadDocumentOptions } from './loaders/index.js';
+import { splitDocuments } from './splitters/recursive-splitter.js';
+import { splitMarkdownDocuments } from './splitters/markdown-splitter.js';
+import { getEmbeddings } from './embeddings/openai-embeddings.js';
+import { ensureCachedPGVectorStore, addDocumentsToPG } from './stores/pgvector-store.js';
+import { similaritySearch } from './retrievers/similarity-retriever.js';
+import { hybridSearch } from './retrievers/hybrid-retriever.js';
+import { rerank } from './rerankers/bi-encoder-reranker.js';
+import { streamChat, buildContext } from './llm/chat-service.js';
 import type {
   RAGPipelineConfig,
   TextChunk,
@@ -21,7 +16,7 @@ import type {
   SearchParams,
   SourceRef,
   StreamCallbacks,
-} from "./types.js";
+} from './types.js';
 
 /**
  * Stage 1: 文档摄入
@@ -38,15 +33,15 @@ export async function ingestDocument(
   filePath: string,
   kbId: string,
   config: RAGPipelineConfig,
-  parseStrategy: ParseStrategy = "basic",
-  agentOptions?: LoadDocumentOptions["agentOptions"],
+  parseStrategy: ParseStrategy = 'basic',
+  agentOptions?: LoadDocumentOptions['agentOptions'],
 ): Promise<{ chunkCount: number; chunks: TextChunk[] }> {
   // 1. 加载
   const { documents } = await loadDocument(filePath, undefined, parseStrategy, agentOptions);
 
   // 2. 切片（根据策略选择不同切片器）
   let chunks: TextChunk[];
-  if (parseStrategy === "mineru" || parseStrategy === "mineru-agent") {
+  if (parseStrategy === 'mineru' || parseStrategy === 'mineru-agent') {
     const mdDocs = await splitMarkdownDocuments(documents, {
       chunkSize: config.chunkSize,
       chunkOverlap: config.chunkOverlap,
@@ -139,9 +134,5 @@ export async function retrieveAndChat(
   callbacks.onSources(sources);
 
   const context = buildContext(results);
-  await streamChat(
-    { query, context },
-    config.llm,
-    callbacks,
-  );
+  await streamChat({ query, context }, config.llm, callbacks);
 }

@@ -1,9 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import * as yaml from "js-yaml";
-import { Client } from "pg";
-import type { DbQueryTemplate, DbQueryExecuteFn } from "@knowbase-x/agents";
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as yaml from 'js-yaml';
+import { Client } from 'pg';
+import type { DbQueryTemplate, DbQueryExecuteFn } from '@knowbase-x/agents';
 
 /**
  * DbQueryService — 数据库查询服务
@@ -33,7 +33,7 @@ export class DbQueryService implements OnModuleDestroy {
 
     try {
       await this.client.connect();
-      this.logger.log("DB Query Service 初始化完成");
+      this.logger.log('DB Query Service 初始化完成');
     } catch (err: any) {
       this.logger.error(`DB Query Service 初始化失败: ${err.message}`);
       // 不抛出，允许服务在其他 Agent 不可用时降级运行
@@ -44,15 +44,15 @@ export class DbQueryService implements OnModuleDestroy {
 
   private loadTemplates(): void {
     const possiblePaths = [
-      path.resolve(process.cwd(), "config/db-queries.yml"),
-      path.resolve(__dirname, "../../../../config/db-queries.yml"),
-      path.resolve("/home/hhhry/projects/knowledge-ai-main/config/db-queries.yml"),
+      path.resolve(process.cwd(), 'config/db-queries.yml'),
+      path.resolve(__dirname, '../../../../config/db-queries.yml'),
+      path.resolve('/home/hhhry/projects/knowledge-ai-main/config/db-queries.yml'),
     ];
 
     for (const p of possiblePaths) {
       try {
         if (fs.existsSync(p)) {
-          const content = fs.readFileSync(p, "utf-8");
+          const content = fs.readFileSync(p, 'utf-8');
           const config = yaml.load(content) as { templates: DbQueryTemplate[] };
           for (const t of config.templates) {
             this.templates.set(t.id, t);
@@ -65,12 +65,12 @@ export class DbQueryService implements OnModuleDestroy {
       }
     }
 
-    this.logger.warn("未找到 db-queries.yml，DB Query Agent 将无模板可用");
+    this.logger.warn('未找到 db-queries.yml，DB Query Agent 将无模板可用');
   }
 
   /** 执行参数化查询，返回结果行 */
   async execute(queryId: string, params: any[], maxRows: number = 100): Promise<any[]> {
-    if (!this.client) throw new Error("数据库未连接");
+    if (!this.client) throw new Error('数据库未连接');
 
     const template = this.templates.get(queryId);
     if (!template) throw new Error(`查询模板不存在: ${queryId}`);
@@ -99,8 +99,8 @@ export class DbQueryService implements OnModuleDestroy {
 
   private sanitizeParam(param: any): any {
     if (param === null || param === undefined) return null;
-    if (typeof param === "number") return param;
-    if (typeof param === "string") {
+    if (typeof param === 'number') return param;
+    if (typeof param === 'string') {
       // UUID 格式校验
       if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(param)) {
         return param;

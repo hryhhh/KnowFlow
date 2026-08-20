@@ -1,15 +1,8 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Delete,
-  Body,
-  Param,
-} from "@nestjs/common";
-import { ApiKeyService } from "./api-key.service";
-import { CreateApiServiceDto } from "./dto/create-api-service.dto";
+import { Controller, Get, Post, Delete, Body, Param } from '@nestjs/common';
+import { ApiKeyService } from './api-key.service';
+import { CreateApiServiceDto } from './dto/create-api-service.dto';
 
-@Controller("api-services")
+@Controller('api-services')
 export class ApiServiceController {
   constructor(private readonly service: ApiKeyService) {}
 
@@ -25,8 +18,8 @@ export class ApiServiceController {
     return { code: 0, data: list };
   }
 
-  @Delete(":serviceId")
-  async remove(@Param("serviceId") serviceId: string) {
+  @Delete(':serviceId')
+  async remove(@Param('serviceId') serviceId: string) {
     const res = await this.service.remove(serviceId);
     return { code: 0, data: res };
   }

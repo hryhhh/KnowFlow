@@ -1,16 +1,16 @@
-import type { Document } from "@langchain/core/documents";
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import type { Document } from '@langchain/core/documents';
+import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 
 /** Markdown 感知分隔符：优先在标题层级处切分，兜底到字符级 */
 const MARKDOWN_SEPARATORS = [
-  "\n# ", // H1
-  "\n## ", // H2
-  "\n### ", // H3
-  "\n#### ", // H4
-  "\n\n", // 段落间空行
-  "\n", // 单换行
-  " ",
-  "",
+  '\n# ', // H1
+  '\n## ', // H2
+  '\n### ', // H3
+  '\n#### ', // H4
+  '\n\n', // 段落间空行
+  '\n', // 单换行
+  ' ',
+  '',
 ];
 
 interface HeadingTracker {
@@ -58,15 +58,15 @@ export async function splitMarkdownDocuments(
 
   for (const doc of documents) {
     const rawContent = doc.pageContent;
-    const lines = rawContent.split("\n");
+    const lines = rawContent.split('\n');
 
     // 构建 heading 上下文栈
-    const tracker: HeadingTracker = { path: [], currentHeading: "" };
+    const tracker: HeadingTracker = { path: [], currentHeading: '' };
 
     // 先按标题层级粗分大块（heading 行不包含在 content 中，作为 metadata 单独保留）
     const sections: Array<{ headingLine: string; headingPath: string[]; content: string }> = [];
     let currentSectionLines: string[] = [];
-    let currentSectionHeading: string = "";
+    let currentSectionHeading: string = '';
     let currentSectionHeadingPath: string[] = [];
 
     for (const line of lines) {
@@ -77,7 +77,7 @@ export async function splitMarkdownDocuments(
           sections.push({
             headingLine: currentSectionHeading,
             headingPath: [...currentSectionHeadingPath],
-            content: currentSectionLines.join("\n"),
+            content: currentSectionLines.join('\n'),
           });
         }
         // 计算新 heading 路径
@@ -97,7 +97,7 @@ export async function splitMarkdownDocuments(
       sections.push({
         headingLine: currentSectionHeading,
         headingPath: [...currentSectionHeadingPath],
-        content: currentSectionLines.join("\n"),
+        content: currentSectionLines.join('\n'),
       });
     }
 
@@ -105,18 +105,18 @@ export async function splitMarkdownDocuments(
     for (const section of sections) {
       if (!section.content.trim()) continue;
 
-      const chunkPrefix = section.headingLine
-        ? `${section.headingLine}\n`
-        : "";
+      const chunkPrefix = section.headingLine ? `${section.headingLine}\n` : '';
 
-      const sectionDocs: Document[] = [{
-        pageContent: section.content,
-        metadata: {
-          ...doc.metadata,
-          headingPath: section.headingPath.join(" > "),
-          headingLine: section.headingLine,
+      const sectionDocs: Document[] = [
+        {
+          pageContent: section.content,
+          metadata: {
+            ...doc.metadata,
+            headingPath: section.headingPath.join(' > '),
+            headingLine: section.headingLine,
+          },
         },
-      }];
+      ];
 
       const chunks = await splitter.splitDocuments(sectionDocs);
 
@@ -129,7 +129,7 @@ export async function splitMarkdownDocuments(
             pageContent: chunkPrefix + content,
             metadata: {
               ...chunk.metadata,
-              headingPath: section.headingPath.join(" > "),
+              headingPath: section.headingPath.join(' > '),
             },
           });
         } else {

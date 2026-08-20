@@ -75,13 +75,13 @@ packages/rag-engine/src/
 ```typescript
 // packages/rag-engine/src/loaders/csv-loader.ts
 
-import { CSVLoader } from "@langchain/community/document_loaders/fs/csv";
-import type { Document } from "@langchain/core/documents";
+import { CSVLoader } from '@langchain/community/document_loaders/fs/csv';
+import type { Document } from '@langchain/core/documents';
 
 interface CSVLoadOptions {
   filePath: string;
-  column?: string;     // 可选：指定某一列作为内容源
-  separator?: string;  // 分隔符，默认 ","
+  column?: string; // 可选：指定某一列作为内容源
+  separator?: string; // 分隔符，默认 ","
 }
 
 export async function loadCSV(options: CSVLoadOptions): Promise<Document[]> {
@@ -92,6 +92,7 @@ export async function loadCSV(options: CSVLoadOptions): Promise<Document[]> {
 ```
 
 **输出示例（对应 step6.png 数据）：**
+
 ```json
 {
   "pageContent": "日期sheet:2019/8/21\n销售人:小小米\n手机型号:小米8\n数量:1\n单价:2799\n订单金额:\n订单状态:发货中",
@@ -110,11 +111,11 @@ export async function loadCSV(options: CSVLoadOptions): Promise<Document[]> {
 ```typescript
 // packages/rag-engine/src/loaders/xlsx-loader.ts
 
-import { XLSX } from "xlsx";  // 或 @langchain/community 的 XLSX loader
+import { XLSX } from 'xlsx'; // 或 @langchain/community 的 XLSX loader
 
 interface XLSXLoadOptions {
   filePath: string;
-  sheetName?: string;  // null = 第一个 sheet
+  sheetName?: string; // null = 第一个 sheet
 }
 
 export async function loadXLSX(options: XLSXLoadOptions): Promise<Document[]> {
@@ -130,11 +131,11 @@ export async function loadXLSX(options: XLSXLoadOptions): Promise<Document[]> {
 ```typescript
 // packages/rag-engine/src/loaders/pdf-loader.ts
 
-import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
+import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
 
 export async function loadPDF(filePath: string): Promise<Document[]> {
   const loader = new PDFLoader(filePath, {
-    parsedItemSeparator: "\n\n",  // 页面间分隔符
+    parsedItemSeparator: '\n\n', // 页面间分隔符
   });
   return await loader.load();
 }
@@ -147,7 +148,7 @@ export async function loadPDF(filePath: string): Promise<Document[]> {
 ```typescript
 // packages/rag-engine/src/loaders/word-loader.ts
 
-import { DocxLoader } from "@langchain/community/document_loaders/fs/docx";
+import { DocxLoader } from '@langchain/community/document_loaders/fs/docx';
 
 export async function loadWord(filePath: string): Promise<Document[]> {
   const loader = new DocxLoader(filePath);
@@ -160,17 +161,21 @@ export async function loadWord(filePath: string): Promise<Document[]> {
 ```typescript
 // packages/rag-engine/src/loaders/index.ts
 
-import path from "node:path";
+import path from 'node:path';
 
 type FileType = 'csv' | 'xlsx' | 'pdf' | 'word';
 
 export function detectFileType(filename: string): FileType {
   const ext = path.extname(filename).toLowerCase();
   const map: Record<string, FileType> = {
-    '.csv': 'csv', '.xlsx': 'xls', '.xls': 'xlsx',
-    '.pdf': 'pdf', '.docx': 'word', '.doc': 'word',
+    '.csv': 'csv',
+    '.xlsx': 'xls',
+    '.xls': 'xlsx',
+    '.pdf': 'pdf',
+    '.docx': 'word',
+    '.doc': 'word',
   };
-  return map[ext] ?? 'csv';  // 默认当 CSV 处理
+  return map[ext] ?? 'csv'; // 默认当 CSV 处理
 }
 
 export interface LoadResult {
@@ -179,10 +184,7 @@ export interface LoadResult {
   totalChars: number;
 }
 
-export async function loadDocument(
-  filePath: string,
-  fileType?: FileType
-): Promise<LoadResult> {
+export async function loadDocument(filePath: string, fileType?: FileType): Promise<LoadResult> {
   const detectedType = fileType || detectFileType(filePath);
   let documents: Document[] = [];
 
@@ -218,26 +220,26 @@ export async function loadDocument(
 ```typescript
 // packages/rag-engine/src/splitters/recursive-splitter.ts
 
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import type { Document } from "@langchain/core/documents";
+import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
+import type { Document } from '@langchain/core/documents';
 
 interface SplitOptions {
-  chunkSize: number;       // 每块最大字符数，默认 1000
-  chunkOverlap: number;    // 块间重叠字符数，默认 200
-  separators?: string[];   // 分隔符优先级列表
+  chunkSize: number; // 每块最大字符数，默认 1000
+  chunkOverlap: number; // 块间重叠字符数，默认 200
+  separators?: string[]; // 分隔符优先级列表
 }
 
 // 默认分隔符优先级
 const DEFAULT_SEPARATORS = [
-  "\n\n",    // 双换行 (段落)
-  "\n",      // 单换行
-  " ",       // 空格
-  "",        // 字符级兜底
+  '\n\n', // 双换行 (段落)
+  '\n', // 单换行
+  ' ', // 空格
+  '', // 字符级兜底
 ];
 
 export async function splitDocuments(
   documents: Document[],
-  options: Partial<SplitOptions> = {}
+  options: Partial<SplitOptions> = {},
 ): Promise<Document[]> {
   const splitter = new RecursiveCharacterTextSplitter({
     chunkSize: options.chunkSize ?? 1000,
@@ -255,7 +257,10 @@ export async function splitDocuments(
 }
 
 // 单个文本切片（用于测试）
-export async function splitText(text: string, options: Partial<SplitOptions> = {}): Promise<string[]> {
+export async function splitText(
+  text: string,
+  options: Partial<SplitOptions> = {},
+): Promise<string[]> {
   const splitter = new RecursiveCharacterTextSplitter({
     chunkSize: options.chunkSize ?? 1000,
     chunkOverlap: options.chunkOverlap ?? 200,
@@ -291,13 +296,13 @@ export class SemanticSplitter {
 ```typescript
 // packages/rag-engine/src/embeddings/openai-embeddings.ts
 
-import { OpenAIEmbeddings } from "@langchain/openai";
+import { OpenAIEmbeddings } from '@langchain/openai';
 
 interface EmbeddingConfig {
   apiKey: string;
-  model: string;           // 如 "text-embedding-v4"
-  baseURL: string;         // OpenAI 兼容端点
-  dimensions?: number;     // 输出维度（可选）
+  model: string; // 如 "text-embedding-v4"
+  baseURL: string; // OpenAI 兼容端点
+  dimensions?: number; // 输出维度（可选）
 }
 
 let _embeddings: OpenAIEmbeddings | null = null;
@@ -319,7 +324,7 @@ export function getEmbeddings(config: EmbeddingConfig): OpenAIEmbeddings {
 /** 批量将文档列表向量化（自动分批处理，每批最多 10 条） */
 export async function embedDocuments(
   config: EmbeddingConfig,
-  texts: string[]
+  texts: string[],
 ): Promise<number[][]> {
   const embeddings = getEmbeddings(config);
   const BATCH_SIZE = 10;
@@ -338,16 +343,14 @@ export async function embedDocuments(
 }
 
 /** 将单个查询词向量化 */
-export async function embedQuery(
-  config: EmbeddingConfig,
-  query: string
-): Promise<number[]> {
+export async function embedQuery(config: EmbeddingConfig, query: string): Promise<number[]> {
   const embeddings = getEmbeddings(config);
   return embeddings.embedQuery(query);
 }
 ```
 
 **配置示例（阿里云 MaaS）：**
+
 ```json
 {
   "apiKey": "sk-xxxx",
@@ -366,10 +369,10 @@ export async function embedQuery(
 ```typescript
 // packages/rag-engine/src/stores/pgvector-store.ts
 
-import { OpenAIEmbeddings } from "@langchain/openai";
-import { PGVectorStore, DistanceStrategy } from "@langchain/community/vectorstores/pgvector";
-import { Document } from "@langchain/core/documents";
-import type { PoolConfig } from "pg";
+import { OpenAIEmbeddings } from '@langchain/openai';
+import { PGVectorStore, DistanceStrategy } from '@langchain/community/vectorstores/pgvector';
+import { Document } from '@langchain/core/documents';
+import type { PoolConfig } from 'pg';
 
 interface PGVectorConfig {
   postgresConnectionOptions: PoolConfig;
@@ -383,19 +386,19 @@ interface PGVectorConfig {
 }
 
 const DEFAULT_CONFIG: Omit<PGVectorConfig, 'postgresConnectionOptions'> = {
-  tableName: "langchainjs",
+  tableName: 'langchainjs',
   columns: {
-    vectorColumnName: "vector",
-    contentColumnName: "content",
-    metadataColumnName: "metadata",
+    vectorColumnName: 'vector',
+    contentColumnName: 'content',
+    metadataColumnName: 'metadata',
   },
-  distancesStrategy: "cosine" as DistanceStrategy,
+  distancesStrategy: 'cosine' as DistanceStrategy,
 };
 
 export async function createPGVectorStore(
   embeddings: OpenAIEmbeddings,
   dbConfig: PoolConfig,
-  tableConfig?: Partial<Omit<PGVectorConfig, 'postgresConnectionOptions'>>
+  tableConfig?: Partial<Omit<PGVectorConfig, 'postgresConnectionOptions'>>,
 ): Promise<PGVectorStore> {
   const config = { ...DEFAULT_CONFIG, ...tableConfig, postgresConnectionOptions: dbConfig };
 
@@ -406,10 +409,10 @@ export async function createPGVectorStore(
 /** 存入文档向量 */
 export async function addDocumentsToPG(
   store: PGVectorStore,
-  chunks: { content: string; metadata?: Record<string, unknown> }[]
+  chunks: { content: string; metadata?: Record<string, unknown> }[],
 ): Promise<void> {
   const documents = chunks.map(
-    (c) => new Document({ pageContent: c.content, metadata: c.metadata ?? {} })
+    (c) => new Document({ pageContent: c.content, metadata: c.metadata ?? {} }),
   );
   await store.addDocuments(documents);
 }
@@ -418,13 +421,14 @@ export async function addDocumentsToPG(
 export async function searchSimilarityWithScore(
   store: PGVectorStore,
   queryVector: number[],
-  topK: number = 10
+  topK: number = 10,
 ): Promise<[Document, number][]> {
   return store.similaritySearchVectorWithScore(queryVector, topK);
 }
 ```
 
 **Docker PGVector 配置：**
+
 ```yaml
 # docker-compose.yml
 services:
@@ -432,7 +436,7 @@ services:
     image: pgvector/pgvector:pg16
     container_name: postgres-vector-server
     ports:
-      - "5432:5432"
+      - '5432:5432'
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 123456
@@ -446,20 +450,18 @@ services:
 ```typescript
 // packages/rag-engine/src/stores/memory-store.ts
 
-import { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
-import { OpenAIEmbeddings } from "@langchain/openai";
-import { Document } from "@langchain/core/documents";
+import { MemoryVectorStore } from '@langchain/classic/vectorstores/memory';
+import { OpenAIEmbeddings } from '@langchain/openai';
+import { Document } from '@langchain/core/documents';
 
-export async function createMemoryStore(
-  embeddings: OpenAIEmbeddings
-): Promise<MemoryVectorStore> {
+export async function createMemoryStore(embeddings: OpenAIEmbeddings): Promise<MemoryVectorStore> {
   return MemoryVectorStore.fromDocuments([], embeddings);
 }
 
 /** 从已有文本创建内存向量库 */
 export async function createMemoryStoreFromTexts(
   embeddings: OpenAIEmbeddings,
-  texts: string[]
+  texts: string[],
 ): Promise<MemoryVectorStore> {
   const docs = texts.map((t) => new Document({ pageContent: t }));
   return MemoryVectorStore.fromDocuments(docs, embeddings);
@@ -475,41 +477,38 @@ export async function createMemoryStoreFromTexts(
 ```typescript
 // packages/rag-engine/src/retrievers/similarity-retriever.ts
 
-import type { Document } from "@langchain/core/documents";
+import type { Document } from '@langchain/core/documents';
 
 export interface RetrievalResult {
   document: Document;
   score: number;
-  sourceFile: string;  // 从 metadata 中提取
+  sourceFile: string; // 从 metadata 中提取
 }
 
 interface SimilaritySearchParams {
   query: string;
   topK: number;
-  minScore: number;       // 最低相似度阈值
+  minScore: number; // 最低相似度阈值
 }
 
 /** 执行相似度检索 */
 export async function similaritySearch(
   params: SimilaritySearchParams,
-  vectorStore: any,       // PGVectorStore 或 MemoryVectorStore
-  embeddingConfig: import("./openai-embeddings.js").EmbeddingConfig
+  vectorStore: any, // PGVectorStore 或 MemoryVectorStore
+  embeddingConfig: import('./openai-embeddings.js').EmbeddingConfig,
 ): Promise<RetrievalResult[]> {
-  const { embedQuery } = await import("../embeddings/openai-embeddings.js");
+  const { embedQuery } = await import('../embeddings/openai-embeddings.js');
   const queryVector = await embedQuery(embeddingConfig, params.query);
 
-  const rawResults = await vectorStore.similaritySearchVectorWithScore(
-    queryVector,
-    params.topK
-  );
+  const rawResults = await vectorStore.similaritySearchVectorWithScore(queryVector, params.topK);
 
   return rawResults
     .map(([doc, score]: [Document, number]) => ({
       document: doc,
-      score: Number(score.toFixed(7)),  // 保留7位精度
-      sourceFile: doc.metadata?.source ?? "unknown",
+      score: Number(score.toFixed(7)), // 保留7位精度
+      sourceFile: doc.metadata?.source ?? 'unknown',
     }))
-    .filter((r) => r.score >= params.minScore);  // 过滤低分结果
+    .filter((r) => r.score >= params.minScore); // 过滤低分结果
 }
 ```
 
@@ -528,7 +527,7 @@ export async function similaritySearch(
  */
 export interface HybridSearchParams extends SimilaritySearchParams {
   useReranker: boolean;
-  denseWeight: number;  // 0~1, 默认 0.50
+  denseWeight: number; // 0~1, 默认 0.50
 }
 ```
 
@@ -544,7 +543,7 @@ export interface HybridSearchParams extends SimilaritySearchParams {
 interface RerankInput {
   query: string;
   results: RetrievalResult[];
-  topK?: number;  // 返回前 N 条
+  topK?: number; // 返回前 N 条
 }
 
 /**
@@ -574,19 +573,19 @@ export async function rerank(input: RerankInput): Promise<RetrievalResult[]> {
 ```typescript
 // packages/rag-engine/src/llm/chat-service.ts
 
-import { ChatOpenAI } from "@langchain/openai";
-import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { ChatOpenAI } from '@langchain/openai';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 
 interface LLMConfig {
   apiKey: string;
-  model: string;        // 如 "qwen3.7-plus"
+  model: string; // 如 "qwen3.7-plus"
   baseURL: string;
   temperature?: number; // 默认 0.7
 }
 
 interface ChatRequest {
   query: string;
-  context: string;      // 检索到的上下文拼接
+  context: string; // 检索到的上下文拼接
   systemPrompt?: string;
 }
 
@@ -609,7 +608,7 @@ const DEFAULT_SYSTEM_PROMPT = `你是一个知识库助手。请根据以下参�
 export async function streamChat(
   request: ChatRequest,
   config: LLMConfig,
-  callbacks: StreamCallbacks
+  callbacks: StreamCallbacks,
 ): Promise<void> {
   const llm = new ChatOpenAI({
     apiKey: config.apiKey,
@@ -647,7 +646,9 @@ ${request.context}
 /** 构建上下文字符串 */
 export function buildContext(retrievalResults: RetrievalResult[]): string {
   return retrievalResults
-    .map((r, i) => `[${i + 1}] ${r.document.pageContent}\n(来源: ${r.sourceFile}, 相关度: ${r.score})`)
+    .map(
+      (r, i) => `[${i + 1}] ${r.document.pageContent}\n(来源: ${r.sourceFile}, 相关度: ${r.score})`,
+    )
     .join('\n\n');
 }
 ```
@@ -792,35 +793,39 @@ export async function retrieveAndChat(
 // packages/rag-engine/src/index.ts
 
 // Loaders
-export { loadCSV } from "./loaders/csv-loader.js";
-export { loadXLSX } from "./loaders/xlsx-loader.js";
-export { loadPDF } from "./loaders/pdf-loader.js";
-export { loadWord } from "./loaders/word-loader.js";
-export { loadDocument, detectFileType } from "./loaders/index.js";
+export { loadCSV } from './loaders/csv-loader.js';
+export { loadXLSX } from './loaders/xlsx-loader.js';
+export { loadPDF } from './loaders/pdf-loader.js';
+export { loadWord } from './loaders/word-loader.js';
+export { loadDocument, detectFileType } from './loaders/index.js';
 
 // Splitters
-export { splitDocuments, splitText } from "./splitters/recursive-splitter.js";
+export { splitDocuments, splitText } from './splitters/recursive-splitter.js';
 
 // Embeddings
-export { getEmbeddings, embedDocuments, embedQuery } from "./embeddings/openai-embeddings.js";
+export { getEmbeddings, embedDocuments, embedQuery } from './embeddings/openai-embeddings.js';
 
 // Stores
-export { createPGVectorStore, addDocumentsToPG, searchSimilarityWithScore } from "./stores/pgvector-store.js";
-export { createMemoryStore, createMemoryStoreFromTexts } from "./stores/memory-store.js";
+export {
+  createPGVectorStore,
+  addDocumentsToPG,
+  searchSimilarityWithScore,
+} from './stores/pgvector-store.js';
+export { createMemoryStore, createMemoryStoreFromTexts } from './stores/memory-store.js';
 
 // Retrievers
-export { similaritySearch } from "./retrievers/similarity-retriever.js";
+export { similaritySearch } from './retrievers/similarity-retriever.js';
 
 // Rerankers
-export { rerank } from "./rerankers/cross-encoder-reranker.js";
+export { rerank } from './rerankers/cross-encoder-reranker.js';
 
 // LLM
-export { streamChat, buildContext } from "./llm/chat-service.js";
+export { streamChat, buildContext } from './llm/chat-service.js';
 
 // Pipeline
-export { ingestDocument, retrieveAndChat } from "./pipeline.js";
+export { ingestDocument, retrieveAndChat } from './pipeline.js';
 
 // Types
-export type { RAGPipelineConfig } from "./pipeline.js";
-export type { RetrievalResult, SourceRef } from "./llm/chat-service.js";
+export type { RAGPipelineConfig } from './pipeline.js';
+export type { RetrievalResult, SourceRef } from './llm/chat-service.js';
 ```

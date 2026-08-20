@@ -1,6 +1,6 @@
-import { ChatOpenAI } from "@langchain/openai";
-import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import type { LLMConfig, RetrievalResult, SourceRef, StreamCallbacks } from "../types.js";
+import { ChatOpenAI } from '@langchain/openai';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import type { LLMConfig, RetrievalResult, SourceRef, StreamCallbacks } from '../types.js';
 
 export const DEFAULT_SYSTEM_PROMPT = `你是一个知识库助手。请根据以下参考资料回答用户问题。
 如果资料中没有相关信息，请明确告知用户，不要编造。
@@ -14,13 +14,10 @@ export interface ChatRequest {
 
 /** 将检索结果拼装为上下文 */
 export function buildContext(results: RetrievalResult[]): string {
-  if (!results.length) return "（暂无可用参考资料）";
+  if (!results.length) return '（暂无可用参考资料）';
   return results
-    .map(
-      (r, i) =>
-        `[${i + 1}] ${r.content}\n(来源: ${r.sourceFile}, 相关度: ${r.score})`,
-    )
-    .join("\n\n");
+    .map((r, i) => `[${i + 1}] ${r.content}\n(来源: ${r.sourceFile}, 相关度: ${r.score})`)
+    .join('\n\n');
 }
 
 /**

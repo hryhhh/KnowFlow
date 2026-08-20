@@ -1,11 +1,5 @@
-import {
-  ExceptionFilter,
-  Catch,
-  ArgumentsHost,
-  HttpException,
-  HttpStatus,
-} from "@nestjs/common";
-import type { Response } from "express";
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
+import type { Response } from 'express';
 
 interface ErrorBody {
   code: number;
@@ -19,13 +13,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const status = exception.getStatus();
-    const res = exception.getResponse() as
-      | string
-      | { message?: string | string[]; error?: string };
+    const res = exception.getResponse() as string | { message?: string | string[]; error?: string };
 
     let message = exception.message;
-    if (typeof res === "object" && res !== null) {
-      if (Array.isArray(res.message)) message = res.message.join(", ");
+    if (typeof res === 'object' && res !== null) {
+      if (Array.isArray(res.message)) message = res.message.join(', ');
       else if (res.message) message = res.message;
     }
 
@@ -41,8 +33,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const status = HttpStatus.INTERNAL_SERVER_ERROR;
-    const message =
-      exception instanceof Error ? exception.message : "服务器内部错误";
+    const message = exception instanceof Error ? exception.message : '服务器内部错误';
     response.status(status).json({ code: status, message });
   }
 }

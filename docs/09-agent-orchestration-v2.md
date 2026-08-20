@@ -7,11 +7,10 @@ v1.0：单链路 RAG → 多智能体架构设计
 v2.0：补充实现细节、架构决策、接口契约与部署方案
 v2.1（本次）：强化 RAG 召回优先级、引入软默认规则与置信度仲裁、优化合成策略，解决换问法导致误路由问题
 
-
 1. 概要（Summary）
-将现有单链路 RAG 改造为「1 主智能体 + N 子智能体」架构。
-主智能体负责意图路由、并行/条件调度与结果合成。
-v2.1 核心调整：路由从「纯规则竞争」升级为「高精度规则 + RAG 软默认 + 低置信度 LLM 仲裁」，合成阶段默认优先采信 RAGFlow 结果，其他 Agent 结果作为补充，降低因用户换问法导致知识库问题被错误路由的风险。
+   将现有单链路 RAG 改造为「1 主智能体 + N 子智能体」架构。
+   主智能体负责意图路由、并行/条件调度与结果合成。
+   v2.1 核心调整：路由从「纯规则竞争」升级为「高精度规则 + RAG 软默认 + 低置信度 LLM 仲裁」，合成阶段默认优先采信 RAGFlow 结果，其他 Agent 结果作为补充，降低因用户换问法导致知识库问题被错误路由的风险。
 2. 目标与成功指标（Goals & Success Metrics）
 
 目标：
@@ -25,7 +24,6 @@ DB Query 结果准确率 100%（与原始 DB 校验）
 并行/合成场景用户满意度 ≥ 85%（后续 A/B）
 系统错误率（Agent 调用失败）≤ 1%
 
-
 3. 背景与范围（Background & Scope）
 
 背景：v2.0 纯正则规则对 paraphrasing 不鲁棒，导致知识库问题容易被更高优先级的统计/新闻规则抢走。
@@ -38,7 +36,7 @@ Dispatcher 支持「始终候选列表」与合成阶段的 RAG 优先策略。
 非范围（Out-of-scope）：前端 UI 重构、DB 模式变更、RAG 引擎内部重写、完整语义向量路由（可作为后续迭代）。
 
 4. 利益相关者（Stakeholders）
-与 v2.0 相同。
+   与 v2.0 相同。
 5. 用户场景与用户故事（User Stories）
 
 场景 A：明确统计类（“本月新增客户数量是多少？”）→ 高精度命中 DB Query。
@@ -48,7 +46,7 @@ Dispatcher 支持「始终候选列表」与合成阶段的 RAG 优先策略。
 场景 E（边界）：规则置信度不足或冲突 → 触发轻量 LLM 仲裁，最终决定执行列表。
 
 6. 功能需求（Functional Requirements）
-6.1 IntentRouter（重点变更）
+   6.1 IntentRouter（重点变更）
 
 从 YAML 加载规则，支持热重载。
 匹配逻辑：
@@ -84,8 +82,7 @@ rag-priority（新默认推荐）：
 6.3 Agents
 与 v2.0 保持一致（DB Query 无 LLM 生成 SQL、Web Search 可插拔+缓存+脱敏、RAGFlow 轻量包装）。
 6.4 ~ 6.5
-kbId 决策、SSE 兼容性与 v2.0 相同。新增事件与 onMeta 保持不变。
-7. 非功能需求（Non-functional Requirements）
+kbId 决策、SSE 兼容性与 v2.0 相同。新增事件与 onMeta 保持不变。7. 非功能需求（Non-functional Requirements）
 
 性能：路由决策 p95 ≤ 800ms；全链路延迟单独统计。
 可用性：Agent 失败率 ≤ 1%，支持超时降级。
@@ -99,59 +96,60 @@ API 保持不变（/api/agents/route、/api/agents/routeStream、/api/agents/rul
 新增配置项见第 15 节。
 
 9. 路由规则示例（配置）——v2.1 推荐
-YAMLrules:
-  - id: kb-docs-strict
-    pattern: "\\b(文档|资料|手册|知识库|kbId:)\\b"
-    intent: "kb_document"
-    targetAgent: "ragflow"
-    priority: 100
-    minScore: 0.9
-    examples:
-      - "这个文档里怎么说的"
-      - "知识库有没有相关说明"
+   YAMLrules:
+
+- id: kb-docs-strict
+  pattern: "\\b(文档|资料|手册|知识库|kbId:)\\b"
+  intent: "kb_document"
+  targetAgent: "ragflow"
+  priority: 100
+  minScore: 0.9
+  examples:
+  - "这个文档里怎么说的"
+  - "知识库有没有相关说明"
     enabled: true
 
-  - id: db-stats
-    pattern: "\\b(多少|统计|数量|列表|top\\b|新增客户|增长)"
-    intent: "db_query"
-    targetAgent: "db-query"
-    priority: 90
-    minScore: 0.85
-    enabled: true
+- id: db-stats
+  pattern: "\\b(多少|统计|数量|列表|top\\b|新增客户|增长)"
+  intent: "db_query"
+  targetAgent: "db-query"
+  priority: 90
+  minScore: 0.85
+  enabled: true
 
-  - id: web-latest
-    pattern: "\\b(最新|发布|新闻|动态|今天|近日)"
-    intent: "web_search"
-    targetAgent: "web-search"
-    priority: 80
-    minScore: 0.85
-    enabled: true
+- id: web-latest
+  pattern: "\\b(最新|发布|新闻|动态|今天|近日)"
+  intent: "web_search"
+  targetAgent: "web-search"
+  priority: 80
+  minScore: 0.85
+  enabled: true
 
-  # 软默认：保证大多数未明确命中其他意图的问题都会考虑 RAG
-  - id: ragflow-soft
-    pattern: ".*"
-    intent: "kb_fallback"
-    targetAgent: "ragflow"
-    priority: 30
-    minScore: 0.0
-    enabled: true
+# 软默认：保证大多数未明确命中其他意图的问题都会考虑 RAG
 
-  - id: combined-fallback
-    pattern: ""
-    intent: "fallback"
-    targetAgent: "llm-intent-classifier"
-    priority: 10
-    minScore: 0.0
-    enabled: true
+- id: ragflow-soft
+  pattern: ".*"
+  intent: "kb_fallback"
+  targetAgent: "ragflow"
+  priority: 30
+  minScore: 0.0
+  enabled: true
+
+- id: combined-fallback
+  pattern: ""
+  intent: "fallback"
+  targetAgent: "llm-intent-classifier"
+  priority: 10
+  minScore: 0.0
+  enabled: true
 
 settings:
-  maxMatchedRules: 3
-  defaultAgentTimeoutMs: 3000
-  allowParallel: true
-  alwaysIncludeAgents: ["ragflow"]          # 关键配置
-  routerConfidenceThreshold: 0.85           # 低于此值触发 LLM 仲裁
-  composeStrategy: "rag-priority"           # 新默认
-10. 可观测性、日志与追踪
+maxMatchedRules: 3
+defaultAgentTimeoutMs: 3000
+allowParallel: true
+alwaysIncludeAgents: ["ragflow"] # 关键配置
+routerConfidenceThreshold: 0.85 # 低于此值触发 LLM 仲裁
+composeStrategy: "rag-priority" # 新默认 10. 可观测性、日志与追踪
 在原有基础上增加以下字段：
 
 triggered_llm_arbitration: boolean
@@ -159,9 +157,9 @@ rag_included_by: "strict_rule" | "soft_rule" | "always_include" | "llm"
 compose_used_rag_priority: boolean
 
 11. 安全与合规
-与 v2.0 相同。
+    与 v2.0 相同。
 12. 测试计划
-新增用例：
+    新增用例：
 
 同一知识库问题使用 5~10 种不同问法，验证均能进入 ragflow 候选。
 明确统计/新闻类问题不会被 soft 规则错误抢占（priority 生效）。
@@ -181,12 +179,13 @@ rag-priority 合成在 RAG 有结果/无结果两种情况下的表现。
 其他与 v2.0 相同。
 
 15. 环境变量（新增/调整）
-Bash# ---- 路由与调度（v2.1 新增）----
-AGENT_ALWAYS_INCLUDE_AGENTS=ragflow          # 逗号分隔，始终加入候选
-AGENT_ROUTER_CONFIDENCE_THRESHOLD=0.85       # 低于此值触发 LLM 仲裁
-AGENT_COMPOSE_STRATEGY=rag-priority          # 新默认：rag-priority | concat | llm-summarize | rerank-and-merge
+    Bash# ---- 路由与调度（v2.1 新增）----
+    AGENT_ALWAYS_INCLUDE_AGENTS=ragflow # 逗号分隔，始终加入候选
+    AGENT_ROUTER_CONFIDENCE_THRESHOLD=0.85 # 低于此值触发 LLM 仲裁
+    AGENT_COMPOSE_STRATEGY=rag-priority # 新默认：rag-priority | concat | llm-summarize | rerank-and-merge
 
 # 其余变量与 v2.0 保持一致
+
 16. 风险与缓解
 
 风险：soft 规则或 alwaysInclude 导致不必要的 RAG 调用增加 → 缓解：合成阶段可丢弃低质量 RAG 结果；监控平均 Agent 调用数。
@@ -195,7 +194,7 @@ AGENT_COMPOSE_STRATEGY=rag-priority          # 新默认：rag-priority | concat
 其他风险与 v2.0 相同。
 
 17. 交付清单
-在 v2.0 基础上增加：
+    在 v2.0 基础上增加：
 
 IntentRouter 置信度仲裁与 alwaysInclude 逻辑
 rag-priority 合成策略

@@ -1,8 +1,8 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-import * as yaml from "js-yaml";
-import type { RouterRules, RouterRule, RouteMetadata } from "../types";
-import { ChatOpenAI } from "@langchain/openai";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as yaml from 'js-yaml';
+import type { RouterRules, RouterRule, RouteMetadata } from '../types';
+import { ChatOpenAI } from '@langchain/openai';
 
 /**
  * IntentRouter — 基于 YAML 规则的意图路由器
@@ -32,13 +32,13 @@ export class IntentRouter {
     this.rulesPath =
       rulesPath ??
       process.env.ROUTER_RULES_PATH ??
-      path.resolve(process.cwd(), "config/router.rules.yml");
+      path.resolve(process.cwd(), 'config/router.rules.yml');
     this.rules = this.loadRules();
     this.startHotReload();
   }
 
   private loadRules(): RouterRules {
-    const content = fs.readFileSync(this.rulesPath, "utf-8");
+    const content = fs.readFileSync(this.rulesPath, 'utf-8');
     this.lastLoadedTime = Date.now();
     return yaml.load(content) as RouterRules;
   }
@@ -49,10 +49,7 @@ export class IntentRouter {
     this.reloadTimer = setInterval(() => {
       try {
         const stats = fs.statSync(this.rulesPath);
-        if (
-          stats.mtimeMs !== lastMtime &&
-          Date.now() - this.lastLoadedTime > 30_000
-        ) {
+        if (stats.mtimeMs !== lastMtime && Date.now() - this.lastLoadedTime > 30_000) {
           const newRules = this.loadRules();
           this.rules = newRules;
           lastMtime = stats.mtimeMs;
@@ -91,7 +88,7 @@ export class IntentRouter {
     const matched: Array<{ rule: RouterRule; score: number }> = [];
     const metadata: RouteMetadata = {
       triggeredLlmArbitration: false,
-      ragIncludedBy: "none",
+      ragIncludedBy: 'none',
       composeUsedRagPriority: false,
     };
 
@@ -102,7 +99,7 @@ export class IntentRouter {
 
       let score = 0;
       try {
-        const regex = new RegExp(rule.pattern, "i");
+        const regex = new RegExp(rule.pattern, 'i');
         if (regex.test(query)) {
           score = 1.0;
         }
@@ -144,8 +141,8 @@ export class IntentRouter {
             rule: { ...fallbackRule, targetAgent: agentId },
             score: 0.0,
           });
-          if (agentId === "ragflow") {
-            metadata.ragIncludedBy = "always_include";
+          if (agentId === 'ragflow') {
+            metadata.ragIncludedBy = 'always_include';
           }
         }
       }
@@ -155,18 +152,14 @@ export class IntentRouter {
 
     // 3. 无命中 → 检查 soft 规则是否应触发（priority < threshold 且无高优先级规则时）
     //    soft 规则已在规则列表中（priority=30），此处检查是否需要用它兜底
-    const softRule = rules.find(
-      (r) => r.id === "ragflow-soft" && r.enabled,
-    );
+    const softRule = rules.find((r) => r.id === 'ragflow-soft' && r.enabled);
     if (softRule) {
       // soft 规则通过正则已经在上一步处理，如果没命中说明 query 不匹配 soft 模式
       // 直接走 LLM 兜底
     }
 
     // 4. 全部无匹配 → 调用 LLM 兜底分类
-    const fallbackRule = rules.find(
-      (r) => r.targetAgent === "llm-intent-classifier" && r.enabled,
-    );
+    const fallbackRule = rules.find((r) => r.targetAgent === 'llm-intent-classifier' && r.enabled);
     if (!fallbackRule || !this.llmConfig) {
       return { matched: [], metadata };
     }
@@ -177,7 +170,7 @@ export class IntentRouter {
         { rule: fallbackRule, score: 1.0 },
         { rule: { ...fallbackRule, targetAgent: llmAgent }, score: 1.0 },
       );
-      metadata.ragIncludedBy = "llm";
+      metadata.ragIncludedBy = 'llm';
       return { matched, metadata };
     } catch (err) {
       console.error(`[IntentRouter] LLM 分类失败: ${err}`);
@@ -196,15 +189,15 @@ export class IntentRouter {
     const availableAgents = [
       ...new Set(
         allRules
-          .filter((r) => r.enabled && r.targetAgent !== "llm-intent-classifier")
+          .filter((r) => r.enabled && r.targetAgent !== 'llm-intent-classifier')
           .map((r) => r.targetAgent),
       ),
     ];
 
-    const agentList = availableAgents.join(", ");
+    const agentList = availableAgents.join(', ');
     const systemPrompt = `你是一个意图分类器。根据用户问题，判断应该由哪个 Agent 处理。
 可选 Agent：${agentList}
-当前已通过规则命中：${currentMatched.map((m) => m.rule.targetAgent).join(", ")}。
+当前已通过规则命中：${currentMatched.map((m) => m.rule.targetAgent).join(', ')}。
 如果当前命中合理则保持原结果，如果明显错误请替换为正确的 Agent。
 只返回 Agent 名称，不要任何其他内容。`;
 
@@ -223,14 +216,16 @@ export class IntentRouter {
 
       const response = await llm.invoke(
         [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `用户问题：${query}` },
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `用户问题：${query}` },
         ],
         { signal: controller.signal },
       );
 
-      const answer = (response as any).content?.toString().trim() ?? "";
-      const finalAgent = availableAgents.includes(answer) ? answer : availableAgents[0] ?? "ragflow";
+      const answer = (response as any).content?.toString().trim() ?? '';
+      const finalAgent = availableAgents.includes(answer)
+        ? answer
+        : (availableAgents[0] ?? 'ragflow');
 
       // 构建仲裁结果：仅保留最终 Agent 对应的规则
       const finalRule = allRules.find((r) => r.targetAgent === finalAgent && r.enabled);
@@ -239,8 +234,8 @@ export class IntentRouter {
       }
       return { matched: [], agent: finalAgent };
     } catch (err: any) {
-      if (err.name === "AbortError") {
-        console.warn("[IntentRouter] LLM 仲裁超时（500ms），使用默认结果");
+      if (err.name === 'AbortError') {
+        console.warn('[IntentRouter] LLM 仲裁超时（500ms），使用默认结果');
       } else {
         console.error(`[IntentRouter] LLM 仲裁失败: ${err.message}`);
       }
@@ -252,21 +247,16 @@ export class IntentRouter {
   }
 
   /** 调用轻量 LLM 对查询做意图分类 */
-  private async classifyByLLM(
-    query: string,
-    allRules: RouterRule[],
-  ): Promise<string> {
+  private async classifyByLLM(query: string, allRules: RouterRule[]): Promise<string> {
     const availableAgents = [
       ...new Set(
         allRules
-          .filter(
-            (r) => r.enabled && r.targetAgent !== "llm-intent-classifier",
-          )
+          .filter((r) => r.enabled && r.targetAgent !== 'llm-intent-classifier')
           .map((r) => r.targetAgent),
       ),
     ];
 
-    const agentList = availableAgents.join(", ");
+    const agentList = availableAgents.join(', ');
     const systemPrompt = `你是一个意图分类器。根据用户问题，判断应该由哪个 Agent 处理。
 可选 Agent：${agentList}
 只返回 Agent 名称，不要任何其他内容。`;
@@ -286,19 +276,19 @@ export class IntentRouter {
 
       const response = await llm.invoke(
         [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `用户问题：${query}` },
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `用户问题：${query}` },
         ],
         { signal: controller.signal },
       );
 
-      const answer = (response as any).content?.toString().trim() ?? "";
-      return availableAgents.includes(answer) ? answer : availableAgents[0] ?? "ragflow";
+      const answer = (response as any).content?.toString().trim() ?? '';
+      return availableAgents.includes(answer) ? answer : (availableAgents[0] ?? 'ragflow');
     } catch (err: any) {
-      if (err.name === "AbortError") {
-        console.warn("[IntentRouter] LLM 分类超时（500ms）");
+      if (err.name === 'AbortError') {
+        console.warn('[IntentRouter] LLM 分类超时（500ms）');
       }
-      return availableAgents[0] ?? "ragflow";
+      return availableAgents[0] ?? 'ragflow';
     } finally {
       clearTimeout(timeout);
     }

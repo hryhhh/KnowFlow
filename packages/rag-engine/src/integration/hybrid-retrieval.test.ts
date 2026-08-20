@@ -66,8 +66,14 @@ describe.skip('Integration: hybridSearch with real PGVector', () => {
 
   it('should insert and retrieve documents with kbId filter', async () => {
     const testDocs = [
-      new Document({ pageContent: 'PostgreSQL向量检索原理与实现详解', metadata: { source: 'pg.txt', kbId: 'test-kb' } }),
-      new Document({ pageContent: 'JavaScript前端开发最佳实践指南', metadata: { source: 'js.txt', kbId: 'test-kb' } }),
+      new Document({
+        pageContent: 'PostgreSQL向量检索原理与实现详解',
+        metadata: { source: 'pg.txt', kbId: 'test-kb' },
+      }),
+      new Document({
+        pageContent: 'JavaScript前端开发最佳实践指南',
+        metadata: { source: 'js.txt', kbId: 'test-kb' },
+      }),
     ];
 
     await store.addDocuments(testDocs);
@@ -85,7 +91,10 @@ describe.skip('Integration: hybridSearch with real PGVector', () => {
 
   it('should filter out documents with different kbId', async () => {
     const otherDocs = [
-      new Document({ pageContent: 'Other KB content', metadata: { source: 'other.txt', kbId: 'other-kb' } }),
+      new Document({
+        pageContent: 'Other KB content',
+        metadata: { source: 'other.txt', kbId: 'other-kb' },
+      }),
     ];
     await store.addDocuments(otherDocs);
 

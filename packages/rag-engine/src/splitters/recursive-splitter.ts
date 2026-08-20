@@ -1,6 +1,6 @@
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import type { Document } from "@langchain/core/documents";
-import type { TextChunk } from "../types.js";
+import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
+import type { Document } from '@langchain/core/documents';
+import type { TextChunk } from '../types.js';
 
 export interface SplitOptions {
   chunkSize: number;
@@ -8,7 +8,7 @@ export interface SplitOptions {
   separators?: string[];
 }
 
-const DEFAULT_SEPARATORS = ["\n\n", "\n", "。", "！", "？", "；", " ", ""];
+const DEFAULT_SEPARATORS = ['\n\n', '\n', '。', '！', '？', '；', ' ', ''];
 
 /** 估算 token 数量（粗略：中英文按字符数 / 1.5 估算） */
 function estimateTokens(text: string): number {

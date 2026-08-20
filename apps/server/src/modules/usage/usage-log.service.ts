@@ -1,8 +1,8 @@
-import { Injectable } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { UsageLog } from "./entities/usage-log.entity";
-import type { UsageType } from "./entities/usage-log.entity";
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { UsageLog } from './entities/usage-log.entity';
+import type { UsageType } from './entities/usage-log.entity';
 
 @Injectable()
 export class UsageLogService {
@@ -29,7 +29,7 @@ export class UsageLogService {
       apiKeyId: params.apiKeyId ?? null,
       traceId: params.traceId ?? null,
       duration: params.duration ?? 0,
-      status: params.status ?? "success",
+      status: params.status ?? 'success',
       triggeredLlmArbitration: params.triggeredLlmArbitration ?? false,
       ragIncludedBy: params.ragIncludedBy ?? null,
       composeUsedRagPriority: params.composeUsedRagPriority ?? false,
@@ -49,14 +49,14 @@ export class UsageLogService {
     }
 
     const rows = await this.repo
-      .createQueryBuilder("u")
-      .select("DATE(u.\"createdAt\")", "date")
-      .addSelect("SUM(CASE WHEN u.type = 'api' THEN 1 ELSE 0 END)", "apiCalls")
-      .addSelect("SUM(CASE WHEN u.type = 'retrieval' THEN 1 ELSE 0 END)", "retrievalCalls")
-      .addSelect("SUM(CASE WHEN u.type = 'chat' THEN 1 ELSE 0 END)", "chatCalls")
-      .where("DATE(u.\"createdAt\") IN (:...dates)", { dates })
-      .groupBy("DATE(u.\"createdAt\")")
-      .orderBy("date", "ASC")
+      .createQueryBuilder('u')
+      .select('DATE(u."createdAt")', 'date')
+      .addSelect("SUM(CASE WHEN u.type = 'api' THEN 1 ELSE 0 END)", 'apiCalls')
+      .addSelect("SUM(CASE WHEN u.type = 'retrieval' THEN 1 ELSE 0 END)", 'retrievalCalls')
+      .addSelect("SUM(CASE WHEN u.type = 'chat' THEN 1 ELSE 0 END)", 'chatCalls')
+      .where('DATE(u."createdAt") IN (:...dates)', { dates })
+      .groupBy('DATE(u."createdAt")')
+      .orderBy('date', 'ASC')
       .getRawMany();
 
     const map = new Map<string, Record<string, string | number>>();

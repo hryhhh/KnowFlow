@@ -1,19 +1,15 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from "@nestjs/common";
-import { Inject } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import * as iconv from "iconv-lite";
-import { Document } from "./entities/document.entity";
-import { Chunk } from "../chunk/entities/chunk.entity";
-import { detectFileType, ingestDocument } from "@knowbase-x/rag-engine";
-import type { RAGPipelineConfig, ParseStrategy } from "@knowbase-x/rag-engine";
-import { RAG_CONFIG } from "../../config/rag-config.provider";
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as iconv from 'iconv-lite';
+import { Document } from './entities/document.entity';
+import { Chunk } from '../chunk/entities/chunk.entity';
+import { detectFileType, ingestDocument } from '@knowbase-x/rag-engine';
+import type { RAGPipelineConfig, ParseStrategy } from '@knowbase-x/rag-engine';
+import { RAG_CONFIG } from '../../config/rag-config.provider';
 
 export interface DocListItem {
   id: string;
@@ -27,14 +23,14 @@ export interface DocListItem {
   actions: string[];
 }
 
-const UPLOAD_ROOT = path.join(process.cwd(), "uploads");
+const UPLOAD_ROOT = path.join(process.cwd(), 'uploads');
 
 function decodeFilename(name: string): string {
-  const buffer = Buffer.from(name, "binary");
-  const utf8 = buffer.toString("utf8");
-  if (utf8.includes("\uFFFD")) {
+  const buffer = Buffer.from(name, 'binary');
+  const utf8 = buffer.toString('utf8');
+  if (utf8.includes('\uFFFD')) {
     try {
-      return iconv.decode(buffer, "gbk");
+      return iconv.decode(buffer, 'gbk');
     } catch {
       return utf8;
     }
@@ -58,7 +54,7 @@ export class DocumentService {
     file: { originalname: string; buffer: Buffer; size: number },
     processStrategy?: string,
   ): Promise<{ code: number; data: DocListItem }> {
-    if (!file) throw new BadRequestException("未接收到文件");
+    if (!file) throw new BadRequestException('未接收到文件');
     const decodedName = decodeFilename(file.originalname);
     const fileType = detectFileType(decodedName);
 
@@ -66,9 +62,9 @@ export class DocumentService {
 
     // 默认使用 MinerU Agent 轻量解析 API；可指定 mineru（自托管）或 basic（兜底）
     const parseStrategy: ParseStrategy =
-      processStrategy === "mineru" || processStrategy === "mineru-agent"
+      processStrategy === 'mineru' || processStrategy === 'mineru-agent'
         ? processStrategy
-        : "mineru-agent";
+        : 'mineru-agent';
 
     const doc = this.docRepo.create({
       kbId,
@@ -76,9 +72,9 @@ export class DocumentService {
       fileType,
       fileSize: file.size,
       filePath: savedPath,
-      processStrategy: processStrategy ?? "default",
-      status: "processing",
-      importMethod: "upload",
+      processStrategy: processStrategy ?? 'default',
+      status: 'processing',
+      importMethod: 'upload',
       chunkCount: 0,
     });
     await this.docRepo.save(doc);
@@ -104,11 +100,11 @@ export class DocumentService {
       );
       await this.chunkRepo.save(chunkEntities);
 
-      doc.status = "success";
+      doc.status = 'success';
       doc.chunkCount = chunkCount;
       await this.docRepo.save(doc);
     } catch (err) {
-      doc.status = "failed";
+      doc.status = 'failed';
       doc.errorMessage = err instanceof Error ? err.message : String(err);
       await this.docRepo.save(doc);
     }
@@ -117,9 +113,9 @@ export class DocumentService {
   }
 
   async findAll(kbId: string, search?: string): Promise<DocListItem[]> {
-    const qb = this.docRepo.createQueryBuilder("doc").where("doc.kbId = :kbId", { kbId });
-    if (search) qb.andWhere("doc.name ILIKE :s", { s: `%${search}%` });
-    const list = await qb.orderBy("doc.createdAt", "DESC").getMany();
+    const qb = this.docRepo.createQueryBuilder('doc').where('doc.kbId = :kbId', { kbId });
+    if (search) qb.andWhere('doc.name ILIKE :s', { s: `%${search}%` });
+    const list = await qb.orderBy('doc.createdAt', 'DESC').getMany();
     return list.map((d) => this.toListItem(d));
   }
 
@@ -134,7 +130,7 @@ export class DocumentService {
   private saveFile(kbId: string, originalname: string, buffer: Buffer): string {
     const dir = path.join(UPLOAD_ROOT, kbId);
     fs.mkdirSync(dir, { recursive: true });
-    const safe = originalname.replace(/[^\w.\-\u4e00-\u9fa5]/g, "_");
+    const safe = originalname.replace(/[^\w.\-\u4e00-\u9fa5]/g, '_');
     const fileName = `${Date.now()}_${safe}`;
     const full = path.join(dir, fileName);
     fs.writeFileSync(full, buffer);
@@ -147,16 +143,16 @@ export class DocumentService {
       kbId: d.kbId,
       name: d.name,
       status: d.status,
-      strategy: d.processStrategy ?? "",
+      strategy: d.processStrategy ?? '',
       chunkCount: d.chunkCount,
-      importMethod: d.importMethod === "upload" ? "本地上传" : "URL",
+      importMethod: d.importMethod === 'upload' ? '本地上传' : 'URL',
       updatedAt: this.fmt(d.updatedAt),
-      actions: ["切片详情"],
+      actions: ['切片详情'],
     };
   }
 
   private fmt(d: Date): string {
-    const p = (n: number) => String(n).padStart(2, "0");
+    const p = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
   }
 }

@@ -5,8 +5,8 @@ import type {
   SearchProvider,
   SearchResult,
   CacheProvider,
-} from "../types";
-import { generateAgentResultId, sanitizeText } from "../utils";
+} from '../types';
+import { generateAgentResultId, sanitizeText } from '../utils';
 
 /** 抽象基类：所有 Agent 继承此基类 */
 export abstract class BaseAgent implements Agent {
@@ -38,8 +38,8 @@ export interface DbQueryExecuteFn {
 }
 
 export class DbQueryAgent implements Agent {
-  readonly id = "db-query";
-  readonly name = "DB Query";
+  readonly id = 'db-query';
+  readonly name = 'DB Query';
 
   private readonly templates: Map<string, DbQueryTemplate> = new Map();
   private executeFn?: DbQueryExecuteFn;
@@ -57,11 +57,11 @@ export class DbQueryAgent implements Agent {
     try {
       const templateId = this.resolveTemplate(params.query);
       if (!templateId) {
-        return this.errorResult(startTime, "无法匹配查询模板");
+        return this.errorResult(startTime, '无法匹配查询模板');
       }
 
       if (!this.executeFn) {
-        return this.errorResult(startTime, "查询执行函数未配置");
+        return this.errorResult(startTime, '查询执行函数未配置');
       }
 
       const template = this.templates.get(templateId);
@@ -76,7 +76,7 @@ export class DbQueryAgent implements Agent {
       return {
         id: generateAgentResultId(),
         agent: this.id,
-        status: "ok",
+        status: 'ok',
         content,
         sources: [{ uri: `db://${templateId}`, title: template.description || templateId }],
         elapsedMs: Date.now() - startTime,
@@ -85,8 +85,8 @@ export class DbQueryAgent implements Agent {
       return {
         id: generateAgentResultId(),
         agent: this.id,
-        status: "error",
-        content: "",
+        status: 'error',
+        content: '',
         error: { message: err instanceof Error ? err.message : String(err) },
         elapsedMs: Date.now() - startTime,
       };
@@ -98,53 +98,64 @@ export class DbQueryAgent implements Agent {
     const q = query.toLowerCase();
 
     // 统计数量类（含"多少+量词"模式）
-    if (q.includes("总数") || q.includes("总共有") || q.includes("合计") || q.includes("累计") ||
-        /多少.*?(知识库|文档|切片|用户|员工|客户)/.test(q) ||
-        /知识库.*?多少/.test(q) || /文档.*?多少/.test(q)) {
+    if (
+      q.includes('总数') ||
+      q.includes('总共有') ||
+      q.includes('合计') ||
+      q.includes('累计') ||
+      /多少.*?(知识库|文档|切片|用户|员工|客户)/.test(q) ||
+      /知识库.*?多少/.test(q) ||
+      /文档.*?多少/.test(q)
+    ) {
       // 优先判断更具体的实体，避免"知识库总共有多少文档"误匹配为 kb_stats
-      if (q.includes("切片") || q.includes("chunk")) return "chunk_stats";
-      if (q.includes("文档") || q.includes("doc")) return "doc_stats";
-      if (q.includes("知识库") || q.includes("kb")) return "kb_stats";
-      return "kb_stats";
+      if (q.includes('切片') || q.includes('chunk')) return 'chunk_stats';
+      if (q.includes('文档') || q.includes('doc')) return 'doc_stats';
+      if (q.includes('知识库') || q.includes('kb')) return 'kb_stats';
+      return 'kb_stats';
     }
 
     // 列表类
-    if (q.includes("列出") || q.includes("清单") || q.includes("全部") || q.includes("列表")) {
+    if (q.includes('列出') || q.includes('清单') || q.includes('全部') || q.includes('列表')) {
       // 优先判断更具体的实体，避免"列出知识库中的文档"误匹配为 kb_list
-      if (q.includes("文档") || q.includes("doc")) return "doc_list";
-      if (q.includes("切片") || q.includes("chunk")) return "doc_list";
-      if (q.includes("知识库") || q.includes("kb")) return "kb_list";
-      return "doc_list";
+      if (q.includes('文档') || q.includes('doc')) return 'doc_list';
+      if (q.includes('切片') || q.includes('chunk')) return 'doc_list';
+      if (q.includes('知识库') || q.includes('kb')) return 'kb_list';
+      return 'doc_list';
     }
 
     // 排行/排名类
-    if (q.includes("排行") || q.includes("排名") || /top\d+/i.test(q)) {
-      return "top_docs_by_chunks";
+    if (q.includes('排行') || q.includes('排名') || /top\d+/i.test(q)) {
+      return 'top_docs_by_chunks';
     }
 
     // 统计/趋势类（趋势优先于纯统计，避免"文档创建趋势"误入 doc_stats）
-    if (q.includes("趋势") || q.includes("增长") || q.includes("变化")) {
-      return "doc_creation_trend";
+    if (q.includes('趋势') || q.includes('增长') || q.includes('变化')) {
+      return 'doc_creation_trend';
     }
-    if (q.includes("统计") || q.includes("分析")) {
-      if (q.includes("切片") || q.includes("chunk")) return "chunk_stats";
-      if (q.includes("文档") || q.includes("doc")) return "doc_stats";
-      if (q.includes("知识库") || q.includes("kb")) return "kb_stats";
-      return "doc_creation_trend";
+    if (q.includes('统计') || q.includes('分析')) {
+      if (q.includes('切片') || q.includes('chunk')) return 'chunk_stats';
+      if (q.includes('文档') || q.includes('doc')) return 'doc_stats';
+      if (q.includes('知识库') || q.includes('kb')) return 'kb_stats';
+      return 'doc_creation_trend';
     }
 
     // 有哪些 — 需区分对象
-    if (q.includes("有哪些")) {
-      if (q.includes("切片数最多") || q.includes("切片多")) return "top_docs_by_chunks";
-      if (q.includes("知识库")) return "kb_list";
-      return "doc_list";
+    if (q.includes('有哪些')) {
+      if (q.includes('切片数最多') || q.includes('切片多')) return 'top_docs_by_chunks';
+      if (q.includes('知识库')) return 'kb_list';
+      return 'doc_list';
     }
 
     // 个人查询 — 当前无对应模板，返回 null 触发 RAG 降级
     if (
-      q.includes("学号") || q.includes("身份证") || q.includes("手机号") ||
-      q.includes("电话") || q.includes("邮箱") || q.includes("联系方式") ||
-      q.includes("住址") || q.includes("姓名.*?信息")
+      q.includes('学号') ||
+      q.includes('身份证') ||
+      q.includes('手机号') ||
+      q.includes('电话') ||
+      q.includes('邮箱') ||
+      q.includes('联系方式') ||
+      q.includes('住址') ||
+      q.includes('姓名.*?信息')
     ) {
       return null;
     }
@@ -157,13 +168,13 @@ export class DbQueryAgent implements Agent {
     const result: any[] = [];
 
     for (const param of template.params) {
-      if (param.name === "kbId" && kbId) {
+      if (param.name === 'kbId' && kbId) {
         result.push(kbId);
-      } else if (param.name === "limit") {
+      } else if (param.name === 'limit') {
         result.push(10);
-      } else if (param.name === "status") {
-        result.push("active");
-      } else if (param.name === "since") {
+      } else if (param.name === 'status') {
+        result.push('active');
+      } else if (param.name === 'since') {
         // 默认近 30 天
         const d = new Date();
         d.setDate(d.getDate() - 30);
@@ -175,7 +186,7 @@ export class DbQueryAgent implements Agent {
   }
 
   private formatResults(rows: any[], template: DbQueryTemplate): string {
-    if (!rows || rows.length === 0) return "查询结果为空";
+    if (!rows || rows.length === 0) return '查询结果为空';
 
     // 单行单列（计数结果）
     if (rows.length === 1 && Object.keys(rows[0]).length === 1) {
@@ -185,19 +196,17 @@ export class DbQueryAgent implements Agent {
 
     // 多列结果 → 格式化表格
     const columns = Object.keys(rows[0]);
-    const lines = columns.join(" | ");
-    const dataLines = rows.map((row) =>
-      columns.map((c) => String(row[c] ?? "")).join(" | "),
-    );
-    return `${lines}\n${dataLines.join("\n")}`;
+    const lines = columns.join(' | ');
+    const dataLines = rows.map((row) => columns.map((c) => String(row[c] ?? '')).join(' | '));
+    return `${lines}\n${dataLines.join('\n')}`;
   }
 
   private errorResult(elapsedStart: number, message: string): AgentResult {
     return {
       id: generateAgentResultId(),
       agent: this.id,
-      status: "error",
-      content: "",
+      status: 'error',
+      content: '',
       error: { message },
       elapsedMs: Date.now() - elapsedStart,
     };
@@ -209,8 +218,8 @@ export class DbQueryAgent implements Agent {
 // ---------------------------------------------------------------------------
 
 export class WebSearchAgent implements Agent {
-  readonly id = "web-search";
-  readonly name = "Web Search";
+  readonly id = 'web-search';
+  readonly name = 'Web Search';
 
   private readonly provider: SearchProvider;
   private readonly cache: CacheProvider;
@@ -243,12 +252,12 @@ export class WebSearchAgent implements Agent {
       // 格式化内容：限制每个 snippet 长度，避免原始网页过长
       const content = uniqueResults
         .map((r) => `【${r.title}】\n${this.truncateSnippet(r.snippet, 300)}`)
-        .join("\n\n");
+        .join('\n\n');
 
       return {
         id: generateAgentResultId(),
         agent: this.id,
-        status: "ok",
+        status: 'ok',
         content,
         sources: uniqueResults.map((r) => ({ uri: r.uri, title: r.title })),
         elapsedMs: Date.now() - startTime,
@@ -257,8 +266,8 @@ export class WebSearchAgent implements Agent {
       return {
         id: generateAgentResultId(),
         agent: this.id,
-        status: "error",
-        content: "",
+        status: 'error',
+        content: '',
         error: { message: err instanceof Error ? err.message : String(err) },
         elapsedMs: Date.now() - startTime,
       };
@@ -282,14 +291,14 @@ export class WebSearchAgent implements Agent {
     // 优先在句号/换行处截断
     const cutoff = snippet.slice(0, maxLen + 50);
     const lastPeriod = Math.max(
-      cutoff.lastIndexOf("。"),
-      cutoff.lastIndexOf("."),
-      cutoff.lastIndexOf("\n"),
+      cutoff.lastIndexOf('。'),
+      cutoff.lastIndexOf('.'),
+      cutoff.lastIndexOf('\n'),
     );
     if (lastPeriod > maxLen * 0.6) {
       return snippet.slice(0, lastPeriod + 1);
     }
-    return snippet.slice(0, maxLen) + "...";
+    return snippet.slice(0, maxLen) + '...';
   }
 
   private async searchWithTimeout(query: string): Promise<SearchResult[]> {
@@ -319,8 +328,8 @@ export interface RagFlowStreamingFn {
 }
 
 export class RagFlowAgent implements Agent {
-  readonly id = "ragflow";
-  readonly name = "RAGFlow";
+  readonly id = 'ragflow';
+  readonly name = 'RAGFlow';
 
   private streamingFn?: RagFlowStreamingFn;
 
@@ -334,19 +343,21 @@ export class RagFlowAgent implements Agent {
       return {
         id: generateAgentResultId(),
         agent: this.id,
-        status: "error",
-        content: "",
-        error: { message: "RAGFlow streaming function not configured" },
+        status: 'error',
+        content: '',
+        error: { message: 'RAGFlow streaming function not configured' },
         elapsedMs: Date.now() - startTime,
       };
     }
 
-    let content = "";
+    let content = '';
     try {
       await new Promise<void>((resolve, reject) => {
         this.streamingFn!(
           params,
-          (token) => { content += token; },
+          (token) => {
+            content += token;
+          },
           () => {},
           resolve,
           (err) => reject(err),
@@ -355,7 +366,7 @@ export class RagFlowAgent implements Agent {
       return {
         id: generateAgentResultId(),
         agent: this.id,
-        status: "ok",
+        status: 'ok',
         content,
         elapsedMs: Date.now() - startTime,
       };
@@ -363,7 +374,7 @@ export class RagFlowAgent implements Agent {
       return {
         id: generateAgentResultId(),
         agent: this.id,
-        status: "error",
+        status: 'error',
         content,
         elapsedMs: Date.now() - startTime,
         error: { message: err?.message ?? String(err) },

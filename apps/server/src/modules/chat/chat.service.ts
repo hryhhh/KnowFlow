@@ -1,12 +1,12 @@
-import { Injectable, Inject } from "@nestjs/common";
-import { Observable, Subscriber } from "rxjs";
-import { MessageEvent } from "http";
-import { retrieveAndChat } from "@knowbase-x/rag-engine";
-import type { RAGPipelineConfig, SearchParams, SourceRef } from "@knowbase-x/rag-engine";
-import { RAG_CONFIG } from "../../config/rag-config.provider";
-import { UsageLogService } from "../usage/usage-log.service";
-import { SessionService } from "../session/session.service";
-import { AgentChatService } from "../agents/agent-chat.service";
+import { Injectable, Inject } from '@nestjs/common';
+import { Observable, Subscriber } from 'rxjs';
+import { MessageEvent } from 'http';
+import { retrieveAndChat } from '@knowbase-x/rag-engine';
+import type { RAGPipelineConfig, SearchParams, SourceRef } from '@knowbase-x/rag-engine';
+import { RAG_CONFIG } from '../../config/rag-config.provider';
+import { UsageLogService } from '../usage/usage-log.service';
+import { SessionService } from '../session/session.service';
+import { AgentChatService } from '../agents/agent-chat.service';
 
 export interface ChatStreamBody {
   query: string;
@@ -32,7 +32,7 @@ export class ChatService {
   stream(body: ChatStreamBody, request?: any): Observable<MessageEvent> {
     const params = body.params ?? {};
     const startTime = Date.now();
-    const traceId = request?.traceId ?? "";
+    const traceId = request?.traceId ?? '';
     const apiKeyId = request?.apiKey?.id ?? null;
 
     // 会话管理：有 sessionId 就用，否则新建
@@ -56,7 +56,7 @@ export class ChatService {
 
       const record = (status: string) => {
         this.usageLog.record({
-          type: "chat",
+          type: 'chat',
           kbId: body.kbId,
           apiKeyId,
           traceId,
@@ -67,55 +67,60 @@ export class ChatService {
 
       const normalizedParams: SearchParams = {
         topK: params.topK ?? 10,
-        minScore: params.minScore ?? (Number(process.env.DEFAULT_MIN_SCORE) || 0.10),
+        minScore: params.minScore ?? (Number(process.env.DEFAULT_MIN_SCORE) || 0.1),
         useReranker: params.useReranker ?? false,
         denseWeight: params.denseWeight ?? 0.5,
       };
 
       // AGENTS_ENABLED=true 时走 Agent 编排链路，否则降级传统 RAG
-      if (process.env.AGENTS_ENABLED === "true") {
-        let assistantContent = "";
+      if (process.env.AGENTS_ENABLED === 'true') {
+        let assistantContent = '';
         void sessionIdPromise.then(async () => {
           // 保存用户消息
           if (sessionId) {
-            await this.sessionService
-              .addMessage(sessionId, "user", body.query)
-              .catch(() => {});
+            await this.sessionService.addMessage(sessionId, 'user', body.query).catch(() => {});
           }
-          emit("session_id", sessionId);
+          emit('session_id', sessionId);
 
           this.agentChat
-            .stream(body.query, body.kbId, normalizedParams, {
-              onSources: (sources: SourceRef[]) => emit("sources", sources),
-              onToken: (token: string) => {
-                assistantContent += token;
-                emit("token", token);
+            .stream(
+              body.query,
+              body.kbId,
+              normalizedParams,
+              {
+                onSources: (sources: SourceRef[]) => emit('sources', sources),
+                onToken: (token: string) => {
+                  assistantContent += token;
+                  emit('token', token);
+                },
+                onDone: () => {
+                  emit('done', null);
+                  record('success');
+                  // 保存助手回复到会话
+                  if (sessionId && assistantContent.trim()) {
+                    void this.sessionService
+                      .addMessage(sessionId, 'assistant', assistantContent)
+                      .catch(() => {});
+                  }
+                  subscriber.complete();
+                },
+                onError: (err: Error) => {
+                  emit('error', err.message);
+                  record('error');
+                  if (sessionId) {
+                    void this.sessionService
+                      .addMessage(sessionId, 'assistant', `⚠️ ${err.message}`)
+                      .catch(() => {});
+                  }
+                  subscriber.complete();
+                },
               },
-              onDone: () => {
-                emit("done", null);
-                record("success");
-                // 保存助手回复到会话
-                if (sessionId && assistantContent.trim()) {
-                  void this.sessionService
-                    .addMessage(sessionId, "assistant", assistantContent)
-                    .catch(() => {});
-                }
-                subscriber.complete();
-              },
-              onError: (err: Error) => {
-                emit("error", err.message);
-                record("error");
-                if (sessionId) {
-                  void this.sessionService
-                    .addMessage(sessionId, "assistant", `⚠️ ${err.message}`)
-                    .catch(() => {});
-                }
-                subscriber.complete();
-              },
-            }, traceId, apiKeyId)
+              traceId,
+              apiKeyId,
+            )
             .catch((err: unknown) => {
-              emit("error", err instanceof Error ? err.message : String(err));
-              record("error");
+              emit('error', err instanceof Error ? err.message : String(err));
+              record('error');
               subscriber.complete();
             });
         });
@@ -123,35 +128,37 @@ export class ChatService {
       }
 
       // 传统 RAG 单链路
-      let assistantContent = "";
+      let assistantContent = '';
       void sessionIdPromise.then(() => {
         retrieveAndChat(body.query, body.kbId, normalizedParams, this.ragConfig, {
-          onSources: (sources: SourceRef[]) => emit("sources", sources),
+          onSources: (sources: SourceRef[]) => emit('sources', sources),
           onToken: (token: string) => {
             assistantContent += token;
-            emit("token", token);
+            emit('token', token);
           },
           onDone: () => {
-            emit("done", null);
-            record("success");
+            emit('done', null);
+            record('success');
             if (sessionId) {
-              void this.sessionService.addMessage(sessionId, "assistant", assistantContent).catch(() => {});
+              void this.sessionService
+                .addMessage(sessionId, 'assistant', assistantContent)
+                .catch(() => {});
             }
             subscriber.complete();
           },
           onError: (err: Error) => {
-            emit("error", err.message);
-            record("error");
+            emit('error', err.message);
+            record('error');
             if (sessionId) {
               void this.sessionService
-                .addMessage(sessionId, "assistant", `⚠️ ${err.message}`)
+                .addMessage(sessionId, 'assistant', `⚠️ ${err.message}`)
                 .catch(() => {});
             }
             subscriber.complete();
           },
         }).catch((err) => {
-          emit("error", err instanceof Error ? err.message : String(err));
-          record("error");
+          emit('error', err instanceof Error ? err.message : String(err));
+          record('error');
           subscriber.complete();
         });
       });

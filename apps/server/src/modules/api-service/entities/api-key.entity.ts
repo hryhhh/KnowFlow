@@ -4,17 +4,17 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
-} from "typeorm";
+} from 'typeorm';
 
-@Entity("api_keys")
+@Entity('api_keys')
 export class ApiKey {
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ length: 128 })
   serviceName: string;
 
-  @Column({ type: "text", nullable: true })
+  @Column({ type: 'text', nullable: true })
   description: string;
 
   @Column({ length: 128 })
@@ -23,7 +23,7 @@ export class ApiKey {
   @Column({ length: 32 })
   keyPrefix: string;
 
-  @Column({ type: "uuid" })
+  @Column({ type: 'uuid' })
   kbId: string;
 
   @Column({ length: 64, nullable: true })
@@ -32,13 +32,13 @@ export class ApiKey {
   @Column({ default: true })
   isActive: boolean;
 
-  @Column({ type: "bigint", default: 0 })
+  @Column({ type: 'bigint', default: 0 })
   callCount: number;
 
-  @Column({ type: "timestamp", nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   lastCalledAt: Date;
 
-  @Column({ type: "timestamp", nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   expiresAt: Date;
 
   @CreateDateColumn()

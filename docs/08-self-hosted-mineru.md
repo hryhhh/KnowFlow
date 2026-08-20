@@ -32,11 +32,11 @@ rag-engine → AdmZip 解压 → Markdown
 
 ## 二、三种解析策略对比
 
-| 策略值 | 说明 | 文件大小 | 页数 | 隐私 | 依赖 |
-|--------|------|----------|------|------|------|
-| `mineru-agent`（默认）| 云端 MinerU Agent API | ≤10 MB | ≤20 页 | 上传到外部服务 | 无需额外服务 |
-| `mineru` | 本地自托管 MinerU API | 无限制 | 无限制 | 完全本地 | 需启动 Docker 服务 |
-| `basic` | pdf-parse 纯文本兜底 | 无限制 | 无限制 | 完全本地 | 无依赖 |
+| 策略值                 | 说明                  | 文件大小 | 页数   | 隐私           | 依赖               |
+| ---------------------- | --------------------- | -------- | ------ | -------------- | ------------------ |
+| `mineru-agent`（默认） | 云端 MinerU Agent API | ≤10 MB   | ≤20 页 | 上传到外部服务 | 无需额外服务       |
+| `mineru`               | 本地自托管 MinerU API | 无限制   | 无限制 | 完全本地       | 需启动 Docker 服务 |
+| `basic`                | pdf-parse 纯文本兜底  | 无限制   | 无限制 | 完全本地       | 无依赖             |
 
 ---
 
@@ -44,12 +44,12 @@ rag-engine → AdmZip 解压 → Markdown
 
 ### 3.1 硬件要求（CPU 模式）
 
-| 资源 | 最低 | 推荐 |
-|------|------|------|
-| CPU 核数 | 2 | 4+ |
-| 内存 | 8 GB | 16 GB+ |
-| 磁盘 | 10 GB（模型 + 解析中间文件） | 20 GB+ |
-| GPU | 不需要 | 不需要 |
+| 资源     | 最低                         | 推荐   |
+| -------- | ---------------------------- | ------ |
+| CPU 核数 | 2                            | 4+     |
+| 内存     | 8 GB                         | 16 GB+ |
+| 磁盘     | 10 GB（模型 + 解析中间文件） | 20 GB+ |
+| GPU      | 不需要                       | 不需要 |
 
 > 有 NVIDIA GPU 时使用 GPU 模式可获得更快的解析速度，参见 [附录：GPU 模式](#附录-gpu-模式)。
 
@@ -101,6 +101,7 @@ docker logs -f kb-mineru-api
 ```
 
 预期日志：
+
 ```
 Models not found in cache, downloading...
 [大量下载输出...]
@@ -187,12 +188,13 @@ exec mineru-api --host 0.0.0.0 --port 8000
   "model-source": "huggingface",
   "models-dir": {
     "pipeline": "/root/.cache/huggingface/hub/models--opendatalab--PDF-Extract-Kit-1.0/...",
-    "vlm":      "/root/.cache/huggingface/hub/models--opendatalab--MinerU2.5-Pro-2605-1.2B/..."
+    "vlm": "/root/.cache/huggingface/hub/models--opendatalab--MinerU2.5-Pro-2605-1.2B/..."
   }
 }
 ```
 
 两个核心模型：
+
 - **PDF-Extract-Kit-1.0**：版面分析（检测标题、表格、图片区域）
 - **MinerU2.5-Pro-2605-1.2B**：视觉语言模型（理解文档结构、提取公式）
 
@@ -207,17 +209,17 @@ mineru-api:
   image: ${MINERU_IMAGE:-kb-mineru:local}
   container_name: kb-mineru-api
   restart: unless-stopped
-  profiles: ["mineru-cpu"]        # 需要 --profile mineru-cpu 才能启动
+  profiles: ['mineru-cpu'] # 需要 --profile mineru-cpu 才能启动
   ports:
-    - "${MINERU_PORT:-8000}:8000"
+    - '${MINERU_PORT:-8000}:8000'
   environment:
     MINERU_MODEL_SOURCE: local
-    MINERU_BACKEND: pipeline    # pipeline = CPU 后端
-    MINERU_EFFORT: medium       # low / medium / high
+    MINERU_BACKEND: pipeline # pipeline = CPU 后端
+    MINERU_EFFORT: medium # low / medium / high
   volumes:
-    - mineru_models:/root/.cache/huggingface/hub   # 模型持久化
+    - mineru_models:/root/.cache/huggingface/hub # 模型持久化
   healthcheck:
-    test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+    test: ['CMD-SHELL', 'curl -f http://localhost:8000/health || exit 1']
     interval: 10s
     timeout: 5s
     retries: 5
@@ -225,7 +227,7 @@ mineru-api:
     - kb-network
 
 volumes:
-  mineru_models:                 # 模型缓存卷，重启不丢失
+  mineru_models: # 模型缓存卷，重启不丢失
     driver: local
 ```
 
@@ -233,10 +235,10 @@ volumes:
 
 MinerU 和主应用在同一个 `kb-network` 网络中，互访方式：
 
-| 访问方式 | URL |
-|----------|-----|
-| 容器内互访（server → mineru）| `http://kb-mineru-api:8000` |
-| 宿主机访问（前端开发） | `http://localhost:8000` |
+| 访问方式                      | URL                         |
+| ----------------------------- | --------------------------- |
+| 容器内互访（server → mineru） | `http://kb-mineru-api:8000` |
+| 宿主机访问（前端开发）        | `http://localhost:8000`     |
 
 > **注意**：当前 `.env` 中 `MINERU_API_URL=http://localhost:8000` 适用于 server 运行在宿主机（本地开发）的场景。如果 server 也容器化，需改为 `http://kb-mineru-api:8000`。
 
@@ -332,7 +334,7 @@ docker stats kb-mineru-api
 
 ```yaml
 environment:
-  MINERU_EFFORT: ${MINERU_EFFORT:-high}  # 提高质量，速度会慢一些
+  MINERU_EFFORT: ${MINERU_EFFORT:-high} # 提高质量，速度会慢一些
 ```
 
 ### 8.5 内存不足 OOM

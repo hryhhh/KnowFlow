@@ -1,6 +1,6 @@
-import type { EmbeddingConfig, RetrievalResult, SearchParams } from "../types.js";
-import { similaritySearch } from "./similarity-retriever.js";
-import type { VectorStoreLike } from "./similarity-retriever.js";
+import type { EmbeddingConfig, RetrievalResult, SearchParams } from '../types.js';
+import { similaritySearch } from './similarity-retriever.js';
+import type { VectorStoreLike } from './similarity-retriever.js';
 
 export interface HybridSearchParams extends SearchParams {
   query: string;
@@ -32,8 +32,8 @@ export async function hybridSearch(
   return results
     .map((r) => {
       // 用正则整体词匹配，避免 "ai" 误命中 "JavaScript"
-      const hit = queryTerms.some(
-        (t) => new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(r.content),
+      const hit = queryTerms.some((t) =>
+        new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(r.content),
       );
       const keywordScore = hit ? 1 : 0;
       const fused = params.denseWeight * r.score + keywordWeight * keywordScore;

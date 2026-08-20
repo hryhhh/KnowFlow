@@ -1,6 +1,6 @@
-import { Document } from "@langchain/core/documents";
-import type { EmbeddingConfig } from "../types.js";
-import { getEmbeddings } from "../embeddings/openai-embeddings.js";
+import { Document } from '@langchain/core/documents';
+import type { EmbeddingConfig } from '../types.js';
+import { getEmbeddings } from '../embeddings/openai-embeddings.js';
 
 /**
  * 语义切片：基于相邻句向量相似度在语义边界处切分。
@@ -39,7 +39,7 @@ export class SemanticSplitter {
 
       for (let i = 0; i < sentences.length; i++) {
         current.push(sentences[i]);
-        const len = current.join("").length;
+        const len = current.join('').length;
         if (len >= this.targetChunkSize) {
           groups.push(current);
           current = [];
@@ -50,7 +50,7 @@ export class SemanticSplitter {
       groups.forEach((g, idx) => {
         out.push(
           new Document({
-            pageContent: g.join(""),
+            pageContent: g.join(''),
             metadata: { ...doc.metadata, semanticGroup: idx },
           }),
         );

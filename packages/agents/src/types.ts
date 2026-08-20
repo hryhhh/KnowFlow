@@ -35,7 +35,7 @@ export interface RouterRules {
 export interface AgentResult {
   id: string;
   agent: string;
-  status: "ok" | "partial" | "error" | "timeout";
+  status: 'ok' | 'partial' | 'error' | 'timeout';
   score?: number;
   content: string;
   sources?: Array<{ uri?: string; title?: string; meta?: Record<string, any> }>;
@@ -106,14 +106,14 @@ export interface CacheProvider {
 }
 
 /** 合成策略 */
-export type ComposeStrategy = "concat" | "llm-summarize" | "rerank-and-merge" | "rag-priority";
+export type ComposeStrategy = 'concat' | 'llm-summarize' | 'rerank-and-merge' | 'rag-priority';
 
 /** 路由可观测性元数据 */
 export interface RouteMetadata {
   /** 是否触发了 LLM 仲裁 */
   triggeredLlmArbitration: boolean;
   /** ragflow 被加入候选的原因 */
-  ragIncludedBy: "strict_rule" | "soft_rule" | "always_include" | "llm" | "none";
+  ragIncludedBy: 'strict_rule' | 'soft_rule' | 'always_include' | 'llm' | 'none';
   /** 合成阶段是否采用了 rag-priority 策略 */
   composeUsedRagPriority: boolean;
   /** 仲裁时 LLM 返回的目标 Agent */

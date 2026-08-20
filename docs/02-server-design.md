@@ -4,15 +4,15 @@
 
 ## 一、技术选型
 
-| 组件 | 选型 | 说明 |
-|------|------|------|
-| 框架 | NestJS 11 + Express | 模块化、依赖注入、装饰器驱动 |
-| ORM / DB 驱动 | TypeORM 或 Prisma + pg | PostgreSQL 操作 |
-| 向量扩展 | pgvector (pg16) | 相似度检索 |
-| 缓存 | Redis (ioredis) | 会话 & 任务状态 |
-| LLM 客户端 | @langchain/openai | 兼容 OpenAI 接口的 LLM |
-| 认证 | API Key Bearer Token | 简单的 API Key 校验 |
-| 文件上传 | multer | 多格式文件上传 |
+| 组件          | 选型                   | 说明                         |
+| ------------- | ---------------------- | ---------------------------- |
+| 框架          | NestJS 11 + Express    | 模块化、依赖注入、装饰器驱动 |
+| ORM / DB 驱动 | TypeORM 或 Prisma + pg | PostgreSQL 操作              |
+| 向量扩展      | pgvector (pg16)        | 相似度检索                   |
+| 缓存          | Redis (ioredis)        | 会话 & 任务状态              |
+| LLM 客户端    | @langchain/openai      | 兼容 OpenAI 接口的 LLM       |
+| 认证          | API Key Bearer Token   | 简单的 API Key 校验          |
+| 文件上传      | multer                 | 多格式文件上传               |
 
 ## 二、模块设计
 
@@ -87,78 +87,78 @@ apps/server/src/
 
 ### 3.1 knowledge_bases（知识库表）
 
-| 字段 | 类型 | 约束 | 说明 |
-|------|------|------|------|
-| id | UUID | PK | 主键 |
-| name | VARCHAR(128) | NOT NULL, UNIQUE | 知识库名称 |
-| description | TEXT | | 描述 |
-| type | VARCHAR(32) | DEFAULT 'free' | 类型: free / premium |
-| status | VARCHAR(32) | DEFAULT 'active' | 状态: active / archived |
-| created_by | VARCHAR(64) | | 创建者 |
-| created_at | TIMESTAMP | DEFAULT NOW() | 创建时间 |
-| updated_at | TIMESTAMP | | 更新时间 |
+| 字段        | 类型         | 约束             | 说明                    |
+| ----------- | ------------ | ---------------- | ----------------------- |
+| id          | UUID         | PK               | 主键                    |
+| name        | VARCHAR(128) | NOT NULL, UNIQUE | 知识库名称              |
+| description | TEXT         |                  | 描述                    |
+| type        | VARCHAR(32)  | DEFAULT 'free'   | 类型: free / premium    |
+| status      | VARCHAR(32)  | DEFAULT 'active' | 状态: active / archived |
+| created_by  | VARCHAR(64)  |                  | 创建者                  |
+| created_at  | TIMESTAMP    | DEFAULT NOW()    | 创建时间                |
+| updated_at  | TIMESTAMP    |                  | 更新时间                |
 
 ### 3.2 documents（文档表）
 
-| 字段 | 类型 | 约束 | 说明 |
-|------|------|------|------|
-| id | UUID | PK | 主键 |
-| kb_id | UUID | FK → knowledge_bases.id | 所属知识库 |
-| name | VARCHAR(256) | NOT NULL | 文件名 / 标识 |
-| file_type | VARCHAR(16) | NOT NULL | 格式: csv / xlsx / pdf / word |
-| file_size | BIGINT | | 文件大小 (bytes) |
-| file_path | VARCHAR(512) | | 存储路径 |
-| process_strategy | VARCHAR(64) | | 处理策略名 (如 miaoma_init_version) |
-| status | VARCHAR(32) | DEFAULT 'pending' | pending / processing / success / failed |
-| chunk_count | INT | DEFAULT 0 | 切片数量 |
-| import_method | VARCHAR(16) | DEFAULT 'upload' | 上传方式: upload / url |
-| error_message | TEXT | | 错误信息 |
-| created_at | TIMESTAMP | DEFAULT NOW() | 创建时间 |
-| updated_at | TIMESTAMP | | 更新时间 |
+| 字段             | 类型         | 约束                    | 说明                                    |
+| ---------------- | ------------ | ----------------------- | --------------------------------------- |
+| id               | UUID         | PK                      | 主键                                    |
+| kb_id            | UUID         | FK → knowledge_bases.id | 所属知识库                              |
+| name             | VARCHAR(256) | NOT NULL                | 文件名 / 标识                           |
+| file_type        | VARCHAR(16)  | NOT NULL                | 格式: csv / xlsx / pdf / word           |
+| file_size        | BIGINT       |                         | 文件大小 (bytes)                        |
+| file_path        | VARCHAR(512) |                         | 存储路径                                |
+| process_strategy | VARCHAR(64)  |                         | 处理策略名 (如 miaoma_init_version)     |
+| status           | VARCHAR(32)  | DEFAULT 'pending'       | pending / processing / success / failed |
+| chunk_count      | INT          | DEFAULT 0               | 切片数量                                |
+| import_method    | VARCHAR(16)  | DEFAULT 'upload'        | 上传方式: upload / url                  |
+| error_message    | TEXT         |                         | 错误信息                                |
+| created_at       | TIMESTAMP    | DEFAULT NOW()           | 创建时间                                |
+| updated_at       | TIMESTAMP    |                         | 更新时间                                |
 
 ### 3.3 chunks（切片表）
 
 > 注：实际向量存储在 PGVector 的 `langchainjs` 表中，此表为关系型元数据。
 
-| 字段 | 类型 | 约束 | 说明 |
-|------|------|------|------|
-| id | UUID | PK | 主键 |
-| kb_id | UUID | FK → knowledge_bases.id | 所属知识库 |
-| doc_id | UUID | FK → documents.id | 所属文档 |
-| chunk_index | INT | NOT NULL | 切片序号 |
-| content | TEXT | NOT NULL | 切片文本内容 |
-| title | VARCHAR(256) | | 切片标题 |
-| token_count | INT | | Token 数量 |
-| vector_id | VARCHAR(64) | | PGVector 表中的 ID |
-| metadata | JSONB | | 扩展元数据 |
-| created_at | TIMESTAMP | DEFAULT NOW() | 创建时间 |
+| 字段        | 类型         | 约束                    | 说明               |
+| ----------- | ------------ | ----------------------- | ------------------ |
+| id          | UUID         | PK                      | 主键               |
+| kb_id       | UUID         | FK → knowledge_bases.id | 所属知识库         |
+| doc_id      | UUID         | FK → documents.id       | 所属文档           |
+| chunk_index | INT          | NOT NULL                | 切片序号           |
+| content     | TEXT         | NOT NULL                | 切片文本内容       |
+| title       | VARCHAR(256) |                         | 切片标题           |
+| token_count | INT          |                         | Token 数量         |
+| vector_id   | VARCHAR(64)  |                         | PGVector 表中的 ID |
+| metadata    | JSONB        |                         | 扩展元数据         |
+| created_at  | TIMESTAMP    | DEFAULT NOW()           | 创建时间           |
 
 ### 3.4 api_keys（API 密钥表）
 
-| 字段 | 类型 | 约束 | 说明 |
-|------|------|------|------|
-| id | UUID | PK | 主键 |
-| service_name | VARCHAR(128) | NOT NULL | 服务名称 (如 "学生成绩问答 API") |
-| description | TEXT | | 描述 |
-| key_hash | VARCHAR(128) | NOT NULL | API Key 的哈希值 |
-| key_prefix | VARCHAR(12) | NOT NULL | Key 前缀 (用于显示，如 "ek_...") |
-| kb_id | UUID | FK → knowledge_bases.id | 关联知识库 |
-| creator | VARCHAR(64) | | 创建人 |
-| is_active | BOOLEAN | DEFAULT true | 是否启用 |
-| call_count | BIGINT | DEFAULT 0 | 调用次数 |
-| last_called_at | TIMESTAMP | | 最后调用时间 |
-| expires_at | TIMESTAMP | | 过期时间 (可选) |
-| created_at | TIMESTAMP | DEFAULT NOW() | 创建时间 |
+| 字段           | 类型         | 约束                    | 说明                             |
+| -------------- | ------------ | ----------------------- | -------------------------------- |
+| id             | UUID         | PK                      | 主键                             |
+| service_name   | VARCHAR(128) | NOT NULL                | 服务名称 (如 "学生成绩问答 API") |
+| description    | TEXT         |                         | 描述                             |
+| key_hash       | VARCHAR(128) | NOT NULL                | API Key 的哈希值                 |
+| key_prefix     | VARCHAR(12)  | NOT NULL                | Key 前缀 (用于显示，如 "ek_...") |
+| kb_id          | UUID         | FK → knowledge_bases.id | 关联知识库                       |
+| creator        | VARCHAR(64)  |                         | 创建人                           |
+| is_active      | BOOLEAN      | DEFAULT true            | 是否启用                         |
+| call_count     | BIGINT       | DEFAULT 0               | 调用次数                         |
+| last_called_at | TIMESTAMP    |                         | 最后调用时间                     |
+| expires_at     | TIMESTAMP    |                         | 过期时间 (可选)                  |
+| created_at     | TIMESTAMP    | DEFAULT NOW()           | 创建时间                         |
 
 ### 3.5 chat_sessions（会话记录表 - 可选）
 
-| 字段 | 类型 | 约束 | 说明 |
-|------|------|------|------|
-| id | UUID | PK | 主键 |
-| kb_id | UUID | FK | 关联知识库 |
-| session_id | VARCHAR(64) | UNIQUE | 会话标识 |
-| messages | JSONB | | 消息历史 |
-| created_at | TIMESTAMP | DEFAULT NOW() | 创建时间 |
+| 字段       | 类型        | 约束          | 说明       |
+| ---------- | ----------- | ------------- | ---------- |
+| id         | UUID        | PK            | 主键       |
+| kb_id      | UUID        | FK            | 关联知识库 |
+| session_id | VARCHAR(64) | UNIQUE        | 会话标识   |
+| messages   | JSONB       |               | 消息历史   |
+| created_at | TIMESTAMP   | DEFAULT NOW() | 创建时间   |
 
 ## 四、API 接口定义
 
@@ -173,6 +173,7 @@ DELETE /api/knowledge-bases/:id      # 删除
 ```
 
 **创建请求体：**
+
 ```json
 {
   "name": "miaoma",
@@ -182,6 +183,7 @@ DELETE /api/knowledge-bases/:id      # 删除
 ```
 
 **响应示例：**
+
 ```json
 {
   "code": 0,
@@ -207,10 +209,12 @@ GET    /api/knowledge-bases/:kbId/documents/:docId/chunks  # 文档切片列表
 ```
 
 **上传参数：**
+
 - `file`: 文件 (multipart)
 - `processStrategy`: 处理策略名 (可选)
 
 **文档列表响应：**
+
 ```json
 {
   "code": 0,
@@ -241,6 +245,7 @@ DELETE /api/chunks/:chunkId                                 # 删除切片
 ```
 
 **创建切片请求体：**
+
 ```json
 {
   "content": "切片内容",
@@ -249,6 +254,7 @@ DELETE /api/chunks/:chunkId                                 # 删除切片
 ```
 
 **更新切片请求体：**
+
 ```json
 {
   "content": "更新后的切片内容",
@@ -257,6 +263,7 @@ DELETE /api/chunks/:chunkId                                 # 删除切片
 ```
 
 **切片卡片数据结构：**
+
 ```json
 {
   "id": "chunk_xxx",
@@ -276,18 +283,20 @@ POST  /api/retrieval/search    # 知识检索
 ```
 
 **请求体：**
+
 ```json
 {
   "kbId": "kb_xxx",
   "query": "番茄",
   "topK": 10,
-  "minScore": 0.00,
+  "minScore": 0.0,
   "useReranker": false,
-  "denseWeight": 0.50
+  "denseWeight": 0.5
 }
 ```
 
 **响应：**
+
 ```json
 {
   "code": 0,
@@ -319,15 +328,16 @@ POST  /api/service-calls/:svcId/chat/stream  # SSE 外部服务调用
 ```
 
 **请求体：**
+
 ```json
 {
   "query": "您未明确关于小王的具体需求（例如小王的销售业绩、对应订单情况等具体问题）",
   "kbId": "kb_xxx",
   "params": {
     "topK": 10,
-    "minScore": 0.00,
+    "minScore": 0.0,
     "useReranker": false,
-    "denseWeight": 0.50
+    "denseWeight": 0.5
   }
 }
 ```
@@ -335,6 +345,7 @@ POST  /api/service-calls/:svcId/chat/stream  # SSE 外部服务调用
 **SSE 响应格式 (text/event-stream)：**
 
 每个事件类型：
+
 ```
 data: {"type":"sources","value":[{"content":"...","sourceFile":"11gbk.csv","score":0.636677}]}
 
@@ -350,11 +361,12 @@ data: {"type":"done"}
 ```
 
 事件类型说明：
-| type | 说明 |
-|------|------|
+
+| type    | 说明                                 |
+| ------- | ------------------------------------ |
 | sources | 引用来源列表（含文件名和相似度分数） |
-| token | 流式输出的文本片段 |
-| done | 回答完成 |
+| token   | 流式输出的文本片段                   |
+| done    | 回答完成                             |
 
 ### 4.6 API 服务模块
 
@@ -366,6 +378,7 @@ POST  /api/api-services/:serviceId/keys  # 创建 API Key
 ```
 
 **创建服务请求：**
+
 ```json
 {
   "serviceName": "学生成绩问答 API",
@@ -375,6 +388,7 @@ POST  /api/api-services/:serviceId/keys  # 创建 API Key
 ```
 
 **API 使用说明面板数据：**
+
 ```json
 {
   "endpoint": "/api/service-calls/svc_f7818db-e967-43f4-a3bd-bcbecdff0fd4/chat/stream",
@@ -462,6 +476,7 @@ streamChat(@Body() dto: ChatStreamDto): Observable<MessageEvent> {
 ### 6.2 异步文档处理
 
 文档上传后应异步处理（避免阻塞 HTTP 响应），推荐方案：
+
 - 方案 A：NestJS `@nestjs/bull` + Redis Queue
 - 方案 B：简单场景直接用 `setTimeout` / 后台任务
 - 方案 C：独立 Worker 进程处理

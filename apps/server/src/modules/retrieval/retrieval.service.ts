@@ -1,9 +1,9 @@
-import { Injectable, Inject } from "@nestjs/common";
-import { retrieve } from "@knowbase-x/rag-engine";
-import type { RAGPipelineConfig, SearchParams, RetrievalResult } from "@knowbase-x/rag-engine";
-import { RAG_CONFIG } from "../../config/rag-config.provider";
-import { SearchDto } from "./dto/search.dto";
-import { UsageLogService } from "../usage/usage-log.service";
+import { Injectable, Inject } from '@nestjs/common';
+import { retrieve } from '@knowbase-x/rag-engine';
+import type { RAGPipelineConfig, SearchParams, RetrievalResult } from '@knowbase-x/rag-engine';
+import { RAG_CONFIG } from '../../config/rag-config.provider';
+import { SearchDto } from './dto/search.dto';
+import { UsageLogService } from '../usage/usage-log.service';
 
 export interface SearchResultItem {
   chunkId: string;
@@ -23,7 +23,7 @@ export class RetrievalService {
     const startTime = Date.now();
     const params: SearchParams = {
       topK: dto.topK ?? 10,
-      minScore: dto.minScore ?? (Number(process.env.DEFAULT_MIN_SCORE) || 0.70),
+      minScore: dto.minScore ?? (Number(process.env.DEFAULT_MIN_SCORE) || 0.7),
       useReranker: dto.useReranker ?? false,
       denseWeight: dto.denseWeight ?? 0.5,
     };
@@ -37,10 +37,10 @@ export class RetrievalService {
       );
 
       this.usageLog.record({
-        type: "retrieval",
+        type: 'retrieval',
         kbId: dto.kbId,
         duration: Date.now() - startTime,
-        status: "success",
+        status: 'success',
       });
 
       return results.map((r) => ({
@@ -52,10 +52,10 @@ export class RetrievalService {
       }));
     } catch (err) {
       this.usageLog.record({
-        type: "retrieval",
+        type: 'retrieval',
         kbId: dto.kbId,
         duration: Date.now() - startTime,
-        status: "error",
+        status: 'error',
       });
       throw err;
     }

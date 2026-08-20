@@ -46,7 +46,7 @@ services:
     container_name: kb-pgvector
     restart: unless-stopped
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - '${POSTGRES_PORT:-5432}:5432'
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
@@ -54,7 +54,7 @@ services:
     volumes:
       - pgvector_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -67,12 +67,12 @@ services:
     container_name: kb-redis
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - '${REDIS_PORT:-6379}:6379'
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -143,12 +143,12 @@ JWT_SECRET=your-jwt-secret-change-in-production
 
 ### 3.1 前置依赖
 
-| 工具 | 版本要求 | 用途 |
-|------|---------|------|
-| Node.js | >= 18.x | 运行时 |
-| pnpm | >= 8.x | 包管理器 |
-| Docker & Docker Compose | 最新 | PGVector + Redis |
-| Git | 最新 | 版本控制 |
+| 工具                    | 版本要求 | 用途             |
+| ----------------------- | -------- | ---------------- |
+| Node.js                 | >= 18.x  | 运行时           |
+| pnpm                    | >= 8.x   | 包管理器         |
+| Docker & Docker Compose | 最新     | PGVector + Redis |
+| Git                     | 最新     | 版本控制         |
 
 ### 3.2 快速启动步骤
 
@@ -212,7 +212,7 @@ services:
       dockerfile: apps/server/Dockerfile
     container_name: kb-server
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       NODE_ENV: production
       DATABASE_HOST: postgres-vector
@@ -234,7 +234,7 @@ services:
       dockerfile: apps/frontend/Dockerfile
     container_name: kb-frontend
     ports:
-      - "80:80"
+      - '80:80'
     depends_on:
       - server
     networks:
@@ -247,6 +247,7 @@ networks:
 ```
 
 **Nginx 前端 Dockerfile：**
+
 ```dockerfile
 # apps/frontend/Dockerfile
 FROM node:22-alpine AS builder
@@ -265,6 +266,7 @@ CMD ["nginx", "-g", "daemon off;"]
 ```
 
 **Nginx 配置：**
+
 ```nginx
 server {
     listen 80;
@@ -335,6 +337,7 @@ CREATE INDEX IF NOT EXISTS langchainjs_vector_idx
 ```
 
 > **注意：** `vector(1024)` 的维度必须与你使用的 Embedding 模型输出维度匹配。
+>
 > - `text-embedding-v4` (阿里云) → 通常为 **1024** 或 **1536** 维
 > - 实际使用前请确认模型文档
 
@@ -346,21 +349,19 @@ CREATE INDEX IF NOT EXISTS langchainjs_vector_idx
 // API Key 格式: ek_ + 随机32位十六进制字符串
 // 示例: ek_gtjg10ggCM-OkSfLbg88v9ZeXkd6HD1
 
-import { randomBytes } from "node:crypto";
+import { randomBytes } from 'node:crypto';
 
-function generateApiKey(prefix: string = "ek_"): string {
+function generateApiKey(prefix: string = 'ek_'): string {
   const bytes = randomBytes(24); // 48 hex chars
-  const key = bytes.toString("base64url")
-    .replace(/=/g, "")
-    .slice(0, 32); // 取32位
+  const key = bytes.toString('base64url').replace(/=/g, '').slice(0, 32); // 取32位
   return `${prefix}${key}`;
 }
 
 // 存储: 数据库存的是 SHA-256 哈希值，不是明文
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
 function hashApiKey(key: string): string {
-  return createHash("sha256").update(key).digest("hex");
+  return createHash('sha256').update(key).digest('hex');
 }
 ```
 
@@ -407,11 +408,11 @@ docker compose logs -f server
 
 ## 八、安全建议
 
-| 项目 | 建议 |
-|------|------|
-| 数据库密码 | 生产环境使用强密码，不使用默认的 `123456` |
-| API Key | 使用 HTTPS 传输；定期轮换；设置过期时间 |
-| 文件上传 | 校验文件类型和大小限制；防止路径穿越攻击 |
-| LLM API Key | 存储在服务端环境变量中，不暴露给前端 |
-| CORS | 仅允许信任的域名访问 API |
-| 速率限制 | 对 API 调用实施 QPM/QPS 限制 |
+| 项目        | 建议                                      |
+| ----------- | ----------------------------------------- |
+| 数据库密码  | 生产环境使用强密码，不使用默认的 `123456` |
+| API Key     | 使用 HTTPS 传输；定期轮换；设置过期时间   |
+| 文件上传    | 校验文件类型和大小限制；防止路径穿越攻击  |
+| LLM API Key | 存储在服务端环境变量中，不暴露给前端      |
+| CORS        | 仅允许信任的域名访问 API                  |
+| 速率限制    | 对 API 调用实施 QPM/QPS 限制              |

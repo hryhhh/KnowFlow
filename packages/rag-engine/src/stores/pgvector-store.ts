@@ -1,11 +1,8 @@
-import { OpenAIEmbeddings } from "@langchain/openai";
-import {
-  PGVectorStore,
-  type DistanceStrategy,
-} from "@langchain/community/vectorstores/pgvector";
-import { Document } from "@langchain/core/documents";
-import type { PoolConfig } from "pg";
-import type { PGConfig, TextChunk } from "../types.js";
+import { OpenAIEmbeddings } from '@langchain/openai';
+import { PGVectorStore, type DistanceStrategy } from '@langchain/community/vectorstores/pgvector';
+import { Document } from '@langchain/core/documents';
+import type { PoolConfig } from 'pg';
+import type { PGConfig, TextChunk } from '../types.js';
 
 export interface PGVectorTableConfig {
   tableName?: string;
@@ -15,14 +12,14 @@ export interface PGVectorTableConfig {
   distanceStrategy?: DistanceStrategy;
 }
 
-const DEFAULT_TABLE_CONFIG: Required<Omit<PGVectorTableConfig, "tableName">> & {
+const DEFAULT_TABLE_CONFIG: Required<Omit<PGVectorTableConfig, 'tableName'>> & {
   tableName: string;
 } = {
-  tableName: "langchainjs",
-  vectorColumnName: "vector",
-  contentColumnName: "content",
-  metadataColumnName: "metadata",
-  distanceStrategy: "cosine",
+  tableName: 'langchainjs',
+  vectorColumnName: 'vector',
+  contentColumnName: 'content',
+  metadataColumnName: 'metadata',
+  distanceStrategy: 'cosine',
 };
 
 /** 按 DB 配置缓存 PGVectorStore 实例，避免每次检索新建连接 */
@@ -46,7 +43,7 @@ export async function createPGVectorStore(
       metadataColumnName: merged.metadataColumnName,
     },
     postgresConnectionOptions: {
-      type: "postgres",
+      type: 'postgres',
       host: dbConfig.host,
       port: dbConfig.port,
       user: dbConfig.user,
@@ -73,10 +70,7 @@ export async function ensureCachedPGVectorStore(
 }
 
 /** 将切片写入向量库 */
-export async function addDocumentsToPG(
-  store: PGVectorStore,
-  chunks: TextChunk[],
-): Promise<void> {
+export async function addDocumentsToPG(store: PGVectorStore, chunks: TextChunk[]): Promise<void> {
   const documents = chunks.map(
     (c) =>
       new Document({

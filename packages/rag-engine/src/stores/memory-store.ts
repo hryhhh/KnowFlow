@@ -1,14 +1,12 @@
-import { OpenAIEmbeddings } from "@langchain/openai";
-import { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
-import { Document } from "@langchain/core/documents";
-import type { TextChunk } from "../types.js";
+import { OpenAIEmbeddings } from '@langchain/openai';
+import { MemoryVectorStore } from '@langchain/classic/vectorstores/memory';
+import { Document } from '@langchain/core/documents';
+import type { TextChunk } from '../types.js';
 
 /**
  * 创建空的内存向量库（开发/测试用）。
  */
-export async function createMemoryStore(
-  embeddings: OpenAIEmbeddings,
-): Promise<MemoryVectorStore> {
+export async function createMemoryStore(embeddings: OpenAIEmbeddings): Promise<MemoryVectorStore> {
   return MemoryVectorStore.fromDocuments([], embeddings);
 }
 
