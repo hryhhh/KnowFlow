@@ -58,4 +58,4 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - name: Start frontend dev server
         run: pnpm --filter @knowbase-x/frontend dev &
-      - run: pnpm exec playwright test
+      - run: pnpm exec playwright test --config tests/playwright.config.ts
