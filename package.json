@@ -10,7 +10,7 @@
     "start:frontend": "pnpm --filter @knowbase-x/frontend dev",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
-    "test": "pnpm --filter @knowbase-x/agents test && pnpm --filter @knowbase-x/rag-engine test && pnpm --filter @knowbase-x/server test",
+    "test": "pnpm --filter @knowbase-x/rag-engine build && pnpm --filter @knowbase-x/agents build && pnpm --filter @knowbase-x/agents test && pnpm --filter @knowbase-x/rag-engine test && pnpm --filter @knowbase-x/server test",
     "test:watch": "pnpm --filter @knowbase-x/agents test --watch && pnpm --filter @knowbase-x/rag-engine test --watch && pnpm --filter @knowbase-x/server test --watch",
     "format": "prettier --write \"**/*.{ts,tsx,js,mjs,cjs,json,md,yml,yaml,css,scss}\" --ignore-path .gitignore",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,cjs,json,md,yml,yaml,css,scss}\" --ignore-path .gitignore",
