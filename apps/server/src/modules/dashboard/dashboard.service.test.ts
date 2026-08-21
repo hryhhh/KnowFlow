@@ -79,7 +79,12 @@ describe('DashboardService', () => {
     ]);
     docRepo.find.mockResolvedValue([
       { id: 'd1', name: 'doc1.pdf', status: 'success', createdAt: now },
-      { id: 'd2', name: 'doc2.pdf', status: 'processing', createdAt: new Date(now.getTime() - 500) },
+      {
+        id: 'd2',
+        name: 'doc2.pdf',
+        status: 'processing',
+        createdAt: new Date(now.getTime() - 500),
+      },
     ]);
 
     const result = await service.getRecentActivities();
@@ -93,12 +98,17 @@ describe('DashboardService', () => {
   it('getRecentActivities limits to 8 items', async () => {
     kbRepo.find.mockResolvedValue(
       Array.from({ length: 10 }, (_, i) => ({
-        id: `kb-${i}`, name: `KB ${i}`, createdAt: new Date(),
+        id: `kb-${i}`,
+        name: `KB ${i}`,
+        createdAt: new Date(),
       })),
     );
     docRepo.find.mockResolvedValue(
       Array.from({ length: 10 }, (_, i) => ({
-        id: `d-${i}`, name: `doc${i}.pdf`, status: 'success', createdAt: new Date(),
+        id: `d-${i}`,
+        name: `doc${i}.pdf`,
+        status: 'success',
+        createdAt: new Date(),
       })),
     );
 

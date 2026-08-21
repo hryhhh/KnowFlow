@@ -19,7 +19,6 @@ export default function ChatPage() {
     sources,
     searchParams,
     isStreaming,
-    isCreating,
     sessions,
     currentSessionId,
     send,
@@ -32,6 +31,8 @@ export default function ChatPage() {
   } = useChatStore();
   const [input, setInput] = useState('');
   const [services, setServices] = useState<ApiServiceItem[]>([]);
+  // 过滤掉空白会话（messageCount === 0），只显示有消息的会话
+  const visibleSessions = sessions.filter((s) => s.messageCount > 0);
   const [showCreate, setShowCreate] = useState(false);
   const [selectedService, setSelectedService] = useState<ApiServiceItem | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -70,15 +71,11 @@ export default function ChatPage() {
   };
 
   const handleCreateSession = async () => {
-    if (!kbId || isStreaming || isCreating) return;
-    // 如果当前已有空白会话，直接切换过去，不重复创建
-    const activeSession = sessions.find(
-      (s) => s.id === currentSessionId && s.messageCount === 0,
-    );
-    if (activeSession) {
-      switchSession(activeSession.id);
-      return;
-    }
+    if (!kbId || isStreaming) return;
+    // 用 Zustand getState() 读取最新状态，避免 React 闭包捕获旧值导致判断失效
+    const { sessions, currentSessionId } = useChatStore.getState();
+    const current = sessions.find((s) => s.id === currentSessionId && s.messageCount === 0);
+    if (current) return; // 已有空白会话，不重复创建
     await createSession(kbId, '');
   };
 
@@ -136,7 +133,7 @@ export default function ChatPage() {
                   className="btn"
                   style={{ padding: '4px 10px', fontSize: 12, height: 28 }}
                   onClick={handleCreateSession}
-                  disabled={isStreaming || isCreating}
+                  disabled={isStreaming}
                   title="新建空白会话"
                 >
                   <Plus size={12} style={{ marginRight: 4 }} />
@@ -147,7 +144,7 @@ export default function ChatPage() {
                   style={{ padding: '4px 10px', fontSize: 12, height: 28 }}
                   onClick={handleClearAll}
                   title="清空全部会话记录"
-                  disabled={sessions.length === 0}
+                  disabled={visibleSessions.length === 0}
                 >
                   <Trash size={12} style={{ marginRight: 4 }} />
                   清空
@@ -155,10 +152,10 @@ export default function ChatPage() {
               </div>
             </div>
             <div className="session-list">
-              {sessions.length === 0 ? (
+              {visibleSessions.length === 0 ? (
                 <p style={{ fontSize: 12, color: 'var(--text-sub)', margin: 0 }}>暂无历史会话</p>
               ) : (
-                sessions.map((session) => (
+                visibleSessions.map((session) => (
                   <div
                     key={session.id}
                     className={`session-item ${session.id === currentSessionId ? 'active' : ''}`}

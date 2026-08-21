@@ -12,9 +12,9 @@ interface ChatStore {
   sources: SourceRef[];
   searchParams: SearchParams;
   isStreaming: boolean;
-  isCreating: boolean;
   // 方法
   loadSessions: (kbId: string) => Promise<void>;
+  refreshSessions: (kbId: string) => Promise<void>;
   createSession: (kbId: string, firstMessage: string) => Promise<string>;
   switchSession: (sessionId: string) => Promise<void>;
   deleteSession: (sessionId: string) => Promise<void>;
@@ -36,20 +36,28 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     denseWeight: 0.5,
   },
   isStreaming: false,
-  isCreating: false,
 
   loadSessions: async (kbId) => {
     const res = await sessionApi.list(kbId);
-    set({ sessions: (res.data.data ?? []).map((s) => ({
-      ...s,
-      // 兜底：后端可能返回空字符串 title（新建空白会话场景）
-      title: s.title || '新会话',
-    }))});
+    set({
+      sessions: (res.data.data ?? []).map((s) => ({
+        ...s,
+        title: s.title || '新会话',
+      })),
+    });
+  },
+
+  refreshSessions: async (kbId) => {
+    const res = await sessionApi.list(kbId);
+    set({
+      sessions: (res.data.data ?? []).map((s) => ({
+        ...s,
+        title: s.title || '新会话',
+      })),
+    });
   },
 
   createSession: async (kbId: string, firstMessage: string): Promise<string> => {
-    if (get().isCreating) return get().currentSessionId ?? '';
-    set({ isCreating: true });
     try {
       const res = await sessionApi.create({ kbId, firstMessage });
       const newSession = res.data.data;
@@ -68,11 +76,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         messages: [],
         sources: [],
         isStreaming: false,
-        isCreating: false,
       }));
       return newSession.id;
     } catch (_e) {
-      set({ isCreating: false });
       throw _e;
     }
   },
@@ -166,7 +172,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       { sessionId },
     );
 
-    // 更新会话的消息数量
+    // 发送完成后刷新列表，让正式会话显示在历史中
     set((s) => ({
       sessions: s.sessions.map((session) =>
         session.id === result.sessionId
@@ -174,6 +180,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           : session,
       ),
     }));
+    get().refreshSessions(kbId);
   },
 
   setParams: (params) => set((s) => ({ searchParams: { ...s.searchParams, ...params } })),

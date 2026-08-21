@@ -12,7 +12,9 @@ import { retrieveAndChat } from '@knowbase-x/rag-engine';
 function makeMockSessionService() {
   return {
     create: vi.fn().mockResolvedValue({ id: 'session-1', kbId: 'kb-1', title: 'test' }),
-    addMessage: vi.fn().mockResolvedValue({ id: 'msg-1', sessionId: 'session-1', role: 'user', content: 'test' }),
+    addMessage: vi
+      .fn()
+      .mockResolvedValue({ id: 'msg-1', sessionId: 'session-1', role: 'user', content: 'test' }),
   };
 }
 
@@ -57,7 +59,12 @@ describe('ChatService', () => {
     service.ragConfig = {
       pg: { host: 'localhost', port: 5432, user: 'test', password: 'test', database: 'test' },
       llm: { apiKey: 'test', model: 'gpt-4', baseURL: 'https://api.test.com' },
-      embedding: { apiKey: 'test', model: 'text-embedding-3-small', baseURL: 'https://api.test.com', dimensions: 3 },
+      embedding: {
+        apiKey: 'test',
+        model: 'text-embedding-3-small',
+        baseURL: 'https://api.test.com',
+        dimensions: 3,
+      },
       chunkSize: 1000,
       chunkOverlap: 200,
     };
@@ -124,7 +131,11 @@ describe('ChatService', () => {
     await collectEvents(obs$);
 
     expect(sessionService.create).toHaveBeenCalledWith('kb-1', 'test');
-    expect(sessionService.addMessage).toHaveBeenCalledWith('session-1', 'assistant', expect.stringContaining('Hi'));
+    expect(sessionService.addMessage).toHaveBeenCalledWith(
+      'session-1',
+      'assistant',
+      expect.stringContaining('Hi'),
+    );
   });
 
   it('reuses existing sessionId when provided', async () => {
@@ -139,7 +150,11 @@ describe('ChatService', () => {
     await collectEvents(obs$);
 
     expect(sessionService.create).not.toHaveBeenCalled();
-    expect(sessionService.addMessage).toHaveBeenCalledWith('existing-1', 'assistant', expect.stringContaining('Hi'));
+    expect(sessionService.addMessage).toHaveBeenCalledWith(
+      'existing-1',
+      'assistant',
+      expect.stringContaining('Hi'),
+    );
   });
 
   it('emits error event and records status error when retrieveAndChat errors', async () => {

@@ -51,10 +51,9 @@
       "Bash(docker cp *)",
       "Bash(docker restart *)",
       "Bash(docker exec *)",
-      "Bash(docker-compose up *)"
+      "Bash(docker-compose up *)",
+      "Bash(chmod +x /home/hhhry/projects/knowledge-ai-main/.husky/pre-commit)"
     ],
-    "additionalDirectories": [
-      "/tmp"
-    ]
+    "additionalDirectories": ["/tmp"]
   }
 }

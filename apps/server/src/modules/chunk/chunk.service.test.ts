@@ -48,9 +48,7 @@ describe('ChunkService', () => {
     });
     chunkRepo.save = vi
       .fn()
-      .mockImplementation((entity: any) =>
-        Promise.resolve({ ...entity, createdAt: new Date() }),
-      );
+      .mockImplementation((entity: any) => Promise.resolve({ ...entity, createdAt: new Date() }));
     service = Object.create(ChunkService.prototype);
     service.chunkRepo = chunkRepo;
     service.docRepo = docRepo;

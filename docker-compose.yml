@@ -15,7 +15,7 @@ services:
       - pgvector_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: [ 'CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres}' ]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,7 +32,7 @@ services:
       - redis_data:/data
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     healthcheck:
-      test: [ 'CMD', 'redis-cli', 'ping' ]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -40,7 +40,7 @@ services:
       - kb-network
 
   server:
-    profiles: [ 'app' ]
+    profiles: ['app']
     build:
       context: .
       dockerfile: docker/Dockerfile.server
@@ -83,7 +83,7 @@ services:
       - uploads_data:/app/apps/server/uploads
 
   frontend:
-    profiles: [ 'app' ]
+    profiles: ['app']
     build:
       context: .
       dockerfile: docker/Dockerfile.frontend
@@ -108,9 +108,9 @@ services:
     image: ${MINERU_IMAGE:-kb-mineru:local}
     container_name: kb-mineru-api
     restart: unless-stopped
-    profiles: [ 'mineru-cpu' ]
-    entrypoint: [ 'mineru-api' ]
-    command: [ '--host', '0.0.0.0', '--port', '8000' ]
+    profiles: ['mineru-cpu']
+    entrypoint: ['mineru-api']
+    command: ['--host', '0.0.0.0', '--port', '8000']
     ports:
       - '${MINERU_PORT:-8000}:8000'
     environment:
@@ -120,7 +120,7 @@ services:
     volumes:
       - mineru_models:/root/.cache/huggingface/hub
     healthcheck:
-      test: [ 'CMD-SHELL', 'curl -f http://localhost:8000/health || exit 1' ]
+      test: ['CMD-SHELL', 'curl -f http://localhost:8000/health || exit 1']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -132,7 +132,7 @@ services:
     image: ${MINERU_IMAGE:-kb-mineru:local}
     container_name: kb-mineru-api-gpu
     restart: unless-stopped
-    profiles: [ 'mineru-gpu' ]
+    profiles: ['mineru-gpu']
     ports:
       - '${MINERU_PORT:-8000}:8000'
     environment:
@@ -146,9 +146,9 @@ services:
           devices:
             - driver: nvidia
               count: ${MINERU_GPU_COUNT:-1}
-              capabilities: [ gpu ]
+              capabilities: [gpu]
     healthcheck:
-      test: [ 'CMD-SHELL', 'curl -f http://localhost:8000/health || exit 1' ]
+      test: ['CMD-SHELL', 'curl -f http://localhost:8000/health || exit 1']
       interval: 10s
       timeout: 5s
       retries: 5

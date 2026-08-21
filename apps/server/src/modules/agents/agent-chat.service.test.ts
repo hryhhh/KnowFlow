@@ -13,16 +13,30 @@ vi.mock('@knowbase-x/agents', () => {
   const intentRouterMock = { reload: vi.fn() };
   const orchestratorMock = {
     orchestrate: vi.fn(),
-    get matchedRules() { return []; },
-    get sources() { return []; },
-    get content() { return ''; },
-    get agentResults() { return []; },
-    get metadata() { return {}; },
+    get matchedRules() {
+      return [];
+    },
+    get sources() {
+      return [];
+    },
+    get content() {
+      return '';
+    },
+    get agentResults() {
+      return [];
+    },
+    get metadata() {
+      return {};
+    },
   };
   return {
     IntentRouter: vi.fn().mockReturnValue(intentRouterMock),
     Orchestrator: vi.fn().mockReturnValue(orchestratorMock),
-    DbQueryAgent: vi.fn().mockImplementation(() => ({ id: 'db-query', registerTemplate: vi.fn(), setExecuteFn: vi.fn() })),
+    DbQueryAgent: vi.fn().mockImplementation(() => ({
+      id: 'db-query',
+      registerTemplate: vi.fn(),
+      setExecuteFn: vi.fn(),
+    })),
     WebSearchAgent: vi.fn().mockImplementation(() => ({ id: 'web-search' })),
     RagFlowAgent: vi.fn().mockImplementation(() => ({ id: 'ragflow', setStreamingFn: vi.fn() })),
     StreamAgentProxy: vi.fn().mockImplementation((a: any) => a),
@@ -40,9 +54,15 @@ templates:
 }));
 
 vi.mock('js-yaml', () => ({
-  load: vi.fn().mockReturnValue({ templates: [
-    { id: 'sample_query', name: 'Sample Query', queryTemplate: 'SELECT * FROM users WHERE id = $1' },
-  ] }),
+  load: vi.fn().mockReturnValue({
+    templates: [
+      {
+        id: 'sample_query',
+        name: 'Sample Query',
+        queryTemplate: 'SELECT * FROM users WHERE id = $1',
+      },
+    ],
+  }),
 }));
 
 import { retrieveAndChat } from '@knowbase-x/rag-engine';
@@ -63,7 +83,12 @@ function buildService(agentsEnabled: boolean = false): AgentChatService {
   const ragConfig = {
     pg: { host: 'localhost', port: 5432, user: 'test', password: 'test', database: 'test' },
     llm: { apiKey: 'test', model: 'gpt-4', baseURL: 'https://api.test.com' },
-    embedding: { apiKey: 'test', model: 'text-embedding-3-small', baseURL: 'https://api.test.com', dimensions: 3 },
+    embedding: {
+      apiKey: 'test',
+      model: 'text-embedding-3-small',
+      baseURL: 'https://api.test.com',
+      dimensions: 3,
+    },
     chunkSize: 1000,
     chunkOverlap: 200,
   };
@@ -124,7 +149,11 @@ describe('AgentChatService', () => {
       sources: [],
       content: 'Agent response',
       agentResults: [{ agent: 'ragflow', status: 'success', elapsedMs: 100 }],
-      metadata: { triggeredLlmArbitration: false, ragIncludedBy: 'none', composeUsedRagPriority: false },
+      metadata: {
+        triggeredLlmArbitration: false,
+        ragIncludedBy: 'none',
+        composeUsedRagPriority: false,
+      },
     });
     const { service } = buildService(true);
     const callbacks = {
@@ -181,7 +210,9 @@ describe('AgentChatService', () => {
     };
 
     await service.stream('query', 'kb-1', undefined, callbacks as any, 'trace-1', 'key-1');
-    expect(callbacks.onError).toHaveBeenCalledWith(expect.objectContaining({ message: 'orchestration failed' }));
+    expect(callbacks.onError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'orchestration failed' }),
+    );
     expect(usageLog.record).toHaveBeenCalledWith(expect.objectContaining({ status: 'error' }));
   });
 
