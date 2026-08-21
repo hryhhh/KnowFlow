@@ -10,7 +10,7 @@ test.describe('Chat Session - No duplicate blank sessions', () => {
   test('should not create duplicate blank sessions', async ({ page }) => {
     // 拦截所有 API 请求并追踪
     const createRequests: string[] = [];
-    
+
     await page.route('**/api/chat/sessions*', async (route) => {
       const method = route.request().method();
       const url = route.request().url();
@@ -55,7 +55,7 @@ test.describe('Chat Session - No duplicate blank sessions', () => {
     });
 
     const createBtn = page.getByRole('button', { name: /新建/ });
-    
+
     // 点击 3 次
     await createBtn.click();
     await page.waitForTimeout(500);
@@ -108,7 +108,7 @@ test.describe('Chat Session - No duplicate blank sessions', () => {
     });
 
     const createBtn = page.getByRole('button', { name: /新建/ });
-    
+
     // 创建空白会话
     await createBtn.click();
     await page.waitForTimeout(500);
