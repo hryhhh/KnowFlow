@@ -48,3 +48,6 @@ test-results/
 
 # Worktrees (development branches)
 test-worktree/
+
+# Claude Code settings (local preferences)
+.claude/
