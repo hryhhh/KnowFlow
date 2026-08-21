@@ -56,7 +56,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      - run: docker compose -f docker-compose.test.yml up -d
+      - name: Start frontend dev server
+        run: pnpm --filter @knowbase-x/frontend dev &
       - run: pnpm exec playwright test
-      - run: docker compose -f docker-compose.test.yml down -v
-    needs: [unit-tests]
