@@ -12,6 +12,7 @@ interface ChatStore {
   sources: SourceRef[];
   searchParams: SearchParams;
   isStreaming: boolean;
+  isCreating: boolean;
   // 方法
   loadSessions: (kbId: string) => Promise<void>;
   createSession: (kbId: string, firstMessage: string) => Promise<string>;
@@ -35,32 +36,45 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     denseWeight: 0.5,
   },
   isStreaming: false,
+  isCreating: false,
 
   loadSessions: async (kbId) => {
     const res = await sessionApi.list(kbId);
-    set({ sessions: res.data.data });
+    set({ sessions: (res.data.data ?? []).map((s) => ({
+      ...s,
+      // 兜底：后端可能返回空字符串 title（新建空白会话场景）
+      title: s.title || '新会话',
+    }))});
   },
 
-  createSession: async (kbId, firstMessage) => {
-    const res = await sessionApi.create({ kbId, firstMessage });
-    const newSession = res.data.data;
-    const displayTitle = newSession.title || '新会话';
-    set((s) => ({
-      sessions: [
-        {
-          ...newSession,
-          title: displayTitle,
-          messageCount: 0,
-          id: newSession.id,
-        } as SessionListItem,
-        ...s.sessions,
-      ],
-      currentSessionId: newSession.id,
-      messages: [],
-      sources: [],
-      isStreaming: false,
-    }));
-    return newSession.id;
+  createSession: async (kbId: string, firstMessage: string): Promise<string> => {
+    if (get().isCreating) return get().currentSessionId ?? '';
+    set({ isCreating: true });
+    try {
+      const res = await sessionApi.create({ kbId, firstMessage });
+      const newSession = res.data.data;
+      const displayTitle = newSession.title || '新会话';
+      set((s) => ({
+        sessions: [
+          {
+            ...newSession,
+            title: displayTitle,
+            messageCount: 0,
+            id: newSession.id,
+          } as SessionListItem,
+          ...s.sessions,
+        ],
+        currentSessionId: newSession.id,
+        messages: [],
+        sources: [],
+        isStreaming: false,
+        isCreating: false,
+      }));
+      return newSession.id;
+    } catch (_e) {
+      set({ isCreating: false });
+      throw _e;
+    }
   },
 
   switchSession: async (sessionId) => {
@@ -91,6 +105,17 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     let sessionId = get().currentSessionId;
     if (!sessionId) {
       sessionId = await get().createSession(kbId, query);
+    } else {
+      // 已有会话且标题为"新会话"（空白会话），用第一条消息更新标题
+      const currentTitle = get().sessions.find((s) => s.id === sessionId)?.title;
+      if (currentTitle === '新会话') {
+        await sessionApi.updateTitle(sessionId, query);
+        set((s) => ({
+          sessions: s.sessions.map((session) =>
+            session.id === sessionId ? { ...session, title: query } : session,
+          ),
+        }));
+      }
     }
 
     // 添加用户消息到本地状态

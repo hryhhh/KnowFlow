@@ -70,8 +70,8 @@ export default function RetrievalPage() {
           </p>
 
           <div className="param-row">
-            <label>结果返回数量 (TopK)</label>
-            <input
+            <label htmlFor="topK">结果返回数量 (TopK)</label>
+            <input id="topK"
               className="input"
               type="number"
               min={1}
@@ -82,8 +82,8 @@ export default function RetrievalPage() {
           </div>
 
           <div className="param-row">
-            <label>最低相似度阈值</label>
-            <input
+            <label htmlFor="minScore">最低相似度阈值</label>
+            <input id="minScore"
               className="input"
               type="number"
               step="0.01"
@@ -103,8 +103,8 @@ export default function RetrievalPage() {
           </div>
 
           <div className="param-row">
-            <label>Dense Weight (0~1)</label>
-            <input
+            <label htmlFor="denseWeight">Dense Weight (0~1)</label>
+            <input id="denseWeight"
               className="input"
               type="number"
               step="0.1"

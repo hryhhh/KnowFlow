@@ -46,7 +46,15 @@
       "Bash(kill 338469 374918)",
       "Bash(# Check if these are inside containers or on host *)",
       "Read(//proc/482735/**)",
-      "Bash(docker network *)"
+      "Bash(docker network *)",
+      "Bash(TZ= node -e \"console.log\\('Server TZ:', process.env.TZ || 'not set'\\); console.log\\('Local:', new Date\\(\\).toISOString\\(\\)\\); console.log\\('Local CST:', new Date\\(\\).toLocaleString\\('zh-CN', {timeZone:'Asia/Shanghai'}\\)\\);\")",
+      "Bash(docker cp *)",
+      "Bash(docker restart *)",
+      "Bash(docker exec *)",
+      "Bash(docker-compose up *)"
+    ],
+    "additionalDirectories": [
+      "/tmp"
     ]
   }
 }

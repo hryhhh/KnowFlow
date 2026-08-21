@@ -19,6 +19,7 @@ export default function ChatPage() {
     sources,
     searchParams,
     isStreaming,
+    isCreating,
     sessions,
     currentSessionId,
     send,
@@ -69,7 +70,15 @@ export default function ChatPage() {
   };
 
   const handleCreateSession = async () => {
-    if (!kbId || isStreaming) return;
+    if (!kbId || isStreaming || isCreating) return;
+    // 如果当前已有空白会话，直接切换过去，不重复创建
+    const activeSession = sessions.find(
+      (s) => s.id === currentSessionId && s.messageCount === 0,
+    );
+    if (activeSession) {
+      switchSession(activeSession.id);
+      return;
+    }
     await createSession(kbId, '');
   };
 
@@ -127,7 +136,7 @@ export default function ChatPage() {
                   className="btn"
                   style={{ padding: '4px 10px', fontSize: 12, height: 28 }}
                   onClick={handleCreateSession}
-                  disabled={isStreaming}
+                  disabled={isStreaming || isCreating}
                   title="新建空白会话"
                 >
                   <Plus size={12} style={{ marginRight: 4 }} />

@@ -10,6 +10,9 @@ COPY packages/rag-engine/package.json packages/rag-engine/package.json
 COPY packages/agents/package.json packages/agents/package.json
 COPY apps/server/package.json apps/server/package.json
 ENV CI=true
+ENV TZ=UTC
+ENV NODE_OPTIONS="--no-warnings"
+RUN apk add --no-cache tzdata && cp /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN pnpm install --frozen-lockfile
 
 # 复制全部源码并构建

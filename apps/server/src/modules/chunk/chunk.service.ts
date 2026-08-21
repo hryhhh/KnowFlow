@@ -77,8 +77,8 @@ export class ChunkService {
       sourceFile: doc.name,
     });
 
-    await this.chunkRepo.save(newChunk);
-    return this.toCard(newChunk);
+    const saved = await this.chunkRepo.save(newChunk);
+    return this.toCard(saved);
   }
 
   async update(chunkId: string, content: string, title?: string): Promise<ChunkCard> {

@@ -92,6 +92,8 @@ export const sessionApi = {
     api.post<Resp<{ id: string; title: string; createdAt: string }>>(`/chat/sessions`, body),
   messages: (sessionId: string) =>
     api.get<Resp<ChatMessage[]>>(`/chat/sessions/${sessionId}/messages`),
+  updateTitle: (sessionId: string, title: string) =>
+    api.patch<Resp<null>>(`/chat/sessions/${sessionId}/title`, { title }),
   remove: (sessionId: string) => api.delete(`/chat/sessions/${sessionId}`),
   clearAll: (kbId: string) => api.delete(`/chat/sessions`, { params: { kbId } }),
 };

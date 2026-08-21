@@ -49,6 +49,7 @@ services:
     ports:
       - '${SERVER_PORT:-3000}:3000'
     environment:
+      TZ: UTC
       NODE_ENV: ${NODE_ENV:-production}
       DATABASE_HOST: postgres-vector
       DATABASE_PORT: '5432'

@@ -147,4 +147,68 @@ describe('IntentRouter', () => {
     // No error should be thrown
     expect(router.getRules().rules.length).toBeGreaterThan(0);
   });
+
+  it('does not let web-general match through substring in proper nouns (e.g. 太原理工大学)', async () => {
+    const rulesYaml = `
+rules:
+  - id: ragflow-strict
+    pattern: '知识库|文档内容|有没有.*?文档'
+    intent: ragflow_strict
+    targetAgent: ragflow
+    priority: 100
+    minScore: 0.90
+    enabled: true
+  - id: web-general
+    pattern: '(什么是|科普|原理(?!工)(?!大)|工作机制|怎么运行|如何工作|工作原理|怎么工作|是什么原理)'
+    intent: web_general
+    targetAgent: web-search
+    priority: 70
+    minScore: 0.80
+    enabled: true
+  - id: ragflow-soft
+    pattern: '(有没有.*?知识|能不能.*?找到|怎么查|在哪里.*?找|如何查询|.*?有哪些|.*?介绍一下)'
+    intent: ragflow_soft
+    targetAgent: ragflow
+    priority: 30
+    minScore: 0.70
+    enabled: true
+  - id: llm-fallback
+    pattern: ''
+    intent: llm_fallback
+    targetAgent: llm-intent-classifier
+    priority: 10
+    minScore: 0.0
+    enabled: true
+settings:
+  maxMatchedRules: 3
+  defaultAgentTimeoutMs: 5000
+  allowParallel: true
+  alwaysIncludeAgents: ['ragflow']
+  routerConfidenceThreshold: 70
+`;
+    const tmpPath3 = path.join('/tmp', `router-test-proper-noun-${Date.now()}.yml`);
+    fs.writeFileSync(tmpPath3, rulesYaml, 'utf-8');
+    // 传入 llmConfig 使仲裁可正常执行
+    const router = new IntentRouter(tmpPath3, {
+      apiKey: 'test-key',
+      model: 'gpt-4o-mini',
+      baseURL: 'https://api.test.com',
+    });
+    (globalThis as any).__lastRouter = router;
+
+    const query = '太原理工大学的S级竞赛有哪些';
+    const { matched, metadata } = await router.match(query);
+
+    // 不应路由到 web-search（修复前会因"太原理工"匹配"原理"子串而错误命中）
+    const webMatched = matched.find((m: any) => m.rule.targetAgent === 'web-search');
+    expect(webMatched).toBeUndefined();
+
+    // 应路由到 ragflow（通过 soft 规则或 alwaysInclude）
+    const ragflowMatched = matched.find((m: any) => m.rule.targetAgent === 'ragflow');
+    expect(ragflowMatched).toBeDefined();
+
+    try {
+      fs.unlinkSync(tmpPath3);
+    } catch {}
+  });
 });
