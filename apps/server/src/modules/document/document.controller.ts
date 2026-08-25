@@ -13,6 +13,13 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { DocumentService } from './document.service';
 import { UploadDocumentDto } from './dto/upload-document.dto';
 
+/** 上传文件的简化类型，避免依赖 Express.Multer.File（@types/express v5 兼容性断裂） */
+interface UploadedFile {
+  originalname: string;
+  buffer: Buffer;
+  size: number;
+}
+
 const MAX_UPLOAD_SIZE_MB = parseInt(process.env.MAX_UPLOAD_SIZE_MB ?? '100', 10);
 const MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
 
@@ -38,7 +45,7 @@ export class DocumentController {
   )
   async upload(
     @Param('kbId') kbId: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: UploadedFile,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @Query() _dto: UploadDocumentDto,
   ) {
