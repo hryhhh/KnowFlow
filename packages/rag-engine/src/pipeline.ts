@@ -4,7 +4,11 @@ import { loadDocument, type ParseStrategy, type LoadDocumentOptions } from './lo
 import { splitDocuments } from './splitters/recursive-splitter.js';
 import { splitMarkdownDocuments } from './splitters/markdown-splitter.js';
 import { getEmbeddings } from './embeddings/openai-embeddings.js';
-import { ensureCachedPGVectorStore, addDocumentsToPG } from './stores/pgvector-store.js';
+import {
+  ensureCachedPGVectorStore,
+  addDocumentsToPG,
+  deleteByDocId,
+} from './stores/pgvector-store.js';
 import { similaritySearch } from './retrievers/similarity-retriever.js';
 import { hybridSearch } from './retrievers/hybrid-retriever.js';
 import { rerank } from './rerankers/bi-encoder-reranker.js';
@@ -16,6 +20,7 @@ import type {
   SearchParams,
   SourceRef,
   StreamCallbacks,
+  IngestProgressCallback,
 } from './types.js';
 
 /**
@@ -27,6 +32,10 @@ import type {
  *   - "mineru-agent"：调用 MinerU Agent 轻量解析 API（云端免登录），结果经 MarkdownSplitter 切片
  *   - "basic"：使用基础加载器 + RecursiveCharacterTextSplitter（兜底）
  *
+ * @param docId 文档 UUID，写入每个 chunk 的 metadata，用于重试幂等和删除清理
+ *
+ * @param progress 可选进度回调函数，在 parsing/chunking/embedding/persisting 阶段完成时调用
+ *
  * 返回切片列表，供服务端落库（文档/切片元信息）。
  */
 export async function ingestDocument(
@@ -35,8 +44,11 @@ export async function ingestDocument(
   config: RAGPipelineConfig,
   parseStrategy: ParseStrategy = 'basic',
   agentOptions?: LoadDocumentOptions['agentOptions'],
+  docId?: string,
+  progress?: (event: IngestProgressCallback) => void,
 ): Promise<{ chunkCount: number; chunks: TextChunk[] }> {
   // 1. 加载
+  progress?.({ percent: 10, stage: 'parsing' });
   const { documents } = await loadDocument(filePath, undefined, parseStrategy, agentOptions);
 
   // 2. 切片（根据策略选择不同切片器）
@@ -57,18 +69,27 @@ export async function ingestDocument(
       chunkOverlap: config.chunkOverlap,
     });
   }
+  progress?.({ percent: 30, stage: 'parsing' });
+  progress?.({ percent: 40, stage: 'chunking' });
 
-  // 3. 注入 kbId 到 metadata
+  // 3. 注入 kbId 和 docId 到 metadata（docId 必须写入，保证重试幂等和删除能力）
   chunks.forEach((c) => {
-    c.metadata = { ...c.metadata, kbId, source: path.basename(filePath) };
+    c.metadata = {
+      ...c.metadata,
+      kbId,
+      source: path.basename(filePath),
+      ...(docId ? { docId } : {}),
+    };
   });
 
   // 4. 向量化 + 存储（缓存 store 复用连接）
+  progress?.({ percent: 50, stage: 'embedding' });
   const embeddings = getEmbeddings(config.embedding);
   const store = await ensureCachedPGVectorStore(embeddings, config.pg, {
     tableName: config.pgTableName,
   });
-  await addDocumentsToPG(store, chunks);
+  await addDocumentsToPG(store, chunks, (p, s) => progress?.({ percent: p, stage: s }));
+  progress?.({ percent: 90, stage: 'persisting' });
 
   return { chunkCount: chunks.length, chunks };
 }

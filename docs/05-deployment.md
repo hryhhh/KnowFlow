@@ -416,3 +416,87 @@ docker compose logs -f server
 | LLM API Key | 存储在服务端环境变量中，不暴露给前端      |
 | CORS        | 仅允许信任的域名访问 API                  |
 | 速率限制    | 对 API 调用实施 QPM/QPS 限制              |
+
+## 九、异步文档摄入（BullMQ Worker）
+
+### 9.1 架构概述
+
+```
+┌─────────────────────────────────────────────────────┐
+│  API 进程 (server)      Worker 进程 (worker)         │
+│  Port: 3000             NODE_ENV=production          │
+│  ┌──────────┐           ┌──────────────┐            │
+│  │ POST /    │──入队──▶│ BullMQ Queue │            │
+│  │ upload   │           │ (document-   │            │
+│  │          │◀──返回   │ ingest)      │            │
+│  └──────────┘  jobId    └──────┬───────┘            │
+│                                 │                    │
+│                          ┌──────▼───────┐            │
+│                          │ Ingestion    │            │
+│                          │ Processor    │            │
+│                          └──────┬───────┘            │
+│                                 │                    │
+│                    ┌────────────▼────────┐           │
+│                    │ PG + PGVector       │           │
+│                    │ + chunks 表         │           │
+│                    └─────────────────────┘           │
+└─────────────────────────────────────────────────────┘
+```
+
+### 9.2 部署顺序
+
+```bash
+# 1. 启动基础设施
+docker compose --profile app up -d
+
+# 2. 运行数据库迁移（生产环境）
+pnpm --filter @knowbase-x/server migration:run
+
+# 3. 启动 API 和 Worker
+docker compose --profile app up -d server worker
+```
+
+### 9.3 Worker 健康检查
+
+Worker 进程不暴露 HTTP 端口，但提供内部健康检查：
+
+- `GET /health` — Redis 连接状态 + 队列活跃 job 数
+- docker-compose 中通过 `bullmq-cli info` 或定期轮询内部端口检查
+
+### 9.4 环境变量（新增）
+
+| 变量                                | 默认值  | 说明              |
+| ----------------------------------- | ------- | ----------------- |
+| `DOCUMENT_QUEUE_CONCURRENCY`        | `2`     | Worker 并发度     |
+| `DOCUMENT_QUEUE_ATTEMPTS`           | `3`     | 最大重试次数      |
+| `DOCUMENT_QUEUE_BACKOFF_MS`         | `2000`  | 退避起始延迟      |
+| `DOCUMENT_QUEUE_REMOVE_ON_COMPLETE` | `1000`  | 保留已完成 job 数 |
+| `DOCUMENT_QUEUE_REMOVE_ON_FAIL`     | `100`   | 保留失败 job 数   |
+| `REDIS_MAXMEMORY`                   | `512mb` | Redis 最大内存    |
+
+### 9.5 运维命令
+
+```bash
+# 启动 Worker（开发环境）
+pnpm --filter @knowbase-x/server start:worker:dev
+
+# 运行 migration
+pnpm --filter @knowbase-x/server migration:run
+pnpm --filter @knowbase-x/server migration:revert
+
+# 查看 Worker 日志
+docker compose logs -f worker
+```
+
+### 9.6 水平扩展
+
+- 增加 Worker 副本：`docker compose up -d --scale worker=3`
+- 不影响 API 进程，API 只需确保 Redis 可达
+- 队列由 BullMQ 自动管理，多 Worker 自动负载均衡
+
+### 9.7 故障处理
+
+- **Redis 不可用**：API 上传返回 400（`队列服务暂不可用`），文件已落盘但文档记录会被补偿删除
+- **Worker 崩溃**：BullMQ 自动 requeue stalled job，重新处理后重试
+- **不可重试错误**（文件不存在、格式不支持）：立即标记 `failed`，不消耗重试 budget
+- **可重试错误**（网络超时、embedding 失败）：指数退避重试，最多 3 次

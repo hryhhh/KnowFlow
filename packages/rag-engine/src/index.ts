@@ -24,6 +24,7 @@ export {
   ensureCachedPGVectorStore,
   addDocumentsToPG,
   searchSimilarityWithScore,
+  deleteByDocId,
 } from './stores/pgvector-store.js';
 export { createMemoryStore, createMemoryStoreFromTexts } from './stores/memory-store.js';
 
@@ -53,4 +54,5 @@ export type {
   LLMConfig,
   PGConfig,
   RAGPipelineConfig,
+  IngestProgressCallback,
 } from './types.js';

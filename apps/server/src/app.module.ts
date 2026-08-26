@@ -14,6 +14,7 @@ import { UsageLogModule } from './modules/usage/usage-log.module';
 import { SessionModule } from './modules/session/session.module';
 import { AgentModule } from './modules/agents/agent.module';
 import { HealthModule } from './common/health/health.module';
+import { IngestionQueueModule } from './modules/ingestion/ingestion.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { HealthModule } from './common/health/health.module';
     AgentModule,
     SessionModule,
     HealthModule,
+    IngestionQueueModule,
   ],
 })
 export class AppModule {}

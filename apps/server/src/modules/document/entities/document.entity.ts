@@ -8,6 +8,8 @@ import {
 } from 'typeorm';
 
 export type DocStatus = 'pending' | 'processing' | 'success' | 'failed';
+export type DocProcessingStage =
+  'queued' | 'parsing' | 'chunking' | 'embedding' | 'persisting' | 'completed';
 
 @Entity('documents')
 @Index('idx_doc_kb', ['kbId'])
@@ -44,6 +46,18 @@ export class Document {
 
   @Column({ type: 'text', nullable: true })
   errorMessage: string;
+
+  /** 处理进度，范围 0-100 */
+  @Column({ type: 'int', default: 0 })
+  progress: number;
+
+  /** 当前处理阶段 */
+  @Column({ length: 32, nullable: true })
+  processingStage: DocProcessingStage;
+
+  /** BullMQ job ID，用于取消或删除活跃任务 */
+  @Column({ length: 256, nullable: true })
+  jobId: string;
 
   @CreateDateColumn()
   createdAt: Date;

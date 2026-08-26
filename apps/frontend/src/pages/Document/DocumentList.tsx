@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import type { ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Select } from 'antd';
+import { Select, Tooltip } from 'antd';
 import PageHeader from '../../components/PageHeader';
 import TopStepsBar from '../../components/TopStepsBar';
 import StatusBadge from '../../components/StatusBadge';
@@ -205,7 +205,55 @@ export default function DocumentList() {
                     <strong>{d.name}</strong>
                   </td>
                   <td>
-                    <StatusBadge status={d.status} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <StatusBadge status={d.status} />
+                      {d.status === 'processing' && (
+                        <div
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 80 }}
+                        >
+                          <div
+                            style={{
+                              flex: 1,
+                              height: 4,
+                              background: 'var(--border)',
+                              borderRadius: 2,
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: `${d.progress ?? 0}%`,
+                                height: '100%',
+                                background: 'var(--primary)',
+                                borderRadius: 2,
+                                transition: 'width 0.3s ease',
+                              }}
+                            />
+                          </div>
+                          <span style={{ fontSize: 11, color: 'var(--text-subtle)' }}>
+                            {d.progress ?? 0}%
+                          </span>
+                        </div>
+                      )}
+                      {d.status === 'failed' && d.errorMessage && (
+                        <Tooltip title={d.errorMessage}>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: 'var(--danger)',
+                              cursor: 'help',
+                              maxWidth: 200,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              display: 'block',
+                            }}
+                          >
+                            {d.errorMessage.slice(0, 200)}
+                          </span>
+                        </Tooltip>
+                      )}
+                    </div>
                   </td>
                   <td>{d.strategy || '—'}</td>
                   <td>{d.chunkCount}</td>

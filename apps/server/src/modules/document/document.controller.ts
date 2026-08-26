@@ -11,7 +11,6 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { DocumentService } from './document.service';
-import { UploadDocumentDto } from './dto/upload-document.dto';
 
 /** 上传文件的简化类型，避免依赖 Express.Multer.File（@types/express v5 兼容性断裂） */
 interface UploadedFile {
@@ -37,7 +36,6 @@ export class DocumentController {
     FileInterceptor('file', {
       limits: { fileSize: MAX_UPLOAD_SIZE_BYTES },
       fileFilter: (_req, file, cb) => {
-        // Sanitize filename to prevent path traversal attacks
         file.originalname = sanitizeFilename(file.originalname);
         cb(null, true);
       },
@@ -46,18 +44,13 @@ export class DocumentController {
   async upload(
     @Param('kbId') kbId: string,
     @UploadedFile() file: UploadedFile,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    @Query() _dto: UploadDocumentDto,
+    @Query('processStrategy') processStrategy?: string,
   ) {
     if (!file) throw new BadRequestException('请选择要上传的文件');
     if (file.size > MAX_UPLOAD_SIZE_BYTES) {
       throw new BadRequestException(`文件大小超出限制（最大 ${MAX_UPLOAD_SIZE_MB}MB）`);
     }
-    const result = await this.service.upload(
-      kbId,
-      { originalname: file.originalname, buffer: file.buffer, size: file.size },
-      _dto.processStrategy,
-    );
+    const result = await this.service.upload(kbId, file, processStrategy);
     return result;
   }
 
@@ -68,8 +61,8 @@ export class DocumentController {
   }
 
   @Delete(':docId')
-  async remove(@Param('kbId') _kbId: string, @Param('docId') docId: string) {
-    const res = await this.service.remove(docId);
+  async remove(@Param('kbId') kbId: string, @Param('docId') docId: string) {
+    const res = await this.service.remove(docId, kbId);
     return { code: 0, data: res };
   }
 }

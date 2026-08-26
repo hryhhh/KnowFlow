@@ -83,3 +83,16 @@ export interface RAGPipelineConfig {
   embeddingDimensions?: number;
   pgTableName?: string;
 }
+
+/**
+ * 摄入阶段进度回调
+ *
+ * Worker 在解析、切片、embedding、落库各阶段完成时调用，
+ * 用于更新 DB 中的 documents.progress 和 documents.processing_stage。
+ */
+export interface IngestProgressCallback {
+  /** 0-100 的整数进度 */
+  percent: number;
+  /** 当前阶段名 */
+  stage: string;
+}

@@ -30,7 +30,7 @@ services:
       - '${REDIS_PORT:-6379}:6379'
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory ${REDIS_MAXMEMORY:-512mb} --maxmemory-policy noeviction
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
@@ -81,6 +81,40 @@ services:
       - kb-network
     volumes:
       - uploads_data:/app/apps/server/uploads
+
+  worker:
+    profiles: ['app']
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.server
+    container_name: kb-worker
+    restart: unless-stopped
+    environment:
+      TZ: UTC
+      NODE_ENV: production
+      DATABASE_HOST: postgres-vector
+      DATABASE_PORT: '5432'
+      DATABASE_USER: ${POSTGRES_USER:-postgres}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-change-me-in-production}
+      DATABASE_NAME: ${POSTGRES_DB:-knowledge_rag}
+      DATABASE_SSL: ${DATABASE_SSL:-false}
+      REDIS_HOST: redis
+      REDIS_PORT: '${REDIS_PORT:-6379}'
+      DOCUMENT_QUEUE_CONCURRENCY: '${DOCUMENT_QUEUE_CONCURRENCY:-2}'
+      DOCUMENT_QUEUE_ATTEMPTS: '${DOCUMENT_QUEUE_ATTEMPTS:-3}'
+      DOCUMENT_QUEUE_BACKOFF_MS: '${DOCUMENT_QUEUE_BACKOFF_MS:-2000}'
+      DOCUMENT_QUEUE_REMOVE_ON_COMPLETE: '${DOCUMENT_QUEUE_REMOVE_ON_COMPLETE:-1000}'
+      DOCUMENT_QUEUE_REMOVE_ON_FAIL: '${DOCUMENT_QUEUE_REMOVE_ON_FAIL:-100}'
+    depends_on:
+      postgres-vector:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - kb-network
+    volumes:
+      - uploads_data:/app/apps/server/uploads
+    command: node dist/worker.main.js
 
   frontend:
     profiles: ['app']

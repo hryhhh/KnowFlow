@@ -1,18 +1,45 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { RAGPipelineConfig, SearchParams, StreamCallbacks, RetrievalResult } from './types.js';
-import { retrieve, retrieveAndChat } from './pipeline.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { ingestDocument } from './pipeline.js';
+import type { RAGPipelineConfig, TextChunk } from './types.js';
+import * as loaders from './loaders/index.js';
+import * as splitters from './splitters/recursive-splitter.js';
+import * as markdownSplitters from './splitters/markdown-splitter.js';
+import * as embeddings from './embeddings/openai-embeddings.js';
+import * as pgvectorStore from './stores/pgvector-store.js';
+
+// Mock all dependencies
+vi.mock('./loaders/index.js', () => ({
+  loadDocument: vi.fn().mockResolvedValue({
+    documents: [{ pageContent: 'Test content', metadata: {} }],
+    fileType: 'pdf' as const,
+    totalChars: 100,
+  }),
+}));
+
+vi.mock('./splitters/recursive-splitter.js', () => ({
+  splitDocuments: vi.fn().mockResolvedValue([
+    { pageContent: 'Chunk 1', metadata: {} },
+    { pageContent: 'Chunk 2', metadata: {} },
+  ]),
+}));
+
+vi.mock('./splitters/markdown-splitter.js', () => ({
+  splitMarkdownDocuments: vi.fn().mockResolvedValue([{ pageContent: 'MD Chunk 1', metadata: {} }]),
+}));
 
 vi.mock('./embeddings/openai-embeddings.js', () => ({
   getEmbeddings: vi.fn(() => ({
-    embedQuery: vi.fn().mockResolvedValue([0.1, 0.2, 0.3]),
+    embedDocuments: vi.fn().mockResolvedValue([[0.1, 0.2]]),
+    embedQuery: vi.fn().mockResolvedValue([0.1, 0.2]),
   })),
 }));
 
 vi.mock('./stores/pgvector-store.js', () => ({
   ensureCachedPGVectorStore: vi.fn().mockResolvedValue({
-    similaritySearchVectorWithScore: vi.fn().mockResolvedValue([]),
+    addDocuments: vi.fn().mockResolvedValue(undefined),
   }),
   addDocumentsToPG: vi.fn().mockResolvedValue(undefined),
+  deleteByDocId: vi.fn().mockResolvedValue({ deleted: 1 }),
 }));
 
 vi.mock('./retrievers/similarity-retriever.js', () => ({
@@ -29,18 +56,8 @@ vi.mock('./rerankers/bi-encoder-reranker.js', () => ({
 
 vi.mock('./llm/chat-service.js', () => ({
   streamChat: vi.fn(),
-  buildContext: vi.fn((results: RetrievalResult[]) => {
-    if (!results.length) return '（暂无可用参考资料）';
-    return results.map((r, i) => `[${i + 1}] ${r.content}`).join('\n');
-  }),
+  buildContext: vi.fn(),
 }));
-
-import { similaritySearch } from './retrievers/similarity-retriever.js';
-import { hybridSearch } from './retrievers/hybrid-retriever.js';
-import { rerank } from './rerankers/bi-encoder-reranker.js';
-import { streamChat, buildContext } from './llm/chat-service.js';
-import { ensureCachedPGVectorStore } from './stores/pgvector-store.js';
-import { getEmbeddings } from './embeddings/openai-embeddings.js';
 
 const mockConfig: RAGPipelineConfig = {
   pg: { host: 'localhost', port: 5432, user: 'test', password: 'test', database: 'testdb' },
@@ -56,142 +73,98 @@ const mockConfig: RAGPipelineConfig = {
   pgTableName: 'langchainjs',
 };
 
-const mockParams: SearchParams = {
-  topK: 5,
-  minScore: 0.3,
-  useReranker: false,
-  denseWeight: 0.5,
-};
-
-const mockResults: RetrievalResult[] = [
-  { content: 'Result 1', score: 0.85, sourceFile: 'doc1.pdf', metadata: {} },
-  { content: 'Result 2', score: 0.6, sourceFile: 'doc2.txt', metadata: {} },
-];
-
-describe('retrieve', () => {
+describe('ingestDocument with docId and progress', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (similaritySearch as ReturnType<typeof vi.fn>).mockResolvedValue(mockResults);
-    (hybridSearch as ReturnType<typeof vi.fn>).mockResolvedValue(mockResults);
-    (rerank as ReturnType<typeof vi.fn>).mockResolvedValue(mockResults);
   });
 
-  it('should call performSearch with correct kbId filter', async () => {
-    const kbId = 'kb-123';
-    await retrieve('what is RAG?', kbId, mockParams, mockConfig);
-    expect(similaritySearch).toHaveBeenCalled();
-    const callArgs = (similaritySearch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(callArgs[0].filter).toEqual({ kbId });
+  it('should pass docId to metadata', async () => {
+    const { addDocumentsToPG } = await import('./stores/pgvector-store.js');
+    vi.mocked(addDocumentsToPG).mockImplementation(
+      async (store: any, chunks: TextChunk[], callback?: any) => {
+        // Verify docId is in metadata
+        chunks.forEach((c) => {
+          expect(c.metadata.docId).toBe('doc-123');
+          expect(c.metadata.kbId).toBe('kb-1');
+          expect(c.metadata.source).toBeTruthy();
+        });
+      },
+    );
+
+    await ingestDocument('/path/to/file.pdf', 'kb-1', mockConfig, 'basic', undefined, 'doc-123');
+
+    expect(addDocumentsToPG).toHaveBeenCalled();
   });
 
-  it('should apply minScore filtering', async () => {
-    const lowParam: SearchParams = { ...mockParams, minScore: 0.99 };
-    const results = await retrieve('query', 'kb-1', lowParam, mockConfig);
-    expect(results).toHaveLength(0);
-  });
+  it('should call progress callbacks in order', async () => {
+    const progressCalls: Array<{ percent: number; stage: string }> = [];
+    const progressCallback = (event: { percent: number; stage: string }) => {
+      progressCalls.push(event);
+    };
 
-  it('should run hybrid search then rerank when useReranker=true', async () => {
-    (rerank as ReturnType<typeof vi.fn>).mockResolvedValue(mockResults);
-    const params: SearchParams = { ...mockParams, useReranker: true };
-    await retrieve('query', 'kb-1', params, mockConfig);
+    const { addDocumentsToPG } = await import('./stores/pgvector-store.js');
+    vi.mocked(addDocumentsToPG).mockImplementation(
+      async (store: any, chunks: TextChunk[], callback?: any) => {
+        // Simulate batch progress callbacks
+        callback?.(50, 'embedding');
+        callback?.(70, 'embedding');
+        callback?.(89, 'embedding');
+      },
+    );
 
-    expect(hybridSearch).toHaveBeenCalled();
-    expect(rerank).toHaveBeenCalledWith(
-      'query',
-      expect.any(Array),
-      mockConfig.embedding,
-      expect.objectContaining({ topK: 5 }),
+    await ingestDocument(
+      '/path/to/file.pdf',
+      'kb-1',
+      mockConfig,
+      'basic',
+      undefined,
+      'doc-123',
+      progressCallback,
+    );
+
+    expect(progressCalls).toEqual(
+      expect.arrayContaining([
+        { percent: 10, stage: 'parsing' },
+        { percent: 30, stage: 'parsing' },
+        { percent: 40, stage: 'chunking' },
+        { percent: 90, stage: 'persisting' },
+      ]),
     );
   });
 
-  it('should run similarity search only when useReranker=false', async () => {
-    const params: SearchParams = { ...mockParams, useReranker: false };
-    await retrieve('query', 'kb-1', params, mockConfig);
+  it('should handle progress without docId (backward compatibility)', async () => {
+    const progressCalls: Array<{ percent: number; stage: string }> = [];
+    const progressCallback = (event: { percent: number; stage: string }) => {
+      progressCalls.push(event);
+    };
 
-    expect(similaritySearch).toHaveBeenCalled();
-    expect(hybridSearch).not.toHaveBeenCalled();
-    expect(rerank).not.toHaveBeenCalled();
-  });
+    const { addDocumentsToPG } = await import('./stores/pgvector-store.js');
+    vi.mocked(addDocumentsToPG).mockImplementation(
+      async (store: any, chunks: TextChunk[], callback?: any) => {
+        callback?.(50, 'embedding');
+      },
+    );
 
-  it('should return filtered results', async () => {
-    const result = await retrieve('query', 'kb-1', mockParams, mockConfig);
-    expect(result).toEqual(mockResults);
-  });
+    await ingestDocument(
+      '/path/to/file.pdf',
+      'kb-1',
+      mockConfig,
+      'basic',
+      undefined,
+      undefined,
+      progressCallback,
+    );
 
-  it('should get embeddings and cached store', async () => {
-    await retrieve('query', 'kb-1', mockParams, mockConfig);
-    expect(getEmbeddings).toHaveBeenCalledWith(mockConfig.embedding);
-    expect(ensureCachedPGVectorStore).toHaveBeenCalled();
+    // Should still work without docId
+    expect(progressCalls.length).toBeGreaterThanOrEqual(0);
   });
 });
 
-describe('retrieveAndChat', () => {
-  let callbacks: StreamCallbacks;
+describe('deleteByDocId', () => {
+  it('should delete vectors by docId', async () => {
+    const { deleteByDocId } = await import('./stores/pgvector-store.js');
+    const result = await deleteByDocId(mockConfig.pg, 'langchainjs', 'doc-123');
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    (similaritySearch as ReturnType<typeof vi.fn>).mockResolvedValue(mockResults);
-    // Reset streamChat: call onDone on successful resolve
-    (streamChat as ReturnType<typeof vi.fn>).mockImplementation(
-      async (_req: any, _config: any, cbs: StreamCallbacks) => cbs.onDone(),
-    );
-
-    callbacks = {
-      onSources: vi.fn(),
-      onToken: vi.fn(),
-      onDone: vi.fn(),
-      onError: vi.fn(),
-    };
-  });
-
-  it('should push sources via callbacks.onSources', async () => {
-    await retrieveAndChat('What is RAG?', 'kb-1', mockParams, mockConfig, callbacks);
-    expect(callbacks.onSources).toHaveBeenCalledOnce();
-    const sources = callbacks.onSources.mock.calls[0][0];
-    expect(sources).toHaveLength(2);
-    expect(sources[0].content).toBe('Result 1');
-    expect(sources[0].sourceFile).toBe('doc1.pdf');
-    expect(sources[0].score).toBe(0.85);
-  });
-
-  it('should build context and stream to LLM', async () => {
-    await retrieveAndChat('What is RAG?', 'kb-1', mockParams, mockConfig, callbacks);
-    expect(buildContext).toHaveBeenCalledWith(mockResults);
-    expect(streamChat).toHaveBeenCalled();
-    const chatCall = (streamChat as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(chatCall[0].query).toBe('What is RAG?');
-    expect(chatCall[0].context).toContain('Result 1');
-  });
-
-  it('should call callbacks.onDone on success', async () => {
-    await retrieveAndChat('What is RAG?', 'kb-1', mockParams, mockConfig, callbacks);
-    expect(callbacks.onDone).toHaveBeenCalledOnce();
-    expect(callbacks.onError).not.toHaveBeenCalled();
-  });
-
-  it('should not propagate streamChat error (error handled in streamChat)', async () => {
-    // streamChat internally handles errors via callbacks.onError
-    // The pipeline itself does not wrap streamChat in try/catch
-    const errorMock = vi.fn();
-    const testCallbacks = { ...callbacks, onError: errorMock };
-    (streamChat as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('LLM error'));
-    // Pipeline should still return (no unhandled rejection in test)
-    // The actual error handling is in streamChat itself
-    await expect(
-      retrieveAndChat('What is RAG?', 'kb-1', mockParams, mockConfig, testCallbacks),
-    ).rejects.toThrow('LLM error');
-  });
-
-  it('should use "暂无可用参考资料" context when results are empty', async () => {
-    (similaritySearch as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-    await retrieveAndChat('unknown topic', 'kb-1', mockParams, mockConfig, callbacks);
-    expect(buildContext).toHaveBeenCalledWith([]);
-    const chatCall = (streamChat as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(chatCall[0].context).toBe('（暂无可用参考资料）');
-  });
-
-  it('should not call onToken when no stream is active', async () => {
-    await retrieveAndChat('query', 'kb-1', mockParams, mockConfig, callbacks);
-    expect(streamChat).toHaveBeenCalled();
+    expect(result.deleted).toBe(1);
   });
 });

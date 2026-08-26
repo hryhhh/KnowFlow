@@ -17,6 +17,9 @@ export interface DocListItem {
   strategy: string;
   chunkCount: number;
   importMethod: string;
+  progress: number;
+  processingStage?: string;
+  errorMessage?: string;
   updatedAt: string;
   actions: string[];
 }
