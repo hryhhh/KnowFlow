@@ -160,7 +160,7 @@ async function performSearch(
   filter: { kbId: string },
   params: SearchParams,
   config: RAGPipelineConfig,
-): Promise<RetrievalResult[]> {
+): Promise<{ results: RetrievalResult[]; debug?: SearchDebugInfo }> {
   // 1. 兼容桥接：补全默认值
   const resolved = resolveSearchParams(params);
   const mode = resolved.retrievalMode ?? 'vector';
@@ -183,7 +183,14 @@ async function performSearch(
     minDenseScore: resolved.minDenseScore ?? undefined,
   });
   if (cached !== null) {
-    return cached;
+    // 缓存命中时构建简化版 debug 信息（候选数等于结果数）
+    if (params.debug) {
+      return {
+        results: cached,
+        debug: buildDebugFromResults(cached, mode, fusionMethod),
+      };
+    }
+    return { results: cached };
   }
 
   const embeddings = getEmbeddings(config.embedding);
@@ -192,6 +199,7 @@ async function performSearch(
   });
 
   let results: RetrievalResult[];
+  let debugInfo: SearchDebugInfo | undefined;
 
   // 3. 按模式分支
   switch (mode) {
@@ -199,6 +207,24 @@ async function performSearch(
       results = await similaritySearch({ ...resolved, query, filter }, store, config.embedding);
       // vector 模式：过滤 minScore
       results = results.filter((r) => r.score >= (resolved.minScore ?? 0));
+      if (params.debug) {
+        debugInfo = {
+          mode: 'vector',
+          fusion: null,
+          denseCandidates: results.length,
+          sparseCandidates: 0,
+          fusedTopK: results.length,
+          items: results.map((r, idx) => ({
+            chunkId: (r.metadata?.chunkId as string) ?? r.sourceFile,
+            rankDense: idx + 1,
+            rankSparse: null,
+            scoreDense: r.score,
+            scoreSparse: null,
+            scoreFused: r.score,
+            sourceFile: r.sourceFile,
+          })),
+        };
+      }
       break;
 
     case 'keyword':
@@ -206,6 +232,24 @@ async function performSearch(
         await import('./retrievers/sparse-retriever.js')
       ).sparseSearch({ query, filter, topK: resolved.topK }, config.pg, 'chunks');
       // keyword 模式：minScore 对稀疏分无固定范围意义，不启用
+      if (params.debug) {
+        debugInfo = {
+          mode: 'keyword',
+          fusion: null,
+          denseCandidates: 0,
+          sparseCandidates: results.length,
+          fusedTopK: results.length,
+          items: results.map((r, idx) => ({
+            chunkId: (r.metadata?.chunkId as string) ?? r.sourceFile,
+            rankDense: null,
+            rankSparse: idx + 1,
+            scoreDense: null,
+            scoreSparse: r.score,
+            scoreFused: r.score,
+            sourceFile: r.sourceFile,
+          })),
+        };
+      }
       break;
 
     case 'hybrid': {
@@ -219,11 +263,13 @@ async function performSearch(
           fusionParam: fusionMethod === 'linear' ? (resolved.denseWeight ?? 0.5) : rrfK,
           dbConfig: config.pg,
           sparseTableName: 'chunks',
+          debug: params.debug,
         },
         store,
         config.embedding,
       );
       results = hybridResult.results;
+      debugInfo = hybridResult.debug;
 
       // hybrid + linear 模式：minScore 过滤融合后结果
       if (fusionMethod === 'linear' && resolved.minScore !== undefined) {
@@ -236,6 +282,9 @@ async function performSearch(
       // 兜底走 vector
       results = await similaritySearch({ ...resolved, query, filter }, store, config.embedding);
       results = results.filter((r) => r.score >= (resolved.minScore ?? 0));
+      if (params.debug) {
+        debugInfo = buildDebugFromResults(results, mode, fusionMethod);
+      }
   }
 
   // 4. 可选重排（与 retrievalMode 独立）
@@ -243,7 +292,7 @@ async function performSearch(
     results = await rerank(query, results, config.embedding, { topK: resolved.topK });
   }
 
-  // 5. 写入缓存
+  // 5. 写入缓存（不缓存 debug 信息，只缓存 results）
   setCachedResults(
     {
       query,
@@ -258,7 +307,31 @@ async function performSearch(
     results,
   );
 
-  return results;
+  return { results, debug: debugInfo };
+}
+
+/** 根据检索结果构建简化版 debug 信息（用于缓存命中时） */
+function buildDebugFromResults(
+  results: RetrievalResult[],
+  mode: 'vector' | 'keyword' | 'hybrid',
+  fusionMethod: string,
+): SearchDebugInfo {
+  return {
+    mode,
+    fusion: (mode === 'hybrid' ? fusionMethod : null) as 'rrf' | 'linear' | null,
+    denseCandidates: mode === 'vector' ? results.length : mode === 'hybrid' ? results.length : 0,
+    sparseCandidates: mode === 'keyword' ? results.length : mode === 'hybrid' ? results.length : 0,
+    fusedTopK: results.length,
+    items: results.map((r, idx) => ({
+      chunkId: (r.metadata?.chunkId as string) ?? r.sourceFile,
+      rankDense: mode === 'vector' ? idx + 1 : mode === 'hybrid' ? idx + 1 : null,
+      rankSparse: mode === 'keyword' ? idx + 1 : mode === 'hybrid' ? idx + 1 : null,
+      scoreDense: mode === 'vector' ? r.score : mode === 'hybrid' ? r.score : null,
+      scoreSparse: mode === 'keyword' ? r.score : mode === 'hybrid' ? r.score : null,
+      scoreFused: r.score,
+      sourceFile: r.sourceFile,
+    })),
+  };
 }
 
 /**
@@ -271,86 +344,7 @@ export async function retrieve(
   params: SearchParams,
   config: RAGPipelineConfig,
 ): Promise<{ results: RetrievalResult[]; debug?: SearchDebugInfo }> {
-  const results = await performSearch(query, { kbId }, params, config);
-
-  if (!params.debug) {
-    return { results };
-  }
-
-  // 构建 debug 信息
-  const resolved = resolveSearchParams(params);
-  const mode = resolved.retrievalMode ?? 'vector';
-  const fusionMethod = resolved.fusionMethod ?? 'rrf';
-
-  let debugInfo: SearchDebugInfo;
-
-  if (mode === 'hybrid') {
-    // hybrid 模式需要重新调用 hybridSearch 以获取真实的候选数
-    const rrfK = resolved.rrfK ?? 60;
-    const rawMultiplier = resolved.candidateMultiplier ?? DEFAULT_CANDIDATE_MULTIPLIER;
-    const multiplier = Math.min(rawMultiplier, MAX_CANDIDATE_MULTIPLIER);
-    const candidatesPerRoute = Math.ceil(resolved.topK * multiplier);
-
-    const embeddings = getEmbeddings(config.embedding);
-    const store = await ensureCachedPGVectorStore(embeddings, config.pg, {
-      tableName: config.pgTableName,
-    });
-
-    const hybridResult = await hybridSearch(
-      {
-        ...resolved,
-        query,
-        filter: { kbId },
-        candidatesPerRoute,
-        fusionMethod,
-        fusionParam: fusionMethod === 'linear' ? (resolved.denseWeight ?? 0.5) : rrfK,
-        dbConfig: config.pg,
-        sparseTableName: 'chunks',
-        debug: true,
-      },
-      store,
-      config.embedding,
-    );
-
-    debugInfo = hybridResult.debug!;
-  } else if (mode === 'vector') {
-    debugInfo = {
-      mode: 'vector',
-      fusion: null,
-      denseCandidates: results.length,
-      sparseCandidates: 0,
-      fusedTopK: results.length,
-      items: results.map((r, idx) => ({
-        chunkId: (r.metadata?.chunkId as string) ?? r.sourceFile,
-        rankDense: idx + 1,
-        rankSparse: null,
-        scoreDense: r.score,
-        scoreSparse: null,
-        scoreFused: r.score,
-        sourceFile: r.sourceFile,
-      })),
-    };
-  } else {
-    // keyword 模式
-    debugInfo = {
-      mode: 'keyword',
-      fusion: null,
-      denseCandidates: 0,
-      sparseCandidates: results.length,
-      fusedTopK: results.length,
-      items: results.map((r, idx) => ({
-        chunkId: (r.metadata?.chunkId as string) ?? r.sourceFile,
-        rankDense: null,
-        rankSparse: idx + 1,
-        scoreDense: null,
-        scoreSparse: r.score,
-        scoreFused: r.score,
-        sourceFile: r.sourceFile,
-      })),
-    };
-  }
-
-  return { results, debug: debugInfo };
+  return performSearch(query, { kbId }, params, config);
 }
 export async function retrieveAndChat(
   query: string,
@@ -359,7 +353,7 @@ export async function retrieveAndChat(
   config: RAGPipelineConfig,
   callbacks: StreamCallbacks,
 ): Promise<void> {
-  const results = await performSearch(query, { kbId }, params, config);
+  const { results } = await performSearch(query, { kbId }, params, config);
 
   // 推送引用来源
   const sources: SourceRef[] = results.map((r) => ({

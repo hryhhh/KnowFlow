@@ -96,20 +96,28 @@ export function linearFuse(
 
   const allIds = new Set<string>([...dense.map(getChunkId), ...sparse.map(getChunkId)]);
 
-  const denseScores = dense.map((r) => r.score);
-  const sparseScores = sparse.map((r) => r.score);
+  const denseMap = new Map<string, number>();
+  for (const r of dense) denseMap.set(getChunkId(r), r.score);
+
+  const sparseMap = new Map<string, number>();
+  for (const r of sparse) sparseMap.set(getChunkId(r), r.score);
+
+  // 单路为空时直接返回（另一路结果无需归一化）
+  if (denseMap.size === 0) {
+    return { results: sparse, debug: undefined };
+  }
+  if (sparseMap.size === 0) {
+    return { results: dense, debug: undefined };
+  }
+
+  const denseScores = Array.from(denseMap.values());
+  const sparseScores = Array.from(sparseMap.values());
   const dMin = Math.min(...denseScores);
   const dMax = Math.max(...denseScores);
   const sMin = Math.min(...sparseScores);
   const sMax = Math.max(...sparseScores);
   const dRange = dMax - dMin || 1;
   const sRange = sMax - sMin || 1;
-
-  const denseMap = new Map<string, number>();
-  for (const r of dense) denseMap.set(getChunkId(r), r.score);
-
-  const sparseMap = new Map<string, number>();
-  for (const r of sparse) sparseMap.set(getChunkId(r), r.score);
 
   // 构建 rank 映射用于 debug
   const denseRankMap = new Map<string, number>();
@@ -126,8 +134,8 @@ export function linearFuse(
         dense.find((r) => getChunkId(r) === id) ??
         sparse.find((r) => getChunkId(r) === id) ??
         ({ content: '', sourceFile: id, score: 0, metadata: {} } as RetrievalResult);
-      const normDense = denseMap.has(id) ? (dScore - dMin) / dRange : 0;
-      const normSparse = sparseMap.has(id) ? (sScore - sMin) / sRange : 0;
+      const normDense = (dScore - dMin) / dRange;
+      const normSparse = (sScore - sMin) / sRange;
       return { ...baseResult, score: weight * normDense + (1 - weight) * normSparse };
     })
     .sort((a, b) => b.score - a.score);

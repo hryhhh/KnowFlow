@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsBoolean, IsOptional, IsIn } from 'class-validator';
+import { IsString, IsNumber, IsBoolean, IsOptional, IsIn, Min, Max } from 'class-validator';
 
 export class SearchDto {
   @IsString()
@@ -33,14 +33,18 @@ export class SearchDto {
   @IsIn(['rrf', 'linear'])
   fusionMethod?: 'rrf' | 'linear';
 
-  /** RRF 公式中的 K 值，默认 60 */
+  /** RRF 公式中的 K 值，默认 60，范围 1-200 */
   @IsOptional()
   @IsNumber()
+  @Min(1)
+  @Max(200)
   rrfK?: number;
 
   /** 每路候选数 = topK × multiplier，默认 3，硬上限 10 */
   @IsOptional()
   @IsNumber()
+  @Min(1)
+  @Max(10)
   candidateMultiplier?: number;
 
   /** 仅 hybrid 模式生效，过滤 dense 候选，默认 null（不施加） */

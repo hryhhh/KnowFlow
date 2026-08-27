@@ -64,11 +64,12 @@ export class RateLimitGuard implements CanActivate {
       res.header('X-RateLimit-Limit', String(this.limit));
       res.header('X-RateLimit-Remaining', '0');
       res.header('X-RateLimit-Reset', String(result.resetAt));
-      return res.status(429).json({
+      res.status(429).json({
         code: 429,
         message: '请求过于频繁，请稍后重试',
         retryAfter: Math.ceil((result.resetAt - Date.now()) / 1000),
-      }).statusCode;
+      });
+      return false;
     }
 
     // 设置响应头

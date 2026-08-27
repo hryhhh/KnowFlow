@@ -1,13 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RedisClientService } from '../../common/redis/redis-client.service';
 
 /**
- * 检索结果缓存服务（进程内）
+ * 检索结果缓存服务（进程内 Map）
  *
- * 按 (query, kbId, topK, minScore, denseWeight) 哈希缓存检索结果。
- * 文档删除时通过 invalidateByDocId() 主动失效。
- *
- * 生产环境可替换为 Redis-backed 实现。
+ * 按 (query, kbId, topK, minScore, retrievalMode, fusionMethod, rrfK) 哈希缓存检索结果，
+ * TTL 默认 5 分钟。文档删除时通过 invalidateByKbId() 主动失效指定知识库的缓存条目。
  */
 @Injectable()
 export class RetrievalCacheService {
@@ -15,7 +12,7 @@ export class RetrievalCacheService {
   private readonly cache = new Map<string, { results: any[]; expiresAt: number; kbId: string }>();
   private readonly ttlMs: number;
 
-  constructor(redisClient?: RedisClientService) {
+  constructor() {
     this.ttlMs = parseInt(process.env.RAG_RESULT_CACHE_TTL_MS ?? '300000', 10);
   }
 
