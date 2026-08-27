@@ -15,14 +15,24 @@ function makeMockUsageLog() {
   };
 }
 
+function makeMockCache() {
+  return {
+    get: vi.fn().mockResolvedValue(null),
+    set: vi.fn().mockResolvedValue(undefined),
+    invalidateByKbId: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
 describe('RetrievalService', () => {
   let usageLog: ReturnType<typeof makeMockUsageLog>;
+  let cache: ReturnType<typeof makeMockCache>;
   let service: RetrievalService;
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv('DEFAULT_MIN_SCORE', '');
     usageLog = makeMockUsageLog();
+    cache = makeMockCache();
     service = Object.create(RetrievalService.prototype);
     service.ragConfig = {
       pg: { host: 'localhost', port: 5432, user: 'test', password: 'test', database: 'test' },
@@ -37,6 +47,7 @@ describe('RetrievalService', () => {
       chunkOverlap: 200,
     };
     service.usageLog = usageLog;
+    service.retrievalCache = cache;
   });
 
   it('calls retrieve with default params and maps results', async () => {

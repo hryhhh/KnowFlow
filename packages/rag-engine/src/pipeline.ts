@@ -13,6 +13,7 @@ import { similaritySearch } from './retrievers/similarity-retriever.js';
 import { hybridSearch } from './retrievers/hybrid-retriever.js';
 import { rerank } from './rerankers/bi-encoder-reranker.js';
 import { streamChat, buildContext } from './llm/chat-service.js';
+import { getCachedResults, setCachedResults } from './cache/search-cache.js';
 import type {
   RAGPipelineConfig,
   TextChunk,
@@ -96,6 +97,7 @@ export async function ingestDocument(
 
 /**
  * 执行向量检索（混合或纯相似度），过滤低质量结果并可选重排。
+ * 带进程内缓存：相同 query+kbId+params 直接命中，跳过 embedding 和向量检索。
  */
 async function performSearch(
   query: string,
@@ -103,6 +105,18 @@ async function performSearch(
   params: SearchParams,
   config: RAGPipelineConfig,
 ): Promise<RetrievalResult[]> {
+  // 尝试缓存命中
+  const cached = await getCachedResults(
+    query,
+    filter.kbId,
+    params.topK,
+    params.minScore,
+    params.denseWeight,
+  );
+  if (cached !== null) {
+    return cached;
+  }
+
   const embeddings = getEmbeddings(config.embedding);
   const store = await ensureCachedPGVectorStore(embeddings, config.pg, {
     tableName: config.pgTableName,
@@ -117,6 +131,9 @@ async function performSearch(
   if (params.useReranker && results.length > 0) {
     results = await rerank(query, results, config.embedding, { topK: params.topK });
   }
+
+  // 写入缓存（5 分钟 TTL，通过环境变量 RAG_RESULT_CACHE_TTL_MS 可配置）
+  setCachedResults(query, filter.kbId, params.topK, params.minScore, params.denseWeight, results);
 
   return results;
 }

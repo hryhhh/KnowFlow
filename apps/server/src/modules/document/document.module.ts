@@ -5,13 +5,10 @@ import { DocumentService } from './document.service';
 import { DocumentController } from './document.controller';
 import { Chunk } from '../chunk/entities/chunk.entity';
 import { IngestionQueueModule } from '../ingestion/ingestion.module';
+import { RetrievalModule } from '../retrieval/retrieval.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Document, Chunk]),
-    // 注入队列模块以获取 IngestionQueue
-    IngestionQueueModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Document, Chunk]), IngestionQueueModule, RetrievalModule],
   controllers: [DocumentController],
   providers: [DocumentService],
   exports: [DocumentService],

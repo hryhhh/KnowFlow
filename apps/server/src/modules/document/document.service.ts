@@ -11,6 +11,7 @@ import { IngestionQueue } from '../ingestion/ingestion.queue';
 import { DOCUMENT_INGEST_QUEUE_NAME } from '../ingestion/ingestion.constants';
 import { RAG_CONFIG } from '../../config/rag-config.provider';
 import type { RAGPipelineConfig } from '@knowbase-x/rag-engine';
+import { RetrievalCacheService } from '../retrieval/retrieval-cache.service';
 
 export interface DocListItem {
   id: string;
@@ -52,6 +53,7 @@ export class DocumentService {
     @InjectRepository(Chunk)
     private readonly chunkRepo: Repository<Chunk>,
     private readonly ingestionQueue: IngestionQueue,
+    private readonly retrievalCache: RetrievalCacheService,
   ) {}
 
   /**
@@ -172,6 +174,8 @@ export class DocumentService {
     try {
       await this.chunkRepo.delete({ docId });
       await this.docRepo.remove(doc);
+      // 失效该 kbId 下的检索缓存
+      this.retrievalCache.invalidateByKbId(doc.kbId);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push(`删除记录失败: ${msg}`);

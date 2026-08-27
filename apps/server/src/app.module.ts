@@ -15,6 +15,8 @@ import { SessionModule } from './modules/session/session.module';
 import { AgentModule } from './modules/agents/agent.module';
 import { HealthModule } from './common/health/health.module';
 import { IngestionQueueModule } from './modules/ingestion/ingestion.module';
+import { RedisModule } from './common/redis/redis.module';
+import { RateLimiterModule } from './common/rate-limiter/rate-limiter.module';
 
 @Module({
   imports: [
@@ -50,6 +52,8 @@ import { IngestionQueueModule } from './modules/ingestion/ingestion.module';
     SessionModule,
     HealthModule,
     IngestionQueueModule,
+    RedisModule,
+    RateLimiterModule,
   ],
 })
 export class AppModule {}

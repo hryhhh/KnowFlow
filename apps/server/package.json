@@ -17,8 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "migration:run": "typeorm migration:run -d src/database/data-source.ts",
-    "migration:revert": "typeorm migration:revert -d src/database/data-source.ts"
+    "migration:run": "NODE_PATH=./node_modules node -e \"const {DataSource} = require('typeorm'); const path = require('path'); const ds = new DataSource({type:'postgres',host:process.env.DATABASE_HOST||'localhost',port:parseInt(process.env.DATABASE_PORT||'5433',10),username:process.env.DATABASE_USER||'postgres',password:process.env.DATABASE_PASSWORD||'123456',database:process.env.DATABASE_NAME||'knowledge_rag',ssl:process.env.DATABASE_SSL==='true',entities:[path.join(__dirname,'dist/src/modules/**/*.entity.js')],migrations:[path.join(__dirname,'dist/database/migrations/*.js')]}); ds.initialize().then(()=>ds.runMigrations()).then(()=>{console.log('Done');process.exit(0)}).catch(e=>{console.error(e);process.exit(1)}).finally(()=>ds.destroy())\""
   },
   "dependencies": {
     "@knowbase-x/agents": "workspace:*",
@@ -37,6 +36,7 @@
     "class-validator": "^0.14.1",
     "helmet": "^8.3.0",
     "iconv-lite": "^0.7.3",
+    "ioredis": "^6.0.0",
     "js-yaml": "^4.1.0",
     "nanoid": "^3.3.18",
     "pg": "8.22.0",

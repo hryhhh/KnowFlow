@@ -17,6 +17,11 @@ export interface ChatStreamBody {
     minScore?: number;
     useReranker?: boolean;
     denseWeight?: number;
+    retrievalMode?: 'vector' | 'keyword' | 'hybrid';
+    fusionMethod?: 'rrf' | 'linear';
+    rrfK?: number;
+    candidateMultiplier?: number;
+    minDenseScore?: number;
   };
 }
 
@@ -70,6 +75,11 @@ export class ChatService {
         minScore: params.minScore ?? (Number(process.env.DEFAULT_MIN_SCORE) || 0.1),
         useReranker: params.useReranker ?? false,
         denseWeight: params.denseWeight ?? 0.5,
+        retrievalMode: params.retrievalMode,
+        fusionMethod: params.fusionMethod,
+        rrfK: params.rrfK,
+        candidateMultiplier: params.candidateMultiplier ?? (Number(process.env.DEFAULT_CANDIDATE_MULTIPLIER) || 3),
+        minDenseScore: params.minDenseScore ?? (Number(process.env.DEFAULT_MIN_DENSE_SCORE) || null),
       };
 
       // AGENTS_ENABLED=true 时走 Agent 编排链路，否则降级传统 RAG

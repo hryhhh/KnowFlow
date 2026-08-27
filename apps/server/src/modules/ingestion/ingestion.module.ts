@@ -7,6 +7,7 @@ import {
   DEFAULT_REMOVE_ON_COMPLETE,
   DEFAULT_REMOVE_ON_FAIL,
 } from './ingestion.constants';
+import { IngestionQueue } from './ingestion.queue';
 
 /**
  * API 进程专用模块：注册 BullMQ Redis 连接和队列，不包含任何 processor。
@@ -26,6 +27,7 @@ import {
       name: DOCUMENT_INGEST_QUEUE_NAME,
     }),
   ],
-  exports: [BullModule],
+  providers: [IngestionQueue],
+  exports: [BullModule, IngestionQueue],
 })
 export class IngestionQueueModule {}

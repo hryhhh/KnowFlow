@@ -28,6 +28,14 @@ export {
 } from './stores/pgvector-store.js';
 export { createMemoryStore, createMemoryStoreFromTexts } from './stores/memory-store.js';
 
+// Cache
+export {
+  getCachedResults,
+  setCachedResults,
+  invalidateByKbId,
+  getCacheStats,
+} from './cache/search-cache.js';
+
 // Retrievers
 export { similaritySearch, type VectorStoreLike } from './retrievers/similarity-retriever.js';
 export { hybridSearch } from './retrievers/hybrid-retriever.js';

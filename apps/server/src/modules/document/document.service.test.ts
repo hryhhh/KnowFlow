@@ -54,6 +54,7 @@ describe('DocumentService', () => {
   let docRepo: any;
   let chunkRepo: any;
   let ingestionQueue: any;
+  let retrievalCache: any;
   let service: DocumentService;
 
   beforeEach(() => {
@@ -64,11 +65,15 @@ describe('DocumentService', () => {
       enqueue: vi.fn().mockResolvedValue('job-123'),
       removeJob: vi.fn().mockResolvedValue(undefined),
     };
+    retrievalCache = {
+      invalidateByKbId: vi.fn().mockResolvedValue(undefined),
+    };
     // Create service with mocked dependencies (bypass DI)
     service = Object.create(DocumentService.prototype);
     service.docRepo = docRepo;
     service.chunkRepo = chunkRepo;
     service.ingestionQueue = ingestionQueue;
+    service.retrievalCache = retrievalCache;
     service.ragConfig = {
       pg: { host: 'localhost', port: 5432, user: 'test', password: 'test', database: 'test' },
       llm: { apiKey: 'test', model: 'gpt-4', baseURL: 'https://api.test.com' },

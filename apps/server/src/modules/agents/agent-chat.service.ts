@@ -20,6 +20,7 @@ import { UsageLogService } from '../usage/usage-log.service';
 import { DbQueryService } from './db-query.service';
 import { createSearchProvider } from './providers/index';
 import * as path from 'node:path';
+import { RedisCacheProvider } from './cache/redis-cache.provider';
 
 /**
  * AgentChatService — 多 Agent 编排入口层
@@ -51,6 +52,7 @@ export class AgentChatService {
     @Inject(RAG_CONFIG) private readonly ragConfig: RAGPipelineConfig,
     private readonly usageLog: UsageLogService,
     private readonly dbQueryService: DbQueryService,
+    private readonly redisCache: RedisCacheProvider,
   ) {
     this.agentsEnabled = process.env.AGENTS_ENABLED === 'true';
     this.composeStrategy = process.env.AGENT_COMPOSE_STRATEGY ?? 'rag-priority';
@@ -94,15 +96,11 @@ export class AgentChatService {
       }
     }
 
-    const webAgent = new WebSearchAgent(
-      webProvider,
-      { get: async () => null, set: async () => {} },
-      {
-        cacheTtlSeconds: parseInt(process.env.WEB_SEARCH_CACHE_TTL_SECONDS ?? '3600'),
-        providerTimeoutMs: parseInt(process.env.WEB_SEARCH_PROVIDER_TIMEOUT_MS ?? '5000'),
-        maxResults: 1,
-      },
-    );
+    const webAgent = new WebSearchAgent(webProvider, this.redisCache, {
+      cacheTtlSeconds: parseInt(process.env.WEB_SEARCH_CACHE_TTL_SECONDS ?? '3600'),
+      providerTimeoutMs: parseInt(process.env.WEB_SEARCH_PROVIDER_TIMEOUT_MS ?? '5000'),
+      maxResults: 1,
+    });
     this.agentInstances.set(webAgent.id, webAgent);
 
     // 3. RAGFlow Agent（包装 retrieveAndChat 为流式接口）
@@ -122,6 +120,11 @@ export class AgentChatService {
           minScore: params.minScore ?? 0.7,
           useReranker: params.useReranker ?? false,
           denseWeight: params.denseWeight ?? 0.5,
+          retrievalMode: params.retrievalMode,
+          fusionMethod: params.fusionMethod,
+          rrfK: params.rrfK,
+          candidateMultiplier: params.candidateMultiplier ?? (Number(process.env.DEFAULT_CANDIDATE_MULTIPLIER) || 3),
+          minDenseScore: params.minDenseScore ?? (Number(process.env.DEFAULT_MIN_DENSE_SCORE) || null),
         },
         this.ragConfig,
         callbacks,
@@ -367,6 +370,11 @@ export class AgentChatService {
       minScore: params?.minScore ?? 0.7,
       useReranker: params?.useReranker ?? false,
       denseWeight: params?.denseWeight ?? 0.5,
+      retrievalMode: params?.retrievalMode,
+      fusionMethod: params?.fusionMethod,
+      rrfK: params?.rrfK,
+      candidateMultiplier: params?.candidateMultiplier ?? (Number(process.env.DEFAULT_CANDIDATE_MULTIPLIER) || 3),
+      minDenseScore: params?.minDenseScore ?? (Number(process.env.DEFAULT_MIN_DENSE_SCORE) || null),
     };
   }
 }
