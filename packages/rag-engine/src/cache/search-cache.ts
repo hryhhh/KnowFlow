@@ -1,7 +1,8 @@
 /**
  * 检索结果进程内缓存
  *
- * 按 (query, kbId, topK, minScore, denseWeight) 哈希缓存检索结果，TTL 到期自动失效。
+ * 按 (query, kbId, topK, minScore, retrievalMode, fusionMethod, rrfK, minDenseScore)
+ * 哈希缓存检索结果，TTL 到期自动失效。
  * 用于减少重复查询时的向量检索和 embedding 调用。
  *
  * 文档删除时通过 invalidateByKbId() 主动失效相关缓存。
@@ -25,10 +26,15 @@ function makeCacheKey(
   query: string,
   kbId: string,
   topK: number,
-  minScore: number,
-  denseWeight: number,
+  minScore: number | undefined,
+  retrievalMode: string,
+  fusionMethod: string,
+  rrfK: number,
+  minDenseScore: number | undefined,
 ): string {
-  const hash = simpleHash(`${query}|${kbId}|${topK}|${minScore}|${denseWeight}`);
+  const hash = simpleHash(
+    `${query}|${kbId}|${topK}|${minScore}|${retrievalMode}|${fusionMethod}|${rrfK}|${minDenseScore}`,
+  );
   return `rag:result:${hash}`;
 }
 
@@ -43,17 +49,33 @@ function simpleHash(str: string): string {
   return Math.abs(hash).toString(36);
 }
 
+export interface CachedSearchParams {
+  query: string;
+  kbId: string;
+  topK: number;
+  minScore?: number;
+  retrievalMode: string;
+  fusionMethod: string;
+  rrfK: number;
+  minDenseScore?: number;
+}
+
 /**
  * 尝试从缓存返回检索结果。
  */
 export async function getCachedResults(
-  query: string,
-  kbId: string,
-  topK: number,
-  minScore: number,
-  denseWeight: number,
+  params: CachedSearchParams,
 ): Promise<RetrievalResult[] | null> {
-  const key = makeCacheKey(query, kbId, topK, minScore, denseWeight);
+  const key = makeCacheKey(
+    params.query,
+    params.kbId,
+    params.topK,
+    params.minScore,
+    params.retrievalMode,
+    params.fusionMethod,
+    params.rrfK,
+    params.minDenseScore,
+  );
   const entry = resultCache.get(key);
 
   if (!entry) return null;
@@ -70,15 +92,20 @@ export async function getCachedResults(
  * 将检索结果写入缓存。
  */
 export function setCachedResults(
-  query: string,
-  kbId: string,
-  topK: number,
-  minScore: number,
-  denseWeight: number,
+  params: CachedSearchParams,
   results: RetrievalResult[],
   ttlMs: number = DEFAULT_TTL_MS,
 ): void {
-  const key = makeCacheKey(query, kbId, topK, minScore, denseWeight);
+  const key = makeCacheKey(
+    params.query,
+    params.kbId,
+    params.topK,
+    params.minScore,
+    params.retrievalMode,
+    params.fusionMethod,
+    params.rrfK,
+    params.minDenseScore,
+  );
   resultCache.set(key, {
     results,
     expiresAt: Date.now() + ttlMs,
