@@ -73,6 +73,15 @@ export const useKbStore = create<KbStore>((set, get) => ({
       set({ current: null });
     }
     set({ list, loading: false });
+    // 如果没有选中知识库，自动选中（优先默认知识库，否则选第一个）
+    const { defaultKbId, current: cur } = get();
+    if (!cur) {
+      const targetKb = defaultKbId ? list.find((k) => k.id === defaultKbId) : list[0];
+      if (targetKb) {
+        saveCurrentKB(targetKb);
+        set({ current: { ...targetKb, isDefault: targetKb.id === defaultKbId } });
+      }
+    }
   },
   select: (kb) => {
     saveCurrentKB(kb);

@@ -4,31 +4,50 @@ import PageHeader from '../../components/PageHeader';
 import TopStepsBar from '../../components/TopStepsBar';
 import { retrievalApi } from '../../services/api';
 import { useKbStore } from '../../stores/kb-store';
-import type { SearchResultItem, SearchParams } from '../../types';
-import { Search, Settings2 } from 'lucide-react';
+import type { SearchResultItem, SearchDebugInfo, SearchParams } from '../../types';
+import { Search, Settings2, ChevronDown, ChevronUp } from 'lucide-react';
+
+type RetrievalMode = 'vector' | 'keyword' | 'hybrid';
+type FusionMethod = 'rrf' | 'linear';
 
 export default function RetrievalPage() {
   const { kbId } = useParams();
   const current = useKbStore((s) => s.current);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResultItem[]>([]);
+  const [debugInfo, setDebugInfo] = useState<SearchDebugInfo | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
   const [params, setParams] = useState<SearchParams>({
     topK: 10,
     minScore: 0.0,
     useReranker: false,
     denseWeight: 0.5,
+    retrievalMode: 'vector',
+    fusionMethod: 'rrf',
+    rrfK: 60,
+    candidateMultiplier: 3,
+    debug: false,
   });
 
   const search = async () => {
     if (!query.trim() || !kbId) return;
     setLoading(true);
+    setDebugInfo(null);
     try {
       const res = await retrievalApi.search(kbId, query, params);
       setResults(res.data.data.results);
+      if (params.debug && res.data.data.debug) {
+        setDebugInfo(res.data.data.debug);
+        setShowDebug(true);
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const updateParam = <K extends keyof SearchParams>(key: K, value: SearchParams[K]) => {
+    setParams((p) => ({ ...p, [key]: value }));
   };
 
   const highlightMatch = (text: string, query: string) => {
@@ -45,6 +64,8 @@ export default function RetrievalPage() {
       ),
     );
   };
+
+  const isHybrid = params.retrievalMode === 'hybrid';
 
   return (
     <div className="content">
@@ -69,8 +90,109 @@ export default function RetrievalPage() {
             调整检索参数，预览知识库命中效果
           </p>
 
+          {/* 检索模式 */}
           <div className="param-row">
-            <label htmlFor="topK">结果返回数量 (TopK)</label>
+            <label htmlFor="retrievalMode">检索模式</label>
+            <select
+              id="retrievalMode"
+              className="input"
+              value={params.retrievalMode}
+              onChange={(e) => updateParam('retrievalMode', e.target.value as RetrievalMode)}
+            >
+              <option value="vector">仅向量（Dense）</option>
+              <option value="keyword">仅关键词（Sparse）</option>
+              <option value="hybrid">混合检索（Dense + Sparse）</option>
+            </select>
+          </div>
+
+          {/* hybrid 专属参数 */}
+          {isHybrid && (
+            <>
+              <div className="param-row">
+                <label htmlFor="fusionMethod">融合方式</label>
+                <select
+                  id="fusionMethod"
+                  className="input"
+                  value={params.fusionMethod}
+                  onChange={(e) => updateParam('fusionMethod', e.target.value as FusionMethod)}
+                >
+                  <option value="rrf">RRF（默认）</option>
+                  <option value="linear">Linear 加权</option>
+                </select>
+              </div>
+
+              {params.fusionMethod === 'rrf' && (
+                <div className="param-row">
+                  <label htmlFor="rrfK">RRF K 值</label>
+                  <input
+                    id="rrfK"
+                    className="input"
+                    type="number"
+                    min={1}
+                    max={200}
+                    value={params.rrfK}
+                    onChange={(e) => updateParam('rrfK', Number(e.target.value))}
+                  />
+                </div>
+              )}
+
+              <div className="param-row">
+                <label htmlFor="candidateMultiplier">候选倍数（per route）</label>
+                <input
+                  id="candidateMultiplier"
+                  className="input"
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={params.candidateMultiplier}
+                  onChange={(e) => updateParam('candidateMultiplier', Number(e.target.value))}
+                />
+                <span style={{ fontSize: 11, color: 'var(--text-sub)' }}>
+                  每路候选 = topK × {params.candidateMultiplier}（上限 10）
+                </span>
+              </div>
+
+              <div className="param-row">
+                <label htmlFor="minDenseScore">Dense 最低分（过滤候选）</label>
+                <input
+                  id="minDenseScore"
+                  className="input"
+                  type="number"
+                  step="0.05"
+                  min={0}
+                  max={1}
+                  placeholder="不限制"
+                  value={params.minDenseScore ?? ''}
+                  onChange={(e) =>
+                    updateParam('minDenseScore', e.target.value ? Number(e.target.value) : null)
+                  }
+                />
+                <span style={{ fontSize: 11, color: 'var(--text-sub)' }}>
+                  仅 hybrid 模式生效，默认 null
+                </span>
+              </div>
+
+              {params.fusionMethod === 'linear' && (
+                <div className="param-row">
+                  <label htmlFor="denseWeight">Dense 权重（0~1）</label>
+                  <input
+                    id="denseWeight"
+                    className="input"
+                    type="number"
+                    step="0.1"
+                    min={0}
+                    max={1}
+                    value={params.denseWeight}
+                    onChange={(e) => updateParam('denseWeight', Number(e.target.value))}
+                  />
+                </div>
+              )}
+            </>
+          )}
+
+          {/* 公共参数 */}
+          <div className="param-row">
+            <label htmlFor="topK">结果返回数量（TopK）</label>
             <input
               id="topK"
               className="input"
@@ -78,44 +200,44 @@ export default function RetrievalPage() {
               min={1}
               max={50}
               value={params.topK}
-              onChange={(e) => setParams((p) => ({ ...p, topK: Number(e.target.value) }))}
+              onChange={(e) => updateParam('topK', Number(e.target.value))}
             />
           </div>
 
-          <div className="param-row">
-            <label htmlFor="minScore">最低相似度阈值</label>
-            <input
-              id="minScore"
-              className="input"
-              type="number"
-              step="0.01"
-              min={0}
-              max={1}
-              value={params.minScore}
-              onChange={(e) => setParams((p) => ({ ...p, minScore: Number(e.target.value) }))}
-            />
-          </div>
+          {/* minScore 仅 vector 模式显示 */}
+          {params.retrievalMode !== 'hybrid' && (
+            <div className="param-row">
+              <label htmlFor="minScore">最低相似度阈值</label>
+              <input
+                id="minScore"
+                className="input"
+                type="number"
+                step="0.01"
+                min={0}
+                max={1}
+                value={params.minScore}
+                onChange={(e) => updateParam('minScore', Number(e.target.value))}
+              />
+            </div>
+          )}
 
           <div className="param-row">
-            <label>重排模型 (Reranker)</label>
+            <label>重排模型（Reranker）</label>
             <span
               className={'toggle' + (params.useReranker ? ' on' : '')}
-              onClick={() => setParams((p) => ({ ...p, useReranker: !p.useReranker }))}
+              onClick={() => updateParam('useReranker', !params.useReranker)}
             />
           </div>
 
           <div className="param-row">
-            <label htmlFor="denseWeight">Dense Weight (0~1)</label>
-            <input
-              id="denseWeight"
-              className="input"
-              type="number"
-              step="0.1"
-              min={0}
-              max={1}
-              value={params.denseWeight}
-              onChange={(e) => setParams((p) => ({ ...p, denseWeight: Number(e.target.value) }))}
+            <label>调试模式（Debug）</label>
+            <span
+              className={'toggle' + (params.debug ? ' on' : '')}
+              onClick={() => updateParam('debug', !params.debug)}
             />
+            <span style={{ fontSize: 11, color: 'var(--text-sub)' }}>
+              返回各通路命中明细，仅调试用
+            </span>
           </div>
         </div>
 
@@ -162,6 +284,100 @@ export default function RetrievalPage() {
             </button>
           </div>
 
+          {/* Debug 信息面板 */}
+          {debugInfo && (
+            <div
+              style={{
+                margin: '12px 0',
+                padding: '12px 16px',
+                background: 'var(--panel)',
+                border: '1px solid var(--border-strong)',
+                borderRadius: 'var(--radius)',
+              }}
+            >
+              <button
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  padding: 0,
+                }}
+                onClick={() => setShowDebug((v) => !v)}
+              >
+                {showDebug ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                调试信息
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--text-sub)',
+                    fontWeight: 400,
+                    marginLeft: 4,
+                  }}
+                >
+                  {`mode=${debugInfo.mode}`}
+                  {debugInfo.fusion && `, fusion=${debugInfo.fusion}`}
+                  {`, dense=${debugInfo.denseCandidates}`}
+                  {`, sparse=${debugInfo.sparseCandidates}`}
+                  {`, topK=${debugInfo.fusedTopK}`}
+                </span>
+              </button>
+
+              {showDebug && (
+                <table
+                  style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    fontSize: 12,
+                    marginTop: 8,
+                  }}
+                >
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                      <th style={thStyle}>#</th>
+                      <th style={thStyle}>chunkId</th>
+                      <th style={thStyle}>sourceFile</th>
+                      <th style={thStyle}>rankDense</th>
+                      <th style={thStyle}>rankSparse</th>
+                      <th style={thStyle}>scoreDense</th>
+                      <th style={thStyle}>scoreSparse</th>
+                      <th style={thStyle}>scoreFused</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {debugInfo.items.map((item, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                        <td style={tdStyle}>{idx + 1}</td>
+                        <td style={tdStyle}>{item.chunkId.slice(0, 8)}…</td>
+                        <td style={tdStyle}>{item.sourceFile}</td>
+                        <td style={{ ...tdStyle, color: item.rankDense ? 'var(--text-primary)' : 'var(--text-subtle)' }}>
+                          {item.rankDense ?? '—'}
+                        </td>
+                        <td style={{ ...tdStyle, color: item.rankSparse ? 'var(--text-primary)' : 'var(--text-subtle)' }}>
+                          {item.rankSparse ?? '—'}
+                        </td>
+                        <td style={tdStyle}>
+                          {item.scoreDense != null ? item.scoreDense.toFixed(4) : '—'}
+                        </td>
+                        <td style={tdStyle}>
+                          {item.scoreSparse != null ? item.scoreSparse.toFixed(4) : '—'}
+                        </td>
+                        <td style={{ ...tdStyle, fontWeight: 600 }}>
+                          {item.scoreFused.toFixed(4)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
           {results.length === 0 ? (
             <div className="empty">
               <p>输入查询词后查看命中结果</p>
@@ -180,3 +396,19 @@ export default function RetrievalPage() {
     </div>
   );
 }
+
+const thStyle: React.CSSProperties = {
+  padding: '6px 10px',
+  textAlign: 'left',
+  fontWeight: 600,
+  color: 'var(--text-sub)',
+  fontSize: 11,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: '6px 10px',
+  fontSize: 12,
+  fontFamily: 'monospace',
+};

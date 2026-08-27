@@ -47,11 +47,36 @@ export interface SourceRef {
   score: number;
 }
 
+export interface DebugSearchItem {
+  chunkId: string;
+  rankDense: number | null;
+  rankSparse: number | null;
+  scoreDense: number | null;
+  scoreSparse: number | null;
+  scoreFused: number;
+  sourceFile: string;
+}
+
+export interface SearchDebugInfo {
+  mode: string;
+  fusion: 'rrf' | 'linear' | null;
+  denseCandidates: number;
+  sparseCandidates: number;
+  fusedTopK: number;
+  items: DebugSearchItem[];
+}
+
 export interface SearchParams {
   topK: number;
   minScore: number;
   useReranker: boolean;
   denseWeight: number;
+  retrievalMode?: 'vector' | 'keyword' | 'hybrid';
+  fusionMethod?: 'rrf' | 'linear';
+  rrfK?: number;
+  candidateMultiplier?: number;
+  minDenseScore?: number | null;
+  debug?: boolean;
 }
 
 export interface ApiServiceItem {
