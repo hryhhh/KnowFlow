@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Headers } from '@nestjs/common';
 import { RetrievalService } from './retrieval.service';
 import { SearchDto } from './dto/search.dto';
 
@@ -7,8 +7,16 @@ export class RetrievalController {
   constructor(private readonly service: RetrievalService) {}
 
   @Post('search')
-  async search(@Body() dto: SearchDto) {
-    const results = await this.service.search(dto);
-    return { code: 0, data: { results, searchHistory: [] } };
+  async search(
+    @Body() dto: SearchDto,
+    @Headers('x-debug') xDebug?: string,
+  ) {
+    // X-Debug header 可覆盖请求体参数，便于内部调试
+    const effectiveDebug = dto.debug ?? (xDebug === 'true');
+    const result = await this.service.search({ ...dto, debug: effectiveDebug });
+    if (effectiveDebug) {
+      return { code: 0, data: { results: result.results, debug: result.debug, searchHistory: [] } };
+    }
+    return { code: 0, data: { results: result.results, searchHistory: [] } };
   }
 }

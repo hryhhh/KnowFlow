@@ -163,8 +163,13 @@ export class DocumentService {
 
     // ② 删除 PGVector 向量
     try {
-      const { deleteByDocId } = await import('@knowbase-x/rag-engine');
-      await deleteByDocId(this.ragConfig.pg, this.ragConfig.pgTableName, docId);
+      const { deleteByDocId, deleteSparseByDocId } = await import('@knowbase-x/rag-engine');
+      await deleteByDocId(this.ragConfig.pg, this.ragConfig.pgTableName ?? 'langchainjs', docId);
+      await deleteSparseByDocId(
+        this.ragConfig.pg,
+        this.ragConfig.pgTableName ?? 'langchainjs',
+        docId,
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push(`清理向量失败: ${msg}`);

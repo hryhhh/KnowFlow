@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsBoolean, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsBoolean, IsOptional, IsIn } from 'class-validator';
 
 export class SearchDto {
   @IsString()
@@ -22,4 +22,34 @@ export class SearchDto {
   @IsOptional()
   @IsNumber()
   denseWeight?: number;
+
+  /** 检索模式：vector | keyword | hybrid，默认 vector */
+  @IsOptional()
+  @IsIn(['vector', 'keyword', 'hybrid'])
+  retrievalMode?: 'vector' | 'keyword' | 'hybrid';
+
+  /** 融合方式，默认 rrf */
+  @IsOptional()
+  @IsIn(['rrf', 'linear'])
+  fusionMethod?: 'rrf' | 'linear';
+
+  /** RRF 公式中的 K 值，默认 60 */
+  @IsOptional()
+  @IsNumber()
+  rrfK?: number;
+
+  /** 每路候选数 = topK × multiplier，默认 3，硬上限 10 */
+  @IsOptional()
+  @IsNumber()
+  candidateMultiplier?: number;
+
+  /** 仅 hybrid 模式生效，过滤 dense 候选，默认 null（不施加） */
+  @IsOptional()
+  @IsNumber()
+  minDenseScore?: number;
+
+  /** 是否开启调试模式，返回详细的检索信息 */
+  @IsOptional()
+  @IsBoolean()
+  debug?: boolean;
 }

@@ -10,7 +10,12 @@ import { Chunk } from '../chunk/entities/chunk.entity';
 import { IngestionQueue } from './ingestion.queue';
 import { DOCUMENT_INGEST_QUEUE_NAME, PROCESS_DOCUMENT_JOB_NAME } from './ingestion.constants';
 import type { DocumentIngestJobPayload } from './ingestion.types';
-import { ingestDocument, deleteByDocId } from '@knowbase-x/rag-engine';
+import {
+  ingestDocument,
+  deleteByDocId,
+  writeSparseIndex,
+  getChunkIds,
+} from '@knowbase-x/rag-engine';
 import type { RAGPipelineConfig, ParseStrategy } from '@knowbase-x/rag-engine';
 import { RAG_CONFIG } from '../../config/rag-config.provider';
 
@@ -105,7 +110,7 @@ export class IngestionProcessor extends WorkerHost {
         (event) => this.updateProgress(docId, event),
       );
 
-      // ── 5. 落库 chunks ────────────────────────────────────────
+      // ── 5. 落库 chunks（chunkId 使用 pipeline 注入的 UUID，与 dense 侧一致）──
       await this.updateProgress(docId, { percent: 92, stage: 'persisting' });
       const chunkEntities = chunks.map((c, i) =>
         this.chunkRepo.create({
@@ -115,9 +120,23 @@ export class IngestionProcessor extends WorkerHost {
           content: c.content,
           tokenCount: c.tokenCount,
           sourceFile: (c.metadata.source as string) ?? originalName,
+          chunkId: c.metadata.chunkId as string,
         }),
       );
       await this.chunkRepo.save(chunkEntities);
+
+      // ── 5.5 写稀疏索引（tsvector on chunks，使用 chunk_id 关联键）──
+      try {
+        const chunkIds = getChunkIds(chunks);
+        await writeSparseIndex(
+          this.ragConfig.pg,
+          'chunks',
+          chunkEntities.map((e, i) => ({ id: e.id, content: e.content, chunkId: chunkIds[i] })),
+        );
+      } catch (err) {
+        this.logger.warn(`[${docId}] 稀疏索引写入失败: ${err}`);
+        // 不阻塞成功标记，启动期校验任务补偿
+      }
 
       // ── 6. 标记成功 ───────────────────────────────────────────
       doc.status = 'success';

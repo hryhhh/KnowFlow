@@ -55,7 +55,7 @@ describe('RetrievalService', () => {
       { content: 'result1', sourceFile: 'doc1.pdf', score: 0.85 },
       { content: 'result2', sourceFile: 'doc2.pdf', score: 0.72 },
     ];
-    vi.mocked(retrieve).mockResolvedValue(mockResults as any);
+    vi.mocked(retrieve).mockResolvedValue({ results: mockResults as any });
 
     const dto = { query: 'what is RAG', kbId: 'kb-1' };
     const result = await service.search(dto as any);
@@ -71,15 +71,15 @@ describe('RetrievalService', () => {
       }),
       service.ragConfig,
     );
-    expect(result).toHaveLength(2);
-    expect(result[0].chunkId).toBe('doc1.pdf#0.85');
-    expect(result[0].content).toBe('result1');
-    expect(result[0].score).toBe(0.85);
-    expect(result[1].chunkId).toBe('doc2.pdf#0.72');
+    expect(result.results).toHaveLength(2);
+    expect(result.results[0].chunkId).toBe('doc1.pdf#0.85');
+    expect(result.results[0].content).toBe('result1');
+    expect(result.results[0].score).toBe(0.85);
+    expect(result.results[1].chunkId).toBe('doc2.pdf#0.72');
   });
 
   it('uses dto params when provided', async () => {
-    vi.mocked(retrieve).mockResolvedValue([]);
+    vi.mocked(retrieve).mockResolvedValue({ results: [] });
 
     const dto = {
       query: 'test',
@@ -101,7 +101,7 @@ describe('RetrievalService', () => {
 
   it('falls back to DEFAULT_MIN_SCORE env var when dto.minScore is missing', async () => {
     vi.stubEnv('DEFAULT_MIN_SCORE', '0.6');
-    vi.mocked(retrieve).mockResolvedValue([]);
+    vi.mocked(retrieve).mockResolvedValue({ results: [] });
 
     const dto = { query: 'test', kbId: 'kb-1' };
     await service.search(dto as any);
@@ -115,7 +115,7 @@ describe('RetrievalService', () => {
   });
 
   it('records usage log on success', async () => {
-    vi.mocked(retrieve).mockResolvedValue([]);
+    vi.mocked(retrieve).mockResolvedValue({ results: [] });
     const dto = { query: 'test', kbId: 'kb-1' };
     await service.search(dto as any);
 
@@ -140,6 +140,78 @@ describe('RetrievalService', () => {
         kbId: 'kb-1',
         status: 'error',
       }),
+    );
+  });
+
+  it('returns debug info when debug=true', async () => {
+    const mockResults = [
+      { content: 'result1', sourceFile: 'doc1.pdf', score: 0.85, metadata: { chunkId: 'c1' } },
+      { content: 'result2', sourceFile: 'doc2.pdf', score: 0.72, metadata: { chunkId: 'c2' } },
+    ];
+    // mock retrieve 返回 debug 信息（由 retrieve() 内部构建）
+    vi.mocked(retrieve).mockResolvedValue({
+      results: mockResults as any,
+      debug: {
+        mode: 'vector',
+        fusion: null,
+        denseCandidates: 2,
+        sparseCandidates: 0,
+        fusedTopK: 2,
+        items: [
+          { chunkId: 'c1', rankDense: 1, rankSparse: null, scoreDense: 0.85, scoreSparse: null, scoreFused: 0.85, sourceFile: 'doc1.pdf' },
+          { chunkId: 'c2', rankDense: 2, rankSparse: null, scoreDense: 0.72, scoreSparse: null, scoreFused: 0.72, sourceFile: 'doc2.pdf' },
+        ],
+      } as any,
+    });
+
+    const dto = { query: 'test', kbId: 'kb-1', debug: true };
+    const result = await service.search(dto as any);
+
+    expect(result.debug).toBeDefined();
+    expect(result.debug!.mode).toBe('vector');
+    expect(result.debug!.fusedTopK).toBe(2);
+    expect(result.debug!.items).toHaveLength(2);
+    expect(result.debug!.items[0].rankDense).toBe(1);
+    expect(result.debug!.items[0].rankSparse).toBeNull();
+    expect(result.debug!.items[0].scoreFused).toBe(0.85);
+  });
+
+  it('returns null debug when debug=false', async () => {
+    vi.mocked(retrieve).mockResolvedValue({ results: [] });
+
+    const dto = { query: 'test', kbId: 'kb-1', debug: false };
+    const result = await service.search(dto as any);
+
+    expect(result.debug).toBeUndefined();
+  });
+
+  it('uses DEFAULT_MIN_DENSE_SCORE env when dto.minDenseScore is missing', async () => {
+    vi.stubEnv('DEFAULT_MIN_DENSE_SCORE', '0.3');
+    vi.mocked(retrieve).mockResolvedValue({ results: [] });
+
+    const dto = { query: 'test', kbId: 'kb-1' };
+    await service.search(dto as any);
+
+    expect(retrieve).toHaveBeenCalledWith(
+      'test',
+      'kb-1',
+      expect.objectContaining({ minDenseScore: 0.3 }),
+      service.ragConfig,
+    );
+  });
+
+  it('uses DEFAULT_CANDIDATE_MULTIPLIER env when dto.candidateMultiplier is missing', async () => {
+    vi.stubEnv('DEFAULT_CANDIDATE_MULTIPLIER', '5');
+    vi.mocked(retrieve).mockResolvedValue({ results: [] });
+
+    const dto = { query: 'test', kbId: 'kb-1' };
+    await service.search(dto as any);
+
+    expect(retrieve).toHaveBeenCalledWith(
+      'test',
+      'kb-1',
+      expect.objectContaining({ candidateMultiplier: 5 }),
+      service.ragConfig,
     );
   });
 });

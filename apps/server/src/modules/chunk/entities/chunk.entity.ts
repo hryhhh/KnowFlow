@@ -16,7 +16,7 @@ export class Chunk {
   @Column({ type: 'int' })
   chunkIndex: number;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   content: string;
 
   @Column({ length: 256, nullable: true })
@@ -27,6 +27,13 @@ export class Chunk {
 
   @Column({ length: 256, nullable: true })
   sourceFile: string;
+
+  /**
+   * pipeline 注入的 UUID，与 sparseSearch 返回的 metadata.chunkId 一致，
+   * 用于 dense/sparse 两路结果的关联融合。
+   */
+  @Column({ type: 'text', nullable: true })
+  chunkId: string;
 
   @CreateDateColumn()
   createdAt: Date;

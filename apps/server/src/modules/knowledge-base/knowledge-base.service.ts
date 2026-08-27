@@ -1,6 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import type { RAGPipelineConfig } from '@knowbase-x/rag-engine';
+import { RAG_CONFIG } from '../../config/rag-config.provider';
 import { KnowledgeBase } from './entities/knowledge-base.entity';
 import { Document } from '../document/entities/document.entity';
 import { Chunk } from '../chunk/entities/chunk.entity';
@@ -25,6 +27,8 @@ export class KnowledgeBaseService {
     private readonly docRepo: Repository<Document>,
     @InjectRepository(Chunk)
     private readonly chunkRepo: Repository<Chunk>,
+    @Inject(RAG_CONFIG)
+    private readonly ragConfig: RAGPipelineConfig,
   ) {}
 
   async create(dto: CreateKbDto): Promise<KnowledgeBase> {
@@ -63,6 +67,18 @@ export class KnowledgeBaseService {
     const kb = await this.kbRepo.findOne({ where: { id } });
     if (!kb) throw new NotFoundException(`知识库不存在: ${id}`);
     await this.kbRepo.remove(kb);
+    // 清理该知识库的稀疏索引
+    const { deleteSparseByKbId } = await import('@knowbase-x/rag-engine');
+    try {
+      await deleteSparseByKbId(
+        this.ragConfig.pg,
+        this.ragConfig.pgTableName ?? 'langchainjs',
+        kb.id,
+      );
+    } catch (err) {
+      // 不影响删除主流程，记录日志供后续补偿
+      console.warn(`[${id}] 稀疏索引清理失败:`, err);
+    }
     return { success: true };
   }
 

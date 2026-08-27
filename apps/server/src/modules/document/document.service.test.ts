@@ -4,6 +4,7 @@ import { DocumentService } from './document.service.js';
 // Mock rag-engine before importing DocumentService
 vi.mock('@knowbase-x/rag-engine', () => ({
   deleteByDocId: vi.fn().mockResolvedValue({ deleted: 1 }),
+  deleteSparseByDocId: vi.fn().mockResolvedValue({ deleted: 0 }),
 }));
 
 function makeMockRepo(
