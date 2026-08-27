@@ -114,7 +114,7 @@ services:
       - kb-network
     volumes:
       - uploads_data:/app/apps/server/uploads
-    command: node dist/worker.main.js
+    command: node apps/server/dist/worker.main.js
 
   frontend:
     profiles: ['app']
