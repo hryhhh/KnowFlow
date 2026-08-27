@@ -26,6 +26,11 @@ export {
   searchSimilarityWithScore,
   deleteByDocId,
 } from './stores/pgvector-store.js';
+export {
+  writeSparseIndex,
+  deleteSparseByDocId,
+  deleteSparseByKbId,
+} from './stores/sparse-store.js';
 export { createMemoryStore, createMemoryStoreFromTexts } from './stores/memory-store.js';
 
 // Cache
@@ -36,9 +41,19 @@ export {
   getCacheStats,
 } from './cache/search-cache.js';
 
+// Tokenizer
+export { tokenize, tokensToTsvString, tokensToTsQuery } from './tokenizer.js';
+
 // Retrievers
 export { similaritySearch, type VectorStoreLike } from './retrievers/similarity-retriever.js';
-export { hybridSearch } from './retrievers/hybrid-retriever.js';
+export {
+  hybridSearch,
+  type HybridSearchParams,
+} from './retrievers/hybrid-retriever.js';
+export { sparseSearch, type SparseSearchParams } from './retrievers/sparse-retriever.js';
+
+// Fusion
+export { rrfFuse, linearFuse } from './fusion/index.js';
 
 // Rerankers
 export { rerank } from './rerankers/bi-encoder-reranker.js';
@@ -47,7 +62,7 @@ export { rerank } from './rerankers/bi-encoder-reranker.js';
 export { streamChat, buildContext, DEFAULT_SYSTEM_PROMPT } from './llm/chat-service.js';
 
 // Pipeline
-export { ingestDocument, retrieve, retrieveAndChat } from './pipeline.js';
+export { ingestDocument, retrieve, retrieveAndChat, getChunkIds } from './pipeline.js';
 
 // Types
 export type {
@@ -58,6 +73,7 @@ export type {
   RetrievalResult,
   SourceRef,
   StreamCallbacks,
+  SearchDebugInfo,
   EmbeddingConfig,
   LLMConfig,
   PGConfig,

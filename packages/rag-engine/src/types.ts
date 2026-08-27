@@ -23,6 +23,36 @@ export interface SearchParams {
   minScore: number;
   useReranker: boolean;
   denseWeight: number;
+  /** 检索模式：vector | keyword | hybrid，默认 vector */
+  retrievalMode?: 'vector' | 'keyword' | 'hybrid';
+  /** 融合方式，默认 rrf */
+  fusionMethod?: 'rrf' | 'linear';
+  /** RRF 公式中的 K 值，默认 60 */
+  rrfK?: number;
+  /** 每路候选数 = topK × multiplier，默认 3 */
+  candidateMultiplier?: number;
+  /** 仅 hybrid 模式生效，过滤 dense 候选，默认 null（不施加） */
+  minDenseScore?: number | null;
+  /** 是否开启调试模式，返回详细的检索信息 */
+  debug?: boolean;
+}
+
+/** 调试信息结构 */
+export interface SearchDebugInfo {
+  mode: string;
+  fusion: 'rrf' | 'linear' | null;
+  denseCandidates: number;
+  sparseCandidates: number;
+  fusedTopK: number;
+  items: {
+    chunkId: string;
+    rankDense: number | null;
+    rankSparse: number | null;
+    scoreDense: number | null;
+    scoreSparse: number | null;
+    scoreFused: number;
+    sourceFile: string;
+  }[];
 }
 
 /** 检索结果项 */

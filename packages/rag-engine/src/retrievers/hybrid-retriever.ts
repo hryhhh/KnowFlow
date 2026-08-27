@@ -1,43 +1,95 @@
-import type { EmbeddingConfig, RetrievalResult, SearchParams } from '../types.js';
+import type {
+  EmbeddingConfig,
+  PGConfig,
+  RetrievalResult,
+  SearchParams,
+  SearchDebugInfo,
+} from '../types.js';
 import { similaritySearch } from './similarity-retriever.js';
 import type { VectorStoreLike } from './similarity-retriever.js';
+import { sparseSearch } from './sparse-retriever.js';
+import { rrfFuse, linearFuse } from '../fusion/index.js';
 
 export interface HybridSearchParams extends SearchParams {
   query: string;
   filter?: Record<string, unknown>;
+  /** 每路候选数（调用方已乘 candidateMultiplier） */
+  candidatesPerRoute: number;
+  fusionMethod: 'rrf' | 'linear';
+  /** rrfK（rrf 时）或 denseWeight（linear 时） */
+  fusionParam: number;
+  dbConfig: PGConfig;
+  sparseTableName: string;
 }
 
 /**
- * 混合检索（dense vector + keyword 关键词）。
- * 通过 denseWeight 控制两种信号的权重，线性加权融合。
+ * 混合检索（dense vector + sparse tsvector）并行召回 + RRF/linear 融合
+ *
+ * 当 retrievalMode=hybrid 时由 pipeline.ts 调用。
  */
 export async function hybridSearch(
-  params: HybridSearchParams,
+  params: HybridSearchParams & { minDenseScore?: number | null },
   vectorStore: VectorStoreLike,
   embeddingConfig: EmbeddingConfig,
-): Promise<RetrievalResult[]> {
-  const results = await similaritySearch(
-    { ...params, filter: params.filter },
-    vectorStore,
-    embeddingConfig,
-  );
+): Promise<{ results: RetrievalResult[]; debug?: SearchDebugInfo }> {
+  const {
+    query,
+    filter,
+    candidatesPerRoute,
+    fusionMethod,
+    fusionParam,
+    dbConfig,
+    sparseTableName,
+    topK,
+    minDenseScore,
+  } = params;
 
-  const keywordWeight = 1 - params.denseWeight;
-  // 中英文混合切词：英文按空格切，中文连续字符单独成词，过滤单字符和纯标点
-  const queryTerms = params.query
-    .toLowerCase()
-    .split(/[\s,，\s]+/)
-    .filter((t) => t.length > 1 && /^[a-z0-9一-龥]+$/.test(t));
+  // 并行双路召回
+  const [denseRaw, sparse] = await Promise.all([
+    similaritySearch(
+      {
+        query,
+        filter: filter ?? { kbId: '' },
+        topK: candidatesPerRoute,
+        minScore: 0,
+        useReranker: false,
+        denseWeight: 0.5,
+      },
+      vectorStore,
+      embeddingConfig,
+    ),
+    sparseSearch(
+      { query, filter: { kbId: (filter as any)?.kbId ?? '' }, topK: candidatesPerRoute },
+      dbConfig,
+      sparseTableName,
+    ),
+  ]);
 
-  return results
-    .map((r) => {
-      // 用正则整体词匹配，避免 "ai" 误命中 "JavaScript"
-      const hit = queryTerms.some((t) =>
-        new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(r.content),
-      );
-      const keywordScore = hit ? 1 : 0;
-      const fused = params.denseWeight * r.score + keywordWeight * keywordScore;
-      return { ...r, score: Number(fused.toFixed(7)) };
-    })
-    .sort((a, b) => b.score - a.score);
+  // minDenseScore 在 dense 候选阶段预截断（不应用于 RRF/linear 融合分）
+  const dense = minDenseScore !== null && minDenseScore !== undefined
+    ? denseRaw.filter((r) => r.score >= minDenseScore)
+    : denseRaw;
+
+  // 融合
+  let fusionResult: { results: RetrievalResult[]; debug?: SearchDebugInfo };
+  if (fusionMethod === 'linear') {
+    fusionResult = linearFuse(dense, sparse, fusionParam, params.debug);
+  } else {
+    fusionResult = rrfFuse(dense, sparse, fusionParam, params.debug);
+  }
+
+  const results = fusionResult.results;
+
+  // dense 和 sparse 结果均已携带 metadata.chunkId（pipeline 注入占位符，ingestion.processor 回填真实 PK），
+  // rrfFuse / linearFuse 直接以 chunkId 为关联键完成融合，无需额外回填 sourceFile。
+
+  // 取 topK
+  const sliced = results.slice(0, topK);
+
+  // 如果 debug 模式，更新 fusedTopK
+  if (params.debug && fusionResult.debug) {
+    fusionResult.debug.fusedTopK = sliced.length;
+  }
+
+  return { results: sliced, debug: fusionResult.debug };
 }

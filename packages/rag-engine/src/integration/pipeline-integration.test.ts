@@ -25,11 +25,9 @@ vi.mock('../retrievers/similarity-retriever.js', () => ({
 }));
 
 vi.mock('../retrievers/hybrid-retriever.js', () => ({
-  hybridSearch: vi
-    .fn()
-    .mockResolvedValue([
-      { content: 'Reranked result', score: 0.95, sourceFile: 'doc1.pdf', metadata: {} },
-    ]),
+  hybridSearch: vi.fn().mockResolvedValue({
+    results: [{ content: 'Reranked result', score: 0.95, sourceFile: 'doc1.pdf', metadata: {} }],
+  }),
 }));
 
 vi.mock('../rerankers/bi-encoder-reranker.js', () => ({
@@ -79,7 +77,7 @@ describe('L5 Integration: retrieve → chat pipeline', () => {
     (similaritySearch as ReturnType<typeof vi.fn>).mockResolvedValue(mockResults);
 
     const params: SearchParams = { topK: 5, minScore: 0, useReranker: false, denseWeight: 0.5 };
-    const results = await retrieve('向量检索', 'kb-1', params, mockConfig);
+    const { results } = await retrieve('向量检索', 'kb-1', params, mockConfig);
 
     expect(results).toHaveLength(2);
     expect(results[0].content).toBe('PostgreSQL向量检索原理');
@@ -97,7 +95,7 @@ describe('L5 Integration: retrieve → chat pipeline', () => {
     (similaritySearch as ReturnType<typeof vi.fn>).mockResolvedValue(mockResults);
 
     const params: SearchParams = { topK: 10, minScore: 0.5, useReranker: false, denseWeight: 0.5 };
-    const results = await retrieve('test', 'kb-1', params, mockConfig);
+    const { results } = await retrieve('test', 'kb-1', params, mockConfig);
 
     expect(results).toHaveLength(1);
     expect(results[0].content).toBe('high');
@@ -187,7 +185,7 @@ describe('L5 Integration: retrieve → chat pipeline', () => {
     ]);
 
     const params: SearchParams = { topK: 5, minScore: 0, useReranker: true, denseWeight: 0.5 };
-    const results = await retrieve('query', 'kb-1', params, mockConfig);
+    const { results } = await retrieve('query', 'kb-1', params, mockConfig);
 
     expect(results).toHaveLength(1);
     expect(results[0].content).toBe('Reranked result');
