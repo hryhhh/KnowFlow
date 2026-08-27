@@ -16,7 +16,7 @@ import { AgentModule } from './modules/agents/agent.module';
 import { HealthModule } from './common/health/health.module';
 import { IngestionQueueModule } from './modules/ingestion/ingestion.module';
 import { RedisModule } from './common/redis/redis.module';
-import { RateLimiterModule } from './common/rate-limiter/rate-limiter.module';
+import { OutboxCheckModule } from './common/outbox-check/outbox-check.module';
 
 @Module({
   imports: [
@@ -53,7 +53,7 @@ import { RateLimiterModule } from './common/rate-limiter/rate-limiter.module';
     HealthModule,
     IngestionQueueModule,
     RedisModule,
-    RateLimiterModule,
+    OutboxCheckModule,
   ],
 })
 export class AppModule {}
