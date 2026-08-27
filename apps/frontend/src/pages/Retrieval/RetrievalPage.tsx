@@ -355,10 +355,20 @@ export default function RetrievalPage() {
                         <td style={tdStyle}>{idx + 1}</td>
                         <td style={tdStyle}>{item.chunkId.slice(0, 8)}…</td>
                         <td style={tdStyle}>{item.sourceFile}</td>
-                        <td style={{ ...tdStyle, color: item.rankDense ? 'var(--text-primary)' : 'var(--text-subtle)' }}>
+                        <td
+                          style={{
+                            ...tdStyle,
+                            color: item.rankDense ? 'var(--text-primary)' : 'var(--text-subtle)',
+                          }}
+                        >
                           {item.rankDense ?? '—'}
                         </td>
-                        <td style={{ ...tdStyle, color: item.rankSparse ? 'var(--text-primary)' : 'var(--text-subtle)' }}>
+                        <td
+                          style={{
+                            ...tdStyle,
+                            color: item.rankSparse ? 'var(--text-primary)' : 'var(--text-subtle)',
+                          }}
+                        >
                           {item.rankSparse ?? '—'}
                         </td>
                         <td style={tdStyle}>

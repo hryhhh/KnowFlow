@@ -67,7 +67,9 @@ export const chunkApi = {
 
 export const retrievalApi = {
   search: (kbId: string, query: string, params: SearchParams) =>
-    api.post<Resp<{ results: SearchResultItem[]; debug?: SearchDebugInfo; searchHistory: unknown[] }>>('/retrieval/search', {
+    api.post<
+      Resp<{ results: SearchResultItem[]; debug?: SearchDebugInfo; searchHistory: unknown[] }>
+    >('/retrieval/search', {
       kbId,
       query,
       ...params,
