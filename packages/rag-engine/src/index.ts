@@ -46,10 +46,7 @@ export { tokenize, tokensToTsvString, tokensToTsQuery } from './tokenizer.js';
 
 // Retrievers
 export { similaritySearch, type VectorStoreLike } from './retrievers/similarity-retriever.js';
-export {
-  hybridSearch,
-  type HybridSearchParams,
-} from './retrievers/hybrid-retriever.js';
+export { hybridSearch, type HybridSearchParams } from './retrievers/hybrid-retriever.js';
 export { sparseSearch, type SparseSearchParams } from './retrievers/sparse-retriever.js';
 
 // Fusion

@@ -87,7 +87,8 @@ export class OutboxComplianceService implements OnApplicationBootstrap {
       }
 
       // 3. 检查 chunks 表中有 tsv 但 chunk_id 为空的记录
-      const emptyChunkId = await this.chunkRepo.createQueryBuilder('c')
+      const emptyChunkId = await this.chunkRepo
+        .createQueryBuilder('c')
         .where('c.tsv IS NOT NULL AND c.chunk_id IS NULL')
         .getMany();
       for (const chunk of emptyChunkId.slice(0, 20)) {
@@ -100,11 +101,17 @@ export class OutboxComplianceService implements OnApplicationBootstrap {
 
       // 4. 输出报告
       if (issues.length === 0) {
-        this.logger.log(`✅ Outbox 一致性校验通过（耗时 ${Date.now() - startTime}ms），${successDocs.length} 个成功文档全部一致`);
+        this.logger.log(
+          `✅ Outbox 一致性校验通过（耗时 ${Date.now() - startTime}ms），${successDocs.length} 个成功文档全部一致`,
+        );
       } else {
-        this.logger.warn(`⚠️ Outbox 一致性校验发现问题：${issues.length} 项（耗时 ${Date.now() - startTime}ms）`);
+        this.logger.warn(
+          `⚠️ Outbox 一致性校验发现问题：${issues.length} 项（耗时 ${Date.now() - startTime}ms）`,
+        );
         for (const issue of issues) {
-          const msg = issue.detail ? `  - [${issue.type}] docId=${issue.docId} ${issue.detail}` : `  - [${issue.type}] docId=${issue.docId}`;
+          const msg = issue.detail
+            ? `  - [${issue.type}] docId=${issue.docId} ${issue.detail}`
+            : `  - [${issue.type}] docId=${issue.docId}`;
           this.logger.warn(msg);
         }
         this.logger.warn('请手动补偿：对有 chunks 但无向量的文档重新触发摄入');

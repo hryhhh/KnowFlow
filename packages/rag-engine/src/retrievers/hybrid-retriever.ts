@@ -66,9 +66,10 @@ export async function hybridSearch(
   ]);
 
   // minDenseScore 在 dense 候选阶段预截断（不应用于 RRF/linear 融合分）
-  const dense = minDenseScore !== null && minDenseScore !== undefined
-    ? denseRaw.filter((r) => r.score >= minDenseScore)
-    : denseRaw;
+  const dense =
+    minDenseScore !== null && minDenseScore !== undefined
+      ? denseRaw.filter((r) => r.score >= minDenseScore)
+      : denseRaw;
 
   // 融合
   let fusionResult: { results: RetrievalResult[]; debug?: SearchDebugInfo };

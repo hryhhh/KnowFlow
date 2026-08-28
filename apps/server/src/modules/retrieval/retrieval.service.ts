@@ -41,7 +41,8 @@ export class RetrievalService {
       retrievalMode: dto.retrievalMode,
       fusionMethod: dto.fusionMethod,
       rrfK: dto.rrfK,
-      candidateMultiplier: dto.candidateMultiplier ?? (Number(process.env.DEFAULT_CANDIDATE_MULTIPLIER) || 3),
+      candidateMultiplier:
+        dto.candidateMultiplier ?? (Number(process.env.DEFAULT_CANDIDATE_MULTIPLIER) || 3),
       minDenseScore: dto.minDenseScore ?? (Number(process.env.DEFAULT_MIN_DENSE_SCORE) || null),
       debug: dto.debug ?? false,
     };

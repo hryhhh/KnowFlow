@@ -158,8 +158,24 @@ describe('RetrievalService', () => {
         sparseCandidates: 0,
         fusedTopK: 2,
         items: [
-          { chunkId: 'c1', rankDense: 1, rankSparse: null, scoreDense: 0.85, scoreSparse: null, scoreFused: 0.85, sourceFile: 'doc1.pdf' },
-          { chunkId: 'c2', rankDense: 2, rankSparse: null, scoreDense: 0.72, scoreSparse: null, scoreFused: 0.72, sourceFile: 'doc2.pdf' },
+          {
+            chunkId: 'c1',
+            rankDense: 1,
+            rankSparse: null,
+            scoreDense: 0.85,
+            scoreSparse: null,
+            scoreFused: 0.85,
+            sourceFile: 'doc1.pdf',
+          },
+          {
+            chunkId: 'c2',
+            rankDense: 2,
+            rankSparse: null,
+            scoreDense: 0.72,
+            scoreSparse: null,
+            scoreFused: 0.72,
+            sourceFile: 'doc2.pdf',
+          },
         ],
       } as any,
     });

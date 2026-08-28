@@ -78,8 +78,10 @@ export class ChatService {
         retrievalMode: params.retrievalMode,
         fusionMethod: params.fusionMethod,
         rrfK: params.rrfK,
-        candidateMultiplier: params.candidateMultiplier ?? (Number(process.env.DEFAULT_CANDIDATE_MULTIPLIER) || 3),
-        minDenseScore: params.minDenseScore ?? (Number(process.env.DEFAULT_MIN_DENSE_SCORE) || null),
+        candidateMultiplier:
+          params.candidateMultiplier ?? (Number(process.env.DEFAULT_CANDIDATE_MULTIPLIER) || 3),
+        minDenseScore:
+          params.minDenseScore ?? (Number(process.env.DEFAULT_MIN_DENSE_SCORE) || null),
       };
 
       // AGENTS_ENABLED=true 时走 Agent 编排链路，否则降级传统 RAG

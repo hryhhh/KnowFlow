@@ -123,8 +123,10 @@ export class AgentChatService {
           retrievalMode: params.retrievalMode,
           fusionMethod: params.fusionMethod,
           rrfK: params.rrfK,
-          candidateMultiplier: params.candidateMultiplier ?? (Number(process.env.DEFAULT_CANDIDATE_MULTIPLIER) || 3),
-          minDenseScore: params.minDenseScore ?? (Number(process.env.DEFAULT_MIN_DENSE_SCORE) || null),
+          candidateMultiplier:
+            params.candidateMultiplier ?? (Number(process.env.DEFAULT_CANDIDATE_MULTIPLIER) || 3),
+          minDenseScore:
+            params.minDenseScore ?? (Number(process.env.DEFAULT_MIN_DENSE_SCORE) || null),
         },
         this.ragConfig,
         callbacks,
@@ -373,7 +375,8 @@ export class AgentChatService {
       retrievalMode: params?.retrievalMode,
       fusionMethod: params?.fusionMethod,
       rrfK: params?.rrfK,
-      candidateMultiplier: params?.candidateMultiplier ?? (Number(process.env.DEFAULT_CANDIDATE_MULTIPLIER) || 3),
+      candidateMultiplier:
+        params?.candidateMultiplier ?? (Number(process.env.DEFAULT_CANDIDATE_MULTIPLIER) || 3),
       minDenseScore: params?.minDenseScore ?? (Number(process.env.DEFAULT_MIN_DENSE_SCORE) || null),
     };
   }

@@ -78,7 +78,12 @@ vi.mock('./cache/search-cache.js', () => ({
 const MOCK_CONFIG = {
   pg: { host: 'localhost', port: 5433, user: 'test', password: 'test', database: 'test' },
   llm: { apiKey: 'test', model: 'gpt-4', baseURL: 'https://api.test.com' },
-  embedding: { apiKey: 'test', model: 'text-embedding-3-small', baseURL: 'https://api.test.com', dimensions: 3 },
+  embedding: {
+    apiKey: 'test',
+    model: 'text-embedding-3-small',
+    baseURL: 'https://api.test.com',
+    dimensions: 3,
+  },
   chunkSize: 1000,
   chunkOverlap: 200,
   pgTableName: 'langchainjs',
@@ -113,7 +118,10 @@ describe('eval-runner: fixture 结构验证', () => {
 
   it('每类 query 至少有 2 条', () => {
     const byType = evalQueries.reduce(
-      (acc, q) => { acc[q.queryType] = (acc[q.queryType] ?? 0) + 1; return acc; },
+      (acc, q) => {
+        acc[q.queryType] = (acc[q.queryType] ?? 0) + 1;
+        return acc;
+      },
       {} as Record<string, number>,
     );
     for (const [type, count] of Object.entries(byType)) {
@@ -145,7 +153,9 @@ describe('eval-runner: 检索召回评测', () => {
       const results = await retrieve(q.query, 'kb-test', params, MOCK_CONFIG as any);
       collectedResults.set(q.id, results);
 
-      const resultChunkIds = new Set(results.map((r) => r.metadata?.chunkId as string).filter(Boolean));
+      const resultChunkIds = new Set(
+        results.map((r) => r.metadata?.chunkId as string).filter(Boolean),
+      );
       const expectedSet = new Set(q.expectedChunkIds);
 
       totalExpected += expectedSet.size;
@@ -159,9 +169,11 @@ describe('eval-runner: 检索召回评测', () => {
     }
 
     console.log('\n=== Eval 评测报告 ===');
-    console.log(`总体 Recall@10: ${totalHit}/${totalExpected} = ${(totalHit / totalExpected * 100).toFixed(1)}%`);
+    console.log(
+      `总体 Recall@10: ${totalHit}/${totalExpected} = ${((totalHit / totalExpected) * 100).toFixed(1)}%`,
+    );
     for (const [type, stat] of typeStats) {
-      const recall = stat.expected > 0 ? (stat.hit / stat.expected * 100).toFixed(1) : 'N/A';
+      const recall = stat.expected > 0 ? ((stat.hit / stat.expected) * 100).toFixed(1) : 'N/A';
       console.log(`  ${type}: ${stat.hit}/${stat.expected} = ${recall}%`);
     }
     console.log('====================\n');

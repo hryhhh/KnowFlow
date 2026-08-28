@@ -3,468 +3,364 @@
     "id": "q01",
     "query": "PostgreSQL向量检索性能调优方案",
     "queryType": "chinese-no-space",
-    "expectedChunkIds": [
-      "doc-pg-001"
-    ],
+    "expectedChunkIds": ["doc-pg-001"],
     "description": "中文无空格技术查询"
   },
   {
     "id": "q02",
     "query": "vector database comparison benchmark",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-pg-002"
-    ],
+    "expectedChunkIds": ["doc-pg-002"],
     "description": "英文技术术语查询"
   },
   {
     "id": "q03",
     "query": "PGVector vs Milvus embedding 性能差异",
     "queryType": "mixed",
-    "expectedChunkIds": [
-      "doc-pg-003"
-    ],
+    "expectedChunkIds": ["doc-pg-003"],
     "description": "中英混合查询"
   },
   {
     "id": "q04",
     "query": "404 Not Found 错误排查方法",
     "queryType": "error-code",
-    "expectedChunkIds": [
-      "doc-doc-001"
-    ],
+    "expectedChunkIds": ["doc-doc-001"],
     "description": "带错误码的查询"
   },
   {
     "id": "q05",
     "query": "ERROR code 500 internal server error handling",
     "queryType": "error-code",
-    "expectedChunkIds": [
-      "doc-doc-002"
-    ],
+    "expectedChunkIds": ["doc-doc-002"],
     "description": "英文错误码查询"
   },
   {
     "id": "q06",
     "query": "BM25 ranking algorithm implementation",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-sparse-001"
-    ],
+    "expectedChunkIds": ["doc-sparse-001"],
     "description": "英文算法术语"
   },
   {
     "id": "q07",
     "query": "知识库管理功能使用说明",
     "queryType": "chinese-no-space",
-    "expectedChunkIds": [
-      "doc-doc-003"
-    ],
+    "expectedChunkIds": ["doc-doc-003"],
     "description": "纯中文无空格产品功能查询"
   },
   {
     "id": "q08",
     "query": "cosine similarity calculation example",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-pg-004"
-    ],
+    "expectedChunkIds": ["doc-pg-004"],
     "description": "英文数学算法术语"
   },
   {
     "id": "q09",
     "query": "向量数据库选型与部署指南",
     "queryType": "chinese-no-space",
-    "expectedChunkIds": [
-      "doc-pg-005"
-    ],
+    "expectedChunkIds": ["doc-pg-005"],
     "description": "产品选型指南类中文查询"
   },
   {
     "id": "q10",
     "query": "RAG retrieval latency optimization",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-pg-006"
-    ],
+    "expectedChunkIds": ["doc-pg-006"],
     "description": "RAG系统优化英文查询"
   },
   {
     "id": "q11",
     "query": "Redis缓存策略与命中率优化",
     "queryType": "chinese-no-space",
-    "expectedChunkIds": [
-      "doc-doc-004"
-    ],
+    "expectedChunkIds": ["doc-doc-004"],
     "description": "中文技术概念查询"
   },
   {
     "id": "q12",
     "query": "minimax normalization formula derivation",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-pg-007"
-    ],
+    "expectedChunkIds": ["doc-pg-007"],
     "description": "英文数学公式查询"
   },
   {
     "id": "q13",
     "query": "混合检索 RRF融合权重设置",
     "queryType": "mixed",
-    "expectedChunkIds": [
-      "doc-pg-008"
-    ],
+    "expectedChunkIds": ["doc-pg-008"],
     "description": "中英混合的混合检索参数查询"
   },
   {
     "id": "q14",
     "query": "document chunking strategy best practices",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-doc-005"
-    ],
+    "expectedChunkIds": ["doc-doc-005"],
     "description": "文档切片策略英文查询"
   },
   {
     "id": "q15",
     "query": "分词器中文分词精度对比分析",
     "queryType": "chinese-no-space",
-    "expectedChunkIds": [
-      "doc-doc-006"
-    ],
+    "expectedChunkIds": ["doc-doc-006"],
     "description": "中文分词精度对比查询"
   },
   {
     "id": "q16",
     "query": "tsvector tsquery SQL语法示例",
     "queryType": "mixed",
-    "expectedChunkIds": [
-      "doc-pg-009"
-    ],
+    "expectedChunkIds": ["doc-pg-009"],
     "description": "SQL语法中英文混合查询"
   },
   {
     "id": "q17",
     "query": "reranking bi-encoder cross-encoder 模型选择",
     "queryType": "mixed",
-    "expectedChunkIds": [
-      "doc-pg-010"
-    ],
+    "expectedChunkIds": ["doc-pg-010"],
     "description": "重排序模型选型中英文混合"
   },
   {
     "id": "q18",
     "query": "embedding model dimensions tradeoff",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-pg-011"
-    ],
+    "expectedChunkIds": ["doc-pg-011"],
     "description": "嵌入模型维度权衡英文查询"
   },
   {
     "id": "q19",
     "query": "在线实时检索查询延迟优化方案",
     "queryType": "chinese-no-space",
-    "expectedChunkIds": [
-      "doc-doc-007"
-    ],
+    "expectedChunkIds": ["doc-doc-007"],
     "description": "实时检索延迟优化中文查询"
   },
   {
     "id": "q20",
     "query": "sparse vector index indexing performance",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-pg-012"
-    ],
+    "expectedChunkIds": ["doc-pg-012"],
     "description": "稀疏索引性能英文查询"
   },
   {
     "id": "q21",
     "query": "关键词匹配 向量相似度 融合权重",
     "queryType": "chinese-no-space",
-    "expectedChunkIds": [
-      "doc-pg-013"
-    ],
+    "expectedChunkIds": ["doc-pg-013"],
     "description": "纯中文关键词组合查询"
   },
   {
     "id": "q22",
     "query": "semantic search relevance tuning guide",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-doc-008"
-    ],
+    "expectedChunkIds": ["doc-doc-008"],
     "description": "语义搜索相关性调优指南"
   },
   {
     "id": "q23",
     "query": "Elasticsearch pgvector hybrid retrieval architecture",
     "queryType": "mixed",
-    "expectedChunkIds": [
-      "doc-pg-014"
-    ],
+    "expectedChunkIds": ["doc-pg-014"],
     "description": "中英文混合系统架构查询"
   },
   {
     "id": "q24",
     "query": "长文本切片重叠率对检索效果影响",
     "queryType": "chinese-no-space",
-    "expectedChunkIds": [
-      "doc-doc-009"
-    ],
+    "expectedChunkIds": ["doc-doc-009"],
     "description": "文本切片参数影响分析"
   },
   {
     "id": "q25",
     "query": "recall precision F1-score 评估指标计算",
     "queryType": "mixed",
-    "expectedChunkIds": [
-      "doc-pg-015"
-    ],
+    "expectedChunkIds": ["doc-pg-015"],
     "description": "评估指标中英文混合查询"
   },
   {
     "id": "q26",
     "query": "Elasticsearch vs pgvector 性能基准测试",
     "queryType": "mixed",
-    "expectedChunkIds": [
-      "doc-perf-001"
-    ],
+    "expectedChunkIds": ["doc-perf-001"],
     "description": "混合系统架构对比"
   },
   {
     "id": "q27",
     "query": "Redis stream consumer group 实现原理",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-doc-010"
-    ],
+    "expectedChunkIds": ["doc-doc-010"],
     "description": "消息队列机制"
   },
   {
     "id": "q28",
     "query": "BullMQ 队列优先级配置详解",
     "queryType": "chinese-no-space",
-    "expectedChunkIds": [
-      "doc-doc-011"
-    ],
+    "expectedChunkIds": ["doc-doc-011"],
     "description": "任务队列配置"
   },
   {
     "id": "q29",
     "query": "LLM context window limit handling strategy",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-pg-016"
-    ],
+    "expectedChunkIds": ["doc-pg-016"],
     "description": "上下文窗口限制处理"
   },
   {
     "id": "q30",
     "query": "401 unauthorized token refresh mechanism",
     "queryType": "error-code",
-    "expectedChunkIds": [
-      "doc-doc-012"
-    ],
+    "expectedChunkIds": ["doc-doc-012"],
     "description": "认证过期处理"
   },
   {
     "id": "q31",
     "query": "Docker compose volume 数据持久化方案",
     "queryType": "mixed",
-    "expectedChunkIds": [
-      "doc-doc-013"
-    ],
+    "expectedChunkIds": ["doc-doc-013"],
     "description": "容器数据持久化"
   },
   {
     "id": "q32",
     "query": "tsquery 短语匹配与AND操作符区别",
     "queryType": "mixed",
-    "expectedChunkIds": [
-      "doc-pg-017"
-    ],
+    "expectedChunkIds": ["doc-pg-017"],
     "description": "TS查询语法细节"
   },
   {
     "id": "q33",
     "query": "向量索引IVFFLAT vs HNSW 选型指南",
     "queryType": "chinese-no-space",
-    "expectedChunkIds": [
-      "doc-pg-018"
-    ],
+    "expectedChunkIds": ["doc-pg-018"],
     "description": "索引类型对比"
   },
   {
     "id": "q34",
     "query": "CORS preflight request OPTIONS handling",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-doc-014"
-    ],
+    "expectedChunkIds": ["doc-doc-014"],
     "description": "跨域请求处理"
   },
   {
     "id": "q35",
     "query": "502 bad gateway Nginx upstream timeout",
     "queryType": "error-code",
-    "expectedChunkIds": [
-      "doc-doc-015"
-    ],
+    "expectedChunkIds": ["doc-doc-015"],
     "description": "网关超时错误"
   },
   {
     "id": "q36",
     "query": "RAG prompt engineering best practices",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-doc-016"
-    ],
+    "expectedChunkIds": ["doc-doc-016"],
     "description": "Prompt工程最佳实践"
   },
   {
     "id": "q37",
     "query": "分片策略对检索召回率的影响分析",
     "queryType": "chinese-no-space",
-    "expectedChunkIds": [
-      "doc-pg-019"
-    ],
+    "expectedChunkIds": ["doc-pg-019"],
     "description": "切片策略影响"
   },
   {
     "id": "q38",
     "query": "semantic cache hit rate optimization",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-pg-020"
-    ],
+    "expectedChunkIds": ["doc-pg-020"],
     "description": "缓存命中率优化"
   },
   {
     "id": "q39",
     "query": "JSONB metadata filter query performance",
     "queryType": "mixed",
-    "expectedChunkIds": [
-      "doc-pg-021"
-    ],
+    "expectedChunkIds": ["doc-pg-021"],
     "description": "JSON元数据过滤性能"
   },
   {
     "id": "q40",
     "query": "API rate limiting sliding window algorithm",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-doc-017"
-    ],
+    "expectedChunkIds": ["doc-doc-017"],
     "description": "限流算法实现"
   },
   {
     "id": "q41",
     "query": "多语言embedding模型效果对比实验",
     "queryType": "chinese-no-space",
-    "expectedChunkIds": [
-      "doc-pg-022"
-    ],
+    "expectedChunkIds": ["doc-pg-022"],
     "description": "多语言模型对比"
   },
   {
     "id": "q42",
     "query": "301 redirect chain deep link issue",
     "queryType": "error-code",
-    "expectedChunkIds": [
-      "doc-doc-018"
-    ],
+    "expectedChunkIds": ["doc-doc-018"],
     "description": "重定向链问题"
   },
   {
     "id": "q43",
     "query": "NestJS module lifecycle hook order",
     "queryType": "mixed",
-    "expectedChunkIds": [
-      "doc-doc-019"
-    ],
+    "expectedChunkIds": ["doc-doc-019"],
     "description": "模块生命周期钩子"
   },
   {
     "id": "q44",
     "query": "pgvector approximate nearest neighbor tradeoffs",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-pg-023"
-    ],
+    "expectedChunkIds": ["doc-pg-023"],
     "description": "近似最近邻权衡"
   },
   {
     "id": "q45",
     "query": "知识库文档去重策略与冲突处理",
     "queryType": "chinese-no-space",
-    "expectedChunkIds": [
-      "doc-doc-020"
-    ],
+    "expectedChunkIds": ["doc-doc-020"],
     "description": "文档去重"
   },
   {
     "id": "q46",
     "query": "OpenAPI spec 自动生成与版本管理",
     "queryType": "mixed",
-    "expectedChunkIds": [
-      "doc-doc-021"
-    ],
+    "expectedChunkIds": ["doc-doc-021"],
     "description": "API规范自动化"
   },
   {
     "id": "q47",
     "query": "667 authentication middleware bypass vulnerability",
     "queryType": "error-code",
-    "expectedChunkIds": [
-      "doc-doc-022"
-    ],
+    "expectedChunkIds": ["doc-doc-022"],
     "description": "中间件安全漏洞"
   },
   {
     "id": "q48",
     "query": "streaming response chunk boundary detection",
     "queryType": "english-tech",
-    "expectedChunkIds": [
-      "doc-pg-024"
-    ],
+    "expectedChunkIds": ["doc-pg-024"],
     "description": "流式响应边界检测"
   },
   {
     "id": "q49",
     "query": "增量索引更新与全量重建性能对比",
     "queryType": "chinese-no-space",
-    "expectedChunkIds": [
-      "doc-pg-025"
-    ],
+    "expectedChunkIds": ["doc-pg-025"],
     "description": "索引更新策略"
   },
   {
     "id": "q50",
     "query": "GraphQL vs REST retrieval API design choice",
     "queryType": "mixed",
-    "expectedChunkIds": [
-      "doc-doc-023"
-    ],
+    "expectedChunkIds": ["doc-doc-023"],
     "description": "API设计选择"
   },
   {
     "id": "q51",
     "query": "ECONNREFUSED connection pool exhaustion fix",
     "queryType": "error-code",
-    "expectedChunkIds": [
-      "doc-doc-024"
-    ],
+    "expectedChunkIds": ["doc-doc-024"],
     "description": "连接池耗尽修复"
   },
   {
     "id": "q52",
     "query": "embedding dimension 1024 vs 1536 accuracy comparison",
     "queryType": "mixed",
-    "expectedChunkIds": [
-      "doc-pg-026"
-    ],
+    "expectedChunkIds": ["doc-pg-026"],
     "description": "维度对比实验"
   }
 ]

@@ -63,6 +63,7 @@ DB migration 已完成。以下 3 项待完成：
 ## T3: legacyKeywordBoost 分支清理（M5）✅
 
 **状态：** 已完成
+
 - 从 `hybrid-retriever.ts` 删除函数和注释
 - 从 `index.ts` 移除导出
 - 从 `hybrid-retriever.test.ts` 移除 import 和测试用例
