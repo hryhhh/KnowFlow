@@ -7,6 +7,8 @@ v1.0：单链路 RAG → 多智能体架构设计
 v2.0：补充实现细节、架构决策、接口契约与部署方案
 v2.1（本次）：强化 RAG 召回优先级、引入软默认规则与置信度仲裁、优化合成策略，解决换问法导致误路由问题
 
+最后更新：2026-08-28
+
 1. 概要（Summary）
    将现有单链路 RAG 改造为「1 主智能体 + N 子智能体」架构。
    主智能体负责意图路由、并行/条件调度与结果合成。
@@ -92,7 +94,26 @@ kbId 决策、SSE 兼容性与 v2.0 相同。新增事件与 onMeta 保持不变
 8. 数据与接口契约（Data Model & API Contracts）
 
 AgentResult 保持不变。
-API 保持不变（/api/agents/route、/api/agents/routeStream、/api/agents/rules/reload）。
+API 端点：
+- `POST /api/agents/routeStream` — SSE 流式路由（事件：trace / agent_start / agent_done / sources / token / done / error / meta）
+- `POST /api/agents/route` — 同步路由（非流式，返回合成结果）
+- `POST /api/agents/rules/reload` — 热重载路由规则（YAML 文件变更时自动加载，也可手动触发）
+
+SSE 事件说明：
+| 事件类型 | 触发时机 | 数据结构 |
+|---------|---------|---------|
+| `trace` | 请求开始 | `{ traceId: string }` |
+| `agent_start` | Agent 开始执行 | `{ agent: string, traceId?: string }` |
+| `agent_done` | Agent 执行完成 | `{ agent: string, duration: number, traceId?: string }` |
+| `sources` | 检索来源就绪 | `SourceRef[]` |
+| `token` | LLM 流式输出 | `string` |
+| `done` | 回答完成 | `null` |
+| `error` | 发生错误 | `string`（错误信息）|
+| `meta` | 可观测元数据 | `{ type: 'llm_arbitration' | 'rag_included' | 'compose_strategy', ... }` |
+
+**降级策略：** 当所有 Agent 均无有效结果时，系统自动回退到传统单链路 RAG（直接调用 rag-engine）。
+
+**Web Search 缓存：** 使用 `RedisCacheProvider`，TTL 由 `WEB_SEARCH_CACHE_TTL_SECONDS` 控制，避免重复请求。
 新增配置项见第 15 节。
 
 9. 路由规则示例（配置）——v2.1 推荐

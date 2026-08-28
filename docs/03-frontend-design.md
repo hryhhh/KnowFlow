@@ -1,6 +1,7 @@
 # 前端 Frontend 设计文档
 
 > React 19 + Vite 8 前端应用设计，包含页面结构、组件体系、路由、状态管理与交互流程。
+> 最后更新：2026-08-28
 
 ## 一、技术选型
 
@@ -24,20 +25,18 @@
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  Header: Miaoma RAG | LangChain.js 实践台             │
+│  Header: KnowBase X                                  │
 ├──────────┬───────────────────────────────────────────┤
 │ Sidebar  │  Main Content Area                        │
 │ ─────    │                                           │
-│ 📚 知识库│  [动态页面内容]                            │
+│ 📊 仪表盘│  [动态页面内容]                            │
+│ 📚 知识库│                                           │
 │ 📄 文档管│                                           │
 │ 📋 切片管│                                           │
 │ 🔍 知识检│                                           │
 │ 💬 知识问│                                           │
-│          │                                           │
-│ ──统计──│                                           │
-│ miaoma   │                                           │
-│ 0 个文档 │                                           │
-│ 0 个切片 │                                           │
+│ 🧩 Agent │                                           │
+│ 🔌 API测试│                                          │
 └──────────┴───────────────────────────────────────────┘
 ```
 
@@ -49,8 +48,10 @@ const routes = [
     path: '/',
     element: <MainLayout />,
     children: [
+      // 仪表盘（Step 0）
+      { index: true, element: <DashboardPage /> },
+
       // 知识库列表页 (Step 1)
-      { index: true, element: <KnowledgeBaseList /> },
       { path: 'knowledge-bases', element: <KnowledgeBaseList /> },
 
       // 文档管理页 (Step 2)
@@ -81,6 +82,12 @@ const routes = [
       {
         path: 'knowledge-bases/:kbId/chat',
         element: <ChatPage />,
+      },
+
+      // API 测试页
+      {
+        path: 'api-test',
+        element: <ApiTestPage />,
       },
     ],
   },
@@ -201,79 +208,58 @@ const routes = [
 
 ### 3.4 知识检索页
 
-**对应图：step7.png**
-
 **布局要素：**
 
 - **左侧参数配置面板**（固定宽度 ~280px）：
   - 标题：「📊 检索参数」
-  - 副标题：「调整检索参数，预览知识库命中效果」
+  - **检索模式选择**：`vector` / `keyword` / `hybrid` 单选
+  - **融合方法**（仅 hybrid）：`RRF` / `Linear` 单选
   - 参数控件：
     - 结果返回数量 (topK)：滑块，默认 10
-    - 最低相似度：数字输入，默认 0.00
-    - 重排模型：Toggle 开关
-    - Dense Weight：数字输入，默认 0.50
+    - 最低相似度 (minScore)：数字输入
+    - RRF K 值：数字输入，默认 60
+    - 候选倍数 (candidateMultiplier)：数字输入，默认 3
+    - Dense Weight（仅 linear）：数字输入，默认 0.50
+    - Min Dense Score（仅 hybrid）：数字输入
+    - Debug 模式：Toggle 开关
 - **右侧主区域**：
-  - 顶部：「🔍 检索历史」标签
-  - 搜索框 + 搜索按钮
-  - 搜索结果列表：
-
-**搜索结果项格式：**
-
-```
-┌─────────────────────────────────────┐
-│ 相似度 0.7900624  11gbk.csv         │
-│                                     │
-│ 日期sheet:2019/8/15                 │
-│ 销售人:小王                          │
-│ 手机型号: Redmi Note 8 Pro          │
-│ 数量:5                              │
-│ 单价:1399                           │
-│ 订单金额:                           │
-│ 订单状态:交易成功                    │
-└─────────────────────────────────────┘
-```
+  - 顶部：搜索框 + 搜索按钮
+  - 搜索结果列表（含相似度分数 + 来源文件）
+  - **Debug 表格**（debug=true 时显示）：
+    - 每行一个 chunk，展示 `rankDense` / `rankSparse` / `scoreDense` / `scoreSparse` / `scoreFused`
+    - 批次统计：`denseCandidates` / `sparseCandidates` / `fusedTopK`
 
 **交互逻辑：**
 
 1. 输入查询词 → 点击搜索或回车
 2. 调整参数 → 自动重新检索（防抖 300ms）
-3. 结果按相似度分数降序排列
+3. 结果按融合分数降序排列
 4. 点击历史记录 → 回填查询词并重新搜索
+5. 开启 Debug → 下方展示详细的双路检索明细表格
 
 ---
 
 ### 3.5 知识问答页
 
-**对应图：step8.png, step9.png, step10.png**
-
 **布局要素：**
 
-整体分为 **左中右三栏**：
+整体布局为 **左侧会话栏 + 中间对话区 + 右侧参数/来源面板**：
 
-#### 左侧参数栏 (~280px)
+#### 左侧会话历史栏 (~240px)
 
 ```
 ┌──────────────────────────┐
-│ 📋 模型回答参数            │
-│ 调整检索参数，预览...       │
-│                            │
-│ 结果返回数量    [10]       │
-│ 最低相似度      [0.00]     │
-│ 重排模型     [Toggle]     │
-│ Dense Weight  [0.50]      │
-│                            │
-├──────────────────────────┤
-│ ⚙️ 服务调用                │
-│ 发布当前问答参数...         │
-│                            │
-│ [创建服务调用] [API 调用]  │
-│                            │
-│ 暂无服务调用，创建后可生成   │
-│ API Key 并对外提供接口      │
-│                            │
-│ 学生成绩问答 API  10 task  │
-│ ek_xxxxxx                  │
+│ 💬 会话历史               │
+│                          │
+│ 📝 今天的问题            │
+│    最新一条...    [🗑️]   │ ← 点击一次高亮，再点确认删除
+│    5分钟前               │
+│                          │
+│ 📝 昨天的查询            │
+│    另一条问题...  [🗑️]   │
+│    2小时前               │
+│                          │
+│ [+ 新建会话]             │
 └──────────────────────────┘
 ```
 
@@ -285,117 +271,41 @@ const routes = [
 │ Hi，我是知识库助手                         │
 │                                          │
 │ ───────── 用户消息 ─────────              │
-│ 您未明确关于小王的具体需求（例如小王的销售  │
-│ 业绩、对应订单情况等具体问题），无法为您提  │
-│ 供针对性回答。已检索到的销售人"小王"相关    │
-│ 的资料如下：                               │
-│ 1. 2019年8月18日...                       │
-│ 2. ...                                   │
-│ 3. ...                                   │
+│ （用户问题内容）                           │
 │                                          │
 │ ───────── AI 回复 ─────────              │
 │ （流式输出，逐字显示）                     │
 │                                          │
 ├──────────────────────────────────────────┤
-│ 我可以阅读知识库的资料并使用自然语言回答    │
-│ 你的问题                          [发送]  │
+│ 输入框                            [发送]  │
 └──────────────────────────────────────────┘
 ```
 
-#### 右侧引用来源面板
+#### 右侧面板（Tabs 切换）
 
 ```
 ┌──────────────────────────────┐
-│ 📎 引用来源                   │
-│ 回答使用到的命中切片定显示在此 │
+│ 📋 参数  |  📎 来源           │
+│                                      │
+│ 结果返回数量    [10]           │
+│ 最低相似度      [0.00]         │
+│ 检索模式     [▼ hybrid]       │
+│ 融合方法     [▼ rrf]          │
+│ Dense Weight  [0.50]          │
 │                              │
-│ 11gbk.csv   2019/8/18        │
-│ score 0.636677               │
-│ 日期sheet:2019/8/18          │
-│ 销售人:小王                   │
-│ ...                          │
+│ ⚙️ 服务调用                    │
+│ [创建服务调用] [API 测试]     │
 │                              │
-│ 11gbk.csv   2019/8/18        │
-│ score 0.648863               │
-│ ...                          │
-│                              │
-│ 11gbk.csv   2019/8/21        │
-│ score 0.654024               │
-│ ...                          │
+│ 学生成绩问答 API  ek_xxx     │
 └──────────────────────────────┘
 ```
 
-#### 创建服务调用弹窗 (step9.png)
+**API 测试面板**（点击「API 测试」后展示）：
 
-```
-┌──────────────── 创建服务调用 ────────┐
-│                                       │
-│  将调试好的检索问答参数发布为知识服务    │
-│                                       │
-│  ┌───────────────────────────────┐   │
-│  │  {}    服务调用  📘 使用手册   │   │
-│  └───────────────────────────────┘   │
-│  将检索、问答参数组合配置发布成知识服务  │
-│  并通过 API Key 调用                │
-│                                       │
-│  服务调用名称 *                       │
-│  ┌───────────────────────────────┐   │
-│  │ 学生成绩问答 API               │   │
-│  └───────────────────────────────┘   │
-│                                       │
-│  描述                    [7500/7500]  │
-│  ┌───────────────────────────────┐   │
-│  │ 给业务系统调用                 │   │
-│  └───────────────────────────────┘   │
-│                                       │
-│  可用 API Key *                      │
-│  请选择可用的 API Key，服务创建后...   │
-│                                       │
-│  名称    创建人    创建时间    操作     │
-│  ─────────────────────────────────   │
-│           暂无数据                     │
-│                                       │
-│  + 创建 API Key  已选择 0 个         │
-│                                       │
-│           [取消]  [确认创建]          │
-└───────────────────────────────────────┘
-```
-
-#### API 调用面板 (step10.png)
-
-```
-┌──────────────── API 调用 ────────┐
-│                                     │
-│  使用服务 ID 与 API Key，将知识库    │
-│  问答接入业务系统                    │
-│                                     │
-│  ○ 学生成绩问答 API                  │
-│  ○ 给业务系统调用                    │
-│                                     │
-│  请求地址                            │
-│  /api/service-calls/svc_f7818db-    │
-│  e967-43f4-a3bd-bcbecdff0fd4/chat/  │
-│  stream                             │
-│                                     │
-│  鉴权 Header                         │
-│  Authorization: Bearer ek_gtjg10ggCM │
-│  -OkSfLbg88v9ZeXkd6HD1              │
-│                                     │
-│  API Key                             │
-│  📋 ek_gtjg10ggCM-OkSfLbg88v9ZeXk   │
-│  dHD1                                │
-│                                     │
-│  请求示例                             │
-│  curl -N -X POST "https://xxx/api/   │
-│  service-calls/svc_.../chat/stream"  │
-│  -H "Content-Type: application/json" │
-│  -H "Authorization: Bearer ek_..."   │
-│  -d "{\"message\":\"hey 成绩多少\"}" │
-│                                     │
-│  返回类型说明                          │
-│  返回类型为 text/event-stream...      │
-└───────────────────────────────────────┘
-```
+- 选择已创建的服务
+- 粘贴完整 API Key（`serviceId:apiKey` 格式）
+- 发送测试消息，实时查看 SSE 日志流
+- 支持选择 `chat/stream` 或 `agents/routeStream` 端点
 
 ## 四、组件拆分
 
@@ -415,7 +325,8 @@ const routes = [
 | `KBList`             | 知识库列表 | 知识库卡片列表           |
 | `KBCard`             | 知识库列表 | 单个知识库卡片           |
 | `CreateKBModal`      | 知识库列表 | 创建知识库弹窗           |
-| `DocTable`           | 文档管理   | 文档列表表格             |
+| `EditKBModal`        | 知识库列表 | 编辑知识库弹窗           |
+| `DocTable`           | 文档管理   | 文档列表表格（含进度条） |
 | `UploadDocButton`    | 文档管理   | 上传文档按钮 & 流程      |
 | `DocStatusBadge`     | 文档管理   | 文档状态标签             |
 | `ChunkGrid`          | 切片管理   | 切片卡片网格             |
@@ -424,10 +335,14 @@ const routes = [
 | `ChunkModal`         | 切片管理   | 新增/编辑切片模态框      |
 | `SearchPanel`        | 知识检索   | 左侧参数配置面板         |
 | `SearchResults`      | 知识检索   | 搜索结果列表             |
+| `DebugTable`         | 知识检索   | Debug 模式明细表格       |
 | `ChatPanel`          | 知识问答   | 中部对话区域             |
 | `SourcePanel`        | 知识问答   | 右侧引用来源面板         |
+| `SessionSidebar`     | 知识问答   | 会话历史侧边栏           |
 | `CreateServiceModal` | 知识问答   | 创建服务调用弹窗         |
 | `ApiUsagePanel`      | 知识问答   | API 调用说明面板         |
+| `ApiTestPage`        | API 测试   | 外部 API 测试 + SSE 日志 |
+| `DashboardPage`      | 仪表盘     | KPI 卡片 + 趋势图 + 活动 |
 
 ### 4.3 公共组件
 
@@ -459,15 +374,25 @@ interface DocState {
   isUploading: boolean;
   uploadProgress: number;
   fetchDocuments: (kbId: string) => void;
-  uploadDocument: (file: File) => void;
+  uploadDocument: (file: File, strategy?: string) => void;
 }
 
-// stores/chat-store.ts — 对话状态
+// stores/chat-store.ts — 对话与会话状态
 interface ChatState {
+  // 会话管理
+  sessions: SessionListItem[];
+  currentSessionId: string | null;
+  isLoadingSessions: boolean;
+  fetchSessions: (kbId: string) => void;
+  createSession: (kbId: string, firstMessage: string) => Promise<string>;
+  deleteSession: (sessionId: string) => void;
+  switchSession: (sessionId: string) => void;
+
+  // 消息与检索
   messages: ChatMessage[];
   sources: SourceRef[];
   isLoading: boolean;
-  searchParams: SearchParams; // topK, minScore, reranker, denseWeight
+  searchParams: SearchParams; // topK, minScore, retrievalMode, fusionMethod, debug...
   sendMessage: (query: string) => void;
   updateSearchParams: (params: Partial<SearchParams>) => void;
 }
@@ -510,6 +435,16 @@ async function streamChat(query: string) {
           case 'done':
             finish();
             break;
+          case 'trace':
+            // Agent 编排模式下接收 trace ID
+            setTraceId(event.value.traceId);
+            break;
+          case 'agent_start':
+          case 'agent_done':
+          case 'meta':
+            // Agent 可观测事件
+            handleAgentEvent(event);
+            break;
         }
       }
     }
@@ -535,3 +470,28 @@ export default defineConfig({
   },
 });
 ```
+
+### 3.6 仪表盘页（DashboardPage）
+
+**路由：** `/`（首页，默认进入仪表盘）
+
+**布局要素：**
+
+- **KPI 卡片行**：知识库总数、文档总数、切片总数、处理中/失败文档数、存储估算
+- **调用趋势面积图**：近 7 天 API / 检索 / 聊天调用量趋势
+- **调用类型分布饼图**：api / retrieval / chat 调用占比
+- **最近活动流**：最近的 KB 创建和文档上传记录（时间相对标签："刚刚"、"5 分钟前"）
+
+### 3.7 API 测试页（ApiTestPage）
+
+**路由：** `/api-test`
+
+**用途：** 对外部 API 服务进行 SSE 流式测试
+
+**布局要素：**
+
+- 服务选择下拉（从已创建的 api-service 列表选择）
+- API Key 输入框（格式：`serviceId:apiKey`）
+- 消息输入框 + 发送按钮
+- SSE 日志查看器（实时显示每个事件的 type + value）
+- 支持选择端点：`chat/stream`（传统 RAG）或 `agents/routeStream`（多 Agent 编排）

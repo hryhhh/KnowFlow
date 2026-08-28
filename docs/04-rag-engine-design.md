@@ -1,6 +1,7 @@
 # RAG Engine 核心引擎设计文档
 
 > RAG (Retrieval-Augmented Generation) 核心引擎的模块化设计，涵盖文档加载、文本切片、向量化嵌入、向量存储、检索器与 LLM 集成。
+> 最后更新：2026-08-28
 
 ## 一、引擎架构总览
 
@@ -11,28 +12,42 @@ packages/rag-engine/src/
 │   ├── csv-loader.ts         # CSV 文件加载
 │   ├── xlsx-loader.ts        # Excel (XLSX) 加载
 │   ├── pdf-loader.ts         # PDF 加载
+│   ├── agent-pdf-loader.ts   # MinerU Agent API PDF 加载
 │   └── word-loader.ts        # Word (.docx) 加载
 │
 ├── splitters/            # 文本切片层 — 将 Document 拆分为语义块
 │   ├── recursive-splitter.ts  # 递归字符分割器（默认）
-│   └── semantic-splitter.ts   # 语义感知分割器（高级）
+│   ├── markdown-splitter.ts   # Markdown 专用切片器
+│   └── semantic-splitter.ts   # 语义感知分割器（可选增强）
+│
+├── tokenizer.ts          # 应用层分词器（N-gram fallback，jieba 可选）
 │
 ├── embeddings/           # 向量化层 — 将文本转换为稠密向量
 │   └── openai-embeddings.ts   # OpenAI 兼容 Embedding 接口
 │
-├── stores/               # 向量存储层 — 持久化 & 检索向量数据
-│   ├── pgvector-store.ts      # PGVector 持久化向量库
+├── stores/               # 存储层 — 持久化 & 检索数据
+│   ├── pgvector-store.ts      # PGVector 持久化向量库（dense）
+│   ├── sparse-store.ts        # tsvector 全文索引（sparse）
 │   └── memory-store.ts        # 内存向量库（开发 / 测试用）
 │
-├── retrievers/           # 检索层 — 从向量库中召回相关内容
+├── retrievers/           # 检索层 — 从存储中召回相关内容
 │   ├── similarity-retriever.ts    # 纯向量相似度检索
-│   └── hybrid-retriever.ts        # 混合检索 (BM25 + Vector)
+│   ├── sparse-retriever.ts        # tsvector 稀疏检索（BM25-like）
+│   └── hybrid-retriever.ts        # 混合检索（dense + sparse + fusion）
+│
+├── fusion/               # 融合层 — 合并多路检索结果
+│   ├── rrf.ts                 # Reciprocal Rank Fusion（默认）
+│   └── linear.ts              # 线性加权融合
 │
 ├── rerankers/            # 重排序层 — 对检索结果精排
-│   └── cross-encoder-reranker.ts  # Cross-Encoder 重排序
+│   ├── bi-encoder-reranker.ts   # Bi-Encoder 重排序（当前可用）
+│   └── cross-encoder-reranker.ts # Cross-Encoder 重排序（TODO: stub）
 │
 ├── llm/                  # LLM 集成层 — 流式生成回答
 │   └── chat-service.ts          # 对话服务 (SSE 流式)
+│
+├── cache/
+│   └── search-cache.ts      # 进程内检索结果缓存（含 mode 参数的 key）
 │
 ├── pipeline.ts           # 编排层 — 组合上述组件为完整 RAG Pipeline
 │
@@ -472,7 +487,7 @@ export async function createMemoryStoreFromTexts(
 
 ### 7.1 相似度检索器
 
-纯向量相似度搜索。
+纯向量相似度搜索（cosine distance）。
 
 ```typescript
 // packages/rag-engine/src/retrievers/similarity-retriever.ts
@@ -512,56 +527,75 @@ export async function similaritySearch(
 }
 ```
 
-### 7.2 混合检索器（可选增强）
+### 7.2 稀疏检索器
 
-结合 BM25 关键词匹配 + 向量语义相似度的混合检索。
+基于 PostgreSQL `tsvector` + `tsquery` 的全文检索，实现 BM25-like 关键词匹配。
 
 ```typescript
-// packages/rag-engine/src/retrievers/hybrid-retriever.ts
+// packages/rag-engine/src/retrievers/sparse-retriever.ts
 
 /**
- * Hybrid Retriever:
- * - BM25 (关键词匹配) 权重: (1 - denseWeight)
- * - Vector (语义相似度) 权重: denseWeight
- * - 结果融合后重打分 (Reciprocal Rank Fusion)
+ * 稀疏检索器：对 chunks 表的 tsv 列执行 ts_rank 排序
+ * 使用应用层 tokenizer.ts 进行分词（N-gram fallback，jieba 可选）
  */
-export interface HybridSearchParams extends SimilaritySearchParams {
-  useReranker: boolean;
-  denseWeight: number; // 0~1, 默认 0.50
+export async function sparseSearch(
+  query: string,
+  filter: { kbId: string },
+  topK: number,
+  candidateMultiplier: number = 3,
+): Promise<RetrievalResult[]> {
+  // 1. 分词
+  const tokens = tokenize(query);
+  // 2. 构造 tsquery（prefix operator 支持部分匹配）
+  const tsqueryStr = tokensToTsQuery(tokens);
+  // 3. 执行检索
+  const results = await db.query(
+    `SELECT id, content, ts_rank(tsv, q) AS rank
+     FROM chunks
+     WHERE tsv @@ $1 AND kb_id = $2
+     ORDER BY rank DESC
+     LIMIT $3`,
+    [tsqueryStr, filter.kbId, topK * candidateMultiplier],
+  );
+  return results.map((row) => ({
+    content: row.content,
+    score: row.rank,
+    sourceFile: 'unknown',
+    metadata: { chunkId: row.id, kbId: filter.kbId },
+  }));
 }
 ```
 
 ## 八、重排序 (Rerankers)
 
-### 8.1 Cross-Encoder 重排序
+### 8.1 Bi-Encoder 重排序（当前可用）
 
-对初步检索结果做精细排序，提升最终相关性。
+基于双编码器模型的相关性评分。
+
+```typescript
+// packages/rag-engine/src/rerankers/bi-encoder-reranker.ts
+
+/**
+ * Bi-Encoder 重排序：
+ * 分别编码 query 和 document，计算余弦相似度作为重排分数
+ */
+export async function rerank(input: RerankInput): Promise<RetrievalResult[]> {
+  // 实现略
+}
+```
+
+### 8.2 Cross-Encoder 重排序（Stub / TODO）
+
+Cross-Encoder 同时对 (query, document) 对编码，精度更高但计算成本更大。
 
 ```typescript
 // packages/rag-engine/src/rerankers/cross-encoder-reranker.ts
 
-interface RerankInput {
-  query: string;
-  results: RetrievalResult[];
-  topK?: number; // 返回前 N 条
-}
-
 /**
- * Cross-Encoder 重排序：
- * 同时输入 (query, document) 对，输出精确的相关性分数
- *
- * 注：需要额外部署 Cross-Encoder 模型（如 cross-encoder/ms-marco-MiniLM-L-6-v2）
- * 或使用云端 API 提供的重排序接口
+ * ⚠️ 当前为 Stub 实现——直接返回原始结果，未进行实际重排序。
+ * TODO: 接入实际 Cross-Encoder 推理或云端 API
  */
 export async function rerank(input: RerankInput): Promise<RetrievalResult[]> {
-  if (!input.results.length) return [];
-
-  // TODO: 实现 Cross-Encoder 推理
-  // 1. 对每个 (query, doc.content) 对调用模型
-  // 2. 得到新的相关性分数
-  // 3. 按分数降序排列
-  // 4. 截取 topK 条
-
   return input.results.slice(0, input.topK ?? 10);
 }
 ```
@@ -682,6 +716,7 @@ export interface RAGPipelineConfig {
   llmModel: string;
   llmBaseURL: string;
   embeddingModel: string;
+  embeddingDimensions: number;
 
   // 切片参数
   chunkSize: number;
@@ -691,6 +726,8 @@ export interface RAGPipelineConfig {
   defaultTopK: number;
   defaultMinScore: number;
   defaultDenseWeight: number;
+  defaultMinDenseScore?: number | null;
+  defaultCandidateMultiplier?: number;
 }
 
 /**
@@ -737,51 +774,39 @@ export async function ingestDocument(
 /**
  * Pipeline Stage 2: Retrieval & Generation (检索与生成)
  *
- * 用户问题 → 向量检索 → [可选]重排序 → 构建 Prompt → LLM 流式输出
+ * 用户问题 → 按 retrievalMode 分支检索 → [可选]重排序 → 构建 Prompt → LLM 流式输出
+ *
+ * retrievalMode 支持: vector | keyword | hybrid
+ * hybrid 模式下并行执行 dense + sparse 检索，通过 RRF 或 Linear 融合
  */
 export async function retrieveAndChat(
   query: string,
   kbId: string,
-  params: {
-    topK: number;
-    minScore: number;
-    useReranker: boolean;
-    denseWeight: number;
-  },
+  params: SearchParams,
   config: RAGPipelineConfig,
   callbacks: import("./llm/chat-service.js").StreamCallbacks
 ): Promise<void> {
-  // 1. 检索
-  let results = await similaritySearch(
-    { query, ...params },
-    /* vectorStore */,
-    { apiKey: config.llmApiKey, model: config.embeddingModel, baseURL: config.llmBaseURL }
-  );
+  // 1. 检索（根据 retrievalMode 分支）
+  let results = await performSearch(query, kbId, params, config);
 
-  // 2. 过滤低分结果
-  results = results.filter(r => r.score >= params.minScore);
-
-  // 3. 发送引用来源
+  // 2. 发送引用来源
   callbacks.onSources(results.map(r => ({
-    content: r.document.pageContent,
+    content: r.content,
     sourceFile: r.sourceFile,
     score: r.score,
   })));
 
-  // 4. [可选] 重排序
+  // 3. [可选] 重排序（当前为 stub）
   if (params.useReranker && results.length > 0) {
-    results = await rerank({ query, results, topK: params.topK });
+    // TODO: 接入实际 Cross-Encoder 推理
+    // results = await rerank({ query, results, topK: params.topK });
   }
 
-  // 5. 构建上下文并调用 LLM
+  // 4. 构建上下文并调用 LLM
   const context = buildContext(results);
   await streamChat(
     { query, context },
-    {
-      apiKey: config.llmApiKey,
-      model: config.llmModel,
-      baseURL: config.llmBaseURL,
-    },
+    { apiKey: config.llmApiKey, model: config.llmModel, baseURL: config.llmBaseURL },
     callbacks
   );
 }
@@ -815,9 +840,21 @@ export { createMemoryStore, createMemoryStoreFromTexts } from './stores/memory-s
 
 // Retrievers
 export { similaritySearch } from './retrievers/similarity-retriever.js';
+export { sparseSearch } from './retrievers/sparse-retriever.js';
+export { hybridSearch } from './retrievers/hybrid-retriever.js';
+
+// Fusion
+export { rrfFuse } from './fusion/rrf.js';
+export { linearFuse } from './fusion/linear.js';
+
+// Tokenizer
+export { tokenize, tokensToTsvString, tokensToTsQuery } from './tokenizer.js';
+
+// Cache
+export { SearchCache } from './cache/search-cache.js';
 
 // Rerankers
-export { rerank } from './rerankers/cross-encoder-reranker.js';
+export { rerank } from './rerankers/bi-encoder-reranker.js';
 
 // LLM
 export { streamChat, buildContext } from './llm/chat-service.js';
