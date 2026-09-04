@@ -105,9 +105,9 @@ export class AgentChatService {
 
     // 3. RAGFlow Agent（包装 retrieveAndChat 为流式接口）
     const ragFlowAgent = new RagFlowAgent();
-    ragFlowAgent.setStreamingFn(async (params, onToken, _onSources, onDone, onError) => {
+    ragFlowAgent.setStreamingFn(async (params, onToken, onSources, onDone, onError) => {
       const callbacks: StreamCallbacks = {
-        onSources: () => {},
+        onSources,
         onToken,
         onDone,
         onError: (err) => onError(err),
@@ -217,7 +217,7 @@ export class AgentChatService {
 
     try {
       // 执行编排：路由 → 调度 → 合成
-      const result = await this.orchestrator.orchestrate(query, kbId, traceId);
+      const result = await this.orchestrator.orchestrate(query, kbId, traceId, resolvedParams);
       const meta = result.metadata;
 
       // 推送 trace_id
@@ -247,6 +247,9 @@ export class AgentChatService {
         });
       }
 
+      // 发送过程指示：正在检索知识库
+      callbacks.onMeta?.({ type: 'process', value: { stage: 'retrieving', label: '正在检索知识库…' } });
+
       for (const matched of result.matchedRules) {
         callbacks.onMeta?.({
           type: 'agent_start',
@@ -271,9 +274,11 @@ export class AgentChatService {
       if (!content || content.trim().length === 0) {
         // 编排无有效结果，回退到传统 RAG
         this.logger.debug('Agent 编排无有效结果，回退到传统 RAG');
+        callbacks.onMeta?.({ type: 'process', value: { stage: 'rag_fallback', label: '正在检索知识库…' } });
         retrieveAndChat(query, kbId, resolvedParams, this.ragConfig, callbacks);
         return;
       }
+      callbacks.onMeta?.({ type: 'process', value: { stage: 'generating', label: '正在生成回答…' } });
       for (let i = 0; i < content.length; i += chunkSize) {
         callbacks.onToken(content.slice(i, i + chunkSize));
       }
@@ -344,7 +349,7 @@ export class AgentChatService {
     const traceId = `sync_${Date.now()}`;
 
     try {
-      const result = await this.orchestrator.orchestrate(query, kbId, traceId);
+      const result = await this.orchestrator.orchestrate(query, kbId, traceId, params);
       return {
         ...result,
         elapsedMs: Date.now() - startTime,

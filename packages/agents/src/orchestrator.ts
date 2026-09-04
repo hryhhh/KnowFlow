@@ -26,8 +26,14 @@ export class Orchestrator {
    * @param query 用户查询
    * @param kbId 知识库 ID
    * @param traceId 链路追踪 ID
+   * @param extraParams 额外参数（如检索配置），透传给各 Agent
    */
-  async orchestrate(query: string, kbId: string, traceId: string): Promise<RouteResult> {
+  async orchestrate(
+    query: string,
+    kbId: string,
+    traceId: string,
+    extraParams?: Record<string, any>,
+  ): Promise<RouteResult> {
     const { settings } = this.router.getRules();
     const limit = settings.maxMatchedRules ?? 3;
 
@@ -35,7 +41,7 @@ export class Orchestrator {
     const { matched, metadata } = await this.router.match(query, limit);
 
     // 2. 调度执行
-    const agentParams = { query, kbId, traceId };
+    const agentParams = { query, kbId, traceId, ...extraParams };
     const agentResults = await this.dispatcher.dispatch(
       matched,
       agentParams,

@@ -31,6 +31,13 @@ export interface RouterRules {
   };
 }
 
+/** 来源引用信息 */
+export interface SourceRef {
+  content: string;
+  sourceFile: string;
+  score: number;
+}
+
 /** Agent 执行结果 */
 export interface AgentResult {
   id: string;
