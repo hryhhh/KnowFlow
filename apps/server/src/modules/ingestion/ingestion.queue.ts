@@ -8,7 +8,7 @@ import type { DocumentIngestJobPayload } from './ingestion.types';
  * 文档摄入队列封装
  *
  * 提供入队方法和 jobId 生成，供 DocumentService 调用。
- * jobId 使用稳定格式 `document:${docId}`，确保同一文档不重复入队。
+ * jobId 使用稳定格式 `document-{docId}`，确保同一文档不重复入队。
  */
 @Injectable()
 export class IngestionQueue {
@@ -25,7 +25,7 @@ export class IngestionQueue {
    * @returns jobId 字符串，供 DocumentService 回写到 documents.jobId
    */
   async enqueue(payload: DocumentIngestJobPayload): Promise<string> {
-    const jobId = `document:${payload.docId}`;
+    const jobId = `document-${payload.docId}`;
 
     try {
       await this.queue.add('process-document', payload, {

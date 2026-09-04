@@ -5,6 +5,7 @@ import { Document } from './modules/document/entities/document.entity';
 import { Chunk } from './modules/chunk/entities/chunk.entity';
 import { IngestionQueueModule } from './modules/ingestion/ingestion.module';
 import { IngestionWorkerModule } from './modules/ingestion/ingestion.worker.module';
+import * as path from 'node:path';
 
 /**
  * Worker 专用根模块
@@ -21,12 +22,13 @@ import { IngestionWorkerModule } from './modules/ingestion/ingestion.worker.modu
       username: process.env.DATABASE_USER ?? 'postgres',
       password: process.env.DATABASE_PASSWORD ?? '123456',
       database: process.env.DATABASE_NAME ?? 'knowledge_rag',
-      autoLoadEntities: false,
+      autoLoadEntities: true,
+      // 自动加载 entities 目录下的所有实体
+      entities: [path.join(__dirname, './modules/**/*.entity{.ts,.js}')],
       // Worker 必须使用 migration 路径，禁止 synchronize
       synchronize: false,
       ssl: process.env.DATABASE_SSL === 'true',
     }),
-    TypeOrmModule.forFeature([Document, Chunk]),
     // RAG 配置（通过全局模块注入）
     RagConfigModule,
     // 队列模块（含 Redis 连接和队列注册）
