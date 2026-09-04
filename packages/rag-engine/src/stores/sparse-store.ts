@@ -16,7 +16,7 @@ interface SparseUpdate {
 }
 
 /**
- * 批量写入/更新 chunks.tsv 和 chunks.chunk_id
+ * 批量写入/更新 chunks.tsv 和 chunks.chunkId
  *
  * 幂等：同一 id 多次调用以最后一次为准（UPSERT 语义）。
  * 分批执行，每批 50 条，避免单条 SQL 过长。
@@ -24,7 +24,7 @@ interface SparseUpdate {
  * SQL 结构：
  *   UPDATE "chunks" SET
  *     tsv = CASE id WHEN $id1 THEN $tsv1 WHEN $id2 THEN $tsv2 ... END,
- *     chunk_id = CASE id WHEN $id1 THEN $chunkId1 WHEN $id2 THEN $chunkId2 ... END
+ *     "chunkId" = CASE id WHEN $id1 THEN $chunkId1 WHEN $id2 THEN $chunkId2 ... END
  *   WHERE id IN ($id1, $id2, ...)
  *
  * 参数顺序：[tsv1, id1, chunkId1, tsv2, id2, chunkId2, ...]
@@ -69,7 +69,7 @@ export async function writeSparseIndex(
 
       await pool.query(
         `UPDATE "${tableName}" SET tsv = CASE id ${tsvCases} END,
-                                  chunk_id = CASE id ${chunkIdCases} END
+                                  "chunk_id" = CASE id ${chunkIdCases} END
          WHERE id IN (${ids.join(', ')})`,
         params,
       );
@@ -96,7 +96,7 @@ export async function deleteSparseByDocId(
   });
   try {
     const result = await pool.query(
-      `DELETE FROM "${tableName}" WHERE doc_id = $1 AND tsv IS NOT NULL`,
+      `DELETE FROM "${tableName}" WHERE "docId" = $1 AND tsv IS NOT NULL`,
       [docId],
     );
     return { deleted: result.rowCount ?? 0 };
@@ -122,7 +122,7 @@ export async function deleteSparseByKbId(
   });
   try {
     const result = await pool.query(
-      `DELETE FROM "${tableName}" WHERE kb_id = $1 AND tsv IS NOT NULL`,
+      `DELETE FROM "${tableName}" WHERE "kbId" = $1 AND tsv IS NOT NULL`,
       [kbId],
     );
     return { deleted: result.rowCount ?? 0 };

@@ -119,7 +119,7 @@ export async function ingestDocument(
 }
 
 /**
- * 生成 chunkId 列表（供服务端 processor 回填 chunks.chunk_id 列）
+ * 生成 chunkId 列表（供服务端 processor 回填 chunks.chunkId 列）
  */
 export function getChunkIds(chunks: TextChunk[]): string[] {
   return chunks.map((c) => c.metadata?.chunkId as string).filter(Boolean);
