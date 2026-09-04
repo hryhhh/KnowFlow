@@ -22,8 +22,10 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const current = useKbStore((s) => s.current);
+  const loading = useKbStore((s) => s.loading);
 
-  const base = current ? `/knowledge-bases/${current.id}` : null;
+  const base = current?.id ? `/knowledge-bases/${current.id}` : null;
+  const isInitializing = !current?.id || current.name === '加载中...';
 
   return (
     <aside className="sidebar">
@@ -33,7 +35,7 @@ export default function Sidebar() {
       <nav className="sidebar-nav">
         {NAV_ITEMS.map((it) => {
           const to = it.to.startsWith('/') ? it.to : base ? `${base}/${it.to}` : '#';
-          const disabled = !base;
+          const disabled = !base || isInitializing;
           return (
             <NavLink
               key={it.label}
@@ -55,9 +57,16 @@ export default function Sidebar() {
       </nav>
       <div className="sidebar-stats">
         <div>
-          当前知识库：<b style={{ color: '#fff' }}>{current ? current.name : '未选择'}</b>
+          当前知识库：
+          {loading ? (
+            <span style={{ color: '#aaa' }}>加载中...</span>
+          ) : current ? (
+            <b style={{ color: '#fff' }}>{current.name}</b>
+          ) : (
+            <span style={{ color: '#86909c' }}>未选择</span>
+          )}
         </div>
-        {current && (
+        {current && !loading && (
           <>
             <div>文档数：{current.documentCount}</div>
             <div>切片数：{current.chunkCount}</div>

@@ -63,7 +63,9 @@ export const useKbStore = create<KbStore>((set, get) => ({
   defaultKbId: loadDefaultKBId(),
   loading: false,
   fetch: async (search?: string) => {
-    set({ loading: true });
+    const existingCurrent = get().current;
+    // 如果有有效的 current（非加载中状态），保持 loading=false
+    set({ loading: !!existingCurrent?.name?.includes('加载中') });
     const res = await kbApi.list(search);
     const list = res.data.data;
     // 刷新后：如果当前库不再列表中，清除持久化
@@ -73,10 +75,16 @@ export const useKbStore = create<KbStore>((set, get) => ({
       set({ current: null });
     }
     set({ list, loading: false });
+    // 确保列表中每个项的 isDefault 始终与 defaultKbId 一致
+    const { defaultKbId } = get();
+    const updatedList = list.map((k) => ({ ...k, isDefault: k.id === defaultKbId }));
+    set({ list: updatedList });
     // 如果没有选中知识库，自动选中（优先默认知识库，否则选第一个）
-    const { defaultKbId, current: cur } = get();
+    const { current: cur, defaultKbId: currDefaultKbId } = get();
     if (!cur) {
-      const targetKb = defaultKbId ? list.find((k) => k.id === defaultKbId) : list[0];
+      const targetKb = currDefaultKbId
+        ? list.find((k) => k.id === currDefaultKbId)
+        : list[0];
       if (targetKb) {
         saveCurrentKB(targetKb);
         set({ current: { ...targetKb, isDefault: targetKb.id === defaultKbId } });
@@ -101,7 +109,8 @@ export const useKbStore = create<KbStore>((set, get) => ({
       saveDefaultKBId(null);
       const { list } = get();
       const updatedList = list.map((k) => ({ ...k, isDefault: false }));
-      set({ list: updatedList, defaultKbId: null });
+      set({ list: updatedList, defaultKbId: null, current: null });
+      saveCurrentKB(null);
       return;
     }
     saveDefaultKBId(kbId);
@@ -113,6 +122,7 @@ export const useKbStore = create<KbStore>((set, get) => ({
         isDefault: k.id === kbId,
       }));
       set({ list: updatedList, defaultKbId: kbId, current: { ...kb, isDefault: true } });
+      saveCurrentKB(kb);
     }
   },
 }));
