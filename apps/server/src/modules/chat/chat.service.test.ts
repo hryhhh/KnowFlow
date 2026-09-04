@@ -135,6 +135,7 @@ describe('ChatService', () => {
       'session-1',
       'assistant',
       expect.stringContaining('Hi'),
+      [],
     );
   });
 
@@ -154,6 +155,7 @@ describe('ChatService', () => {
       'existing-1',
       'assistant',
       expect.stringContaining('Hi'),
+      [],
     );
   });
 

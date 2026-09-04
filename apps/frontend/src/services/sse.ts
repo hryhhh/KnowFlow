@@ -1,16 +1,19 @@
 import type { SourceRef, SearchParams } from '../types';
 
+export interface ProcessIndicator {
+  stage: 'retrieving' | 'rag_fallback' | 'generating' | 'agent_start' | 'agent_done';
+  label: string;
+  agent?: string;
+}
+
 export interface StreamHandlers {
   onSources: (sources: SourceRef[]) => void;
   onToken: (token: string) => void;
   onDone: () => void;
   onError: (message: string) => void;
+  onMeta?: (event: { type: string; value: unknown }) => void;
 }
 
-/**
- * 通过 fetch + ReadableStream 消费 POST SSE 流式接口。
- * 后端返回 text/event-stream，每行 `data: {json}`。
- */
 export async function streamChat(
   kbId: string,
   query: string,
@@ -18,12 +21,14 @@ export async function streamChat(
   handlers: StreamHandlers,
   options?: { sessionId?: string },
 ): Promise<{ sessionId: string }> {
+  
   const response = await fetch('/api/chat/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ kbId, query, sessionId: options?.sessionId, params }),
   });
-
+  
+  
   if (!response.ok || !response.body) {
     handlers.onError(`请求失败: ${response.status}`);
     return { sessionId: '' };
@@ -32,7 +37,6 @@ export async function streamChat(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-
   let sessionId = options?.sessionId ?? '';
 
   while (true) {
@@ -50,6 +54,7 @@ export async function streamChat(
       if (!payload) continue;
       try {
         const event = JSON.parse(payload);
+        
         switch (event.type) {
           case 'session_id':
             sessionId = event.value as string;
@@ -66,12 +71,17 @@ export async function streamChat(
           case 'error':
             handlers.onError(event.value as string);
             break;
+          case 'process':
+            handlers.onMeta?.({ type: 'process', value: event.value });
+            break;
+          default:
+            handlers.onMeta?.(event);
         }
-      } catch {
-        // 忽略无法解析的行
+      } catch (e) {
+        console.error('[SSE] Parse error:', e, payload.substring(0, 100));
       }
     }
   }
-
+  
   return { sessionId };
 }

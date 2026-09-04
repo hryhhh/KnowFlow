@@ -87,12 +87,15 @@ export class ChatService {
       // AGENTS_ENABLED=true 时走 Agent 编排链路，否则降级传统 RAG
       if (process.env.AGENTS_ENABLED === 'true') {
         let assistantContent = '';
+        let sources: SourceRef[] = [];
         void sessionIdPromise.then(async () => {
+          // 捕获本次请求的 sessionId，避免并发请求共享变量
+          const reqSessionId = sessionId;
           // 保存用户消息
-          if (sessionId) {
-            await this.sessionService.addMessage(sessionId, 'user', body.query).catch(() => {});
+          if (reqSessionId) {
+            await this.sessionService.addMessage(reqSessionId, 'user', body.query).catch(() => {});
           }
-          emit('session_id', sessionId);
+          emit('session_id', reqSessionId);
 
           this.agentChat
             .stream(
@@ -100,7 +103,10 @@ export class ChatService {
               body.kbId,
               normalizedParams,
               {
-                onSources: (sources: SourceRef[]) => emit('sources', sources),
+                onSources: (capturedSources: SourceRef[]) => {
+                  sources = capturedSources;
+                  emit('sources', capturedSources);
+                },
                 onToken: (token: string) => {
                   assistantContent += token;
                   emit('token', token);
@@ -109,9 +115,9 @@ export class ChatService {
                   emit('done', null);
                   record('success');
                   // 保存助手回复到会话
-                  if (sessionId && assistantContent.trim()) {
+                  if (reqSessionId && assistantContent.trim()) {
                     void this.sessionService
-                      .addMessage(sessionId, 'assistant', assistantContent)
+                      .addMessage(reqSessionId, 'assistant', assistantContent, sources)
                       .catch(() => {});
                   }
                   subscriber.complete();
@@ -119,13 +125,14 @@ export class ChatService {
                 onError: (err: Error) => {
                   emit('error', err.message);
                   record('error');
-                  if (sessionId) {
+                  if (reqSessionId) {
                     void this.sessionService
-                      .addMessage(sessionId, 'assistant', `⚠️ ${err.message}`)
+                      .addMessage(reqSessionId, 'assistant', `⚠️ ${err.message}`, sources)
                       .catch(() => {});
                   }
                   subscriber.complete();
                 },
+                onMeta: (event: any) => emit(event.type, event.value),
               },
               traceId,
               apiKeyId,
@@ -141,9 +148,15 @@ export class ChatService {
 
       // 传统 RAG 单链路
       let assistantContent = '';
+      let sources: SourceRef[] = [];
       void sessionIdPromise.then(() => {
+        // 捕获本次请求的 sessionId，避免并发请求共享变量
+        const reqSessionId = sessionId;
         retrieveAndChat(body.query, body.kbId, normalizedParams, this.ragConfig, {
-          onSources: (sources: SourceRef[]) => emit('sources', sources),
+          onSources: (capturedSources: SourceRef[]) => {
+            sources = capturedSources;
+            emit('sources', capturedSources);
+          },
           onToken: (token: string) => {
             assistantContent += token;
             emit('token', token);
@@ -151,9 +164,9 @@ export class ChatService {
           onDone: () => {
             emit('done', null);
             record('success');
-            if (sessionId) {
+            if (reqSessionId) {
               void this.sessionService
-                .addMessage(sessionId, 'assistant', assistantContent)
+                .addMessage(reqSessionId, 'assistant', assistantContent, sources)
                 .catch(() => {});
             }
             subscriber.complete();
@@ -161,9 +174,9 @@ export class ChatService {
           onError: (err: Error) => {
             emit('error', err.message);
             record('error');
-            if (sessionId) {
+            if (reqSessionId) {
               void this.sessionService
-                .addMessage(sessionId, 'assistant', `⚠️ ${err.message}`)
+                .addMessage(reqSessionId, 'assistant', `⚠️ ${err.message}`, sources)
                 .catch(() => {});
             }
             subscriber.complete();

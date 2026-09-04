@@ -47,6 +47,21 @@ export interface SourceRef {
   score: number;
 }
 
+/** 从 LLM 回复文本中提取的引用信息 */
+export interface Citation {
+  /** 引用编号（从 1 开始） */
+  index: number;
+  /** 对应的 SourceRef */
+  source: SourceRef;
+}
+
+/** 过程状态指示（如"正在检索知识库…"） */
+export interface ProcessIndicator {
+  stage: 'retrieving' | 'rag_fallback' | 'generating' | 'agent_start' | 'agent_done';
+  label: string;
+  agent?: string;
+}
+
 export interface DebugSearchItem {
   chunkId: string;
   rankDense: number | null;
@@ -100,6 +115,8 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   sources?: SourceRef[];
+  /** 从 LLM 回复中解析出的引用上标 { index, source } */
+  citations?: Citation[];
   createdAt?: string;
 }
 
