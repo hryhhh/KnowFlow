@@ -11,11 +11,12 @@ import { RedisClientService } from '../../../common/redis/redis-client.service';
 @Injectable()
 export class RedisCacheProvider {
   private readonly logger = new Logger(RedisCacheProvider.name);
-  private readonly client;
   private readonly prefix = 'ks:cache:';
 
-  constructor(redisClient: RedisClientService) {
-    this.client = redisClient.client;
+  constructor(private readonly redisClient: RedisClientService) {}
+
+  private get client() {
+    return this.redisClient.client;
   }
 
   async get<T>(key: string): Promise<T | null> {

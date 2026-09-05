@@ -62,34 +62,27 @@ export class OutboxComplianceService implements OnApplicationBootstrap {
       // 2. 检查 langchainjs 中缺失的 docId（有 chunks 但无向量）
       const docIds = successDocs.map((d) => d.id);
       if (docIds.length > 0) {
+        // 批量检查有 chunks 但 langchainjs 中无对应向量的文档
+        const idList = docIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(', ');
         const missingVectorResult = await pool.query(
-          `SELECT d.id AS doc_id FROM documents d
-           WHERE d.status = 'success' AND d.chunk_count > 0
-             AND NOT EXISTS (
-               SELECT 1 FROM langchainjs l WHERE l.metadata @> '{"docId": $1::text}'
-             )`,
-          [docIds[0]],
-        );
-        // 用 IN 子句批量检查（PostgreSQL 参数限制）
-        const idList = docIds.join("', '");
-        const missingVector = await pool.query(
           `SELECT id AS doc_id FROM documents
-           WHERE status = 'success' AND chunk_count > 0
+           WHERE status = 'success' AND "chunkCount" > 0
              AND id NOT IN (
-               SELECT DISTINCT metadata->>'docId' AS doc_id
+               SELECT DISTINCT (metadata->>'docId')::uuid AS doc_id
                FROM langchainjs
                WHERE metadata ? 'docId'
-             )`,
+             )
+             AND id IN (${idList})`,
         );
-        for (const row of missingVector.rows) {
+        for (const row of missingVectorResult.rows) {
           issues.push({ type: 'missing_vector', docId: row.doc_id });
         }
       }
 
-      // 3. 检查 chunks 表中有 tsv 但 chunk_id 为空的记录
+      // 3. 检查 chunks 表中有 tsv 但 chunkId 为空的记录
       const emptyChunkId = await this.chunkRepo
         .createQueryBuilder('c')
-        .where('c.tsv IS NOT NULL AND c.chunk_id IS NULL')
+        .where('c."chunkId" IS NULL')
         .getMany();
       for (const chunk of emptyChunkId.slice(0, 20)) {
         issues.push({

@@ -47,7 +47,7 @@ export class RetrievalService {
       debug: dto.debug ?? false,
     };
 
-    // 尝试缓存命中（Server 层缓存，key 包含模式参数）
+    // 尝试缓存命中（Server 层缓存，key 包含模式参数 + minDenseScore）
     const cached = await this.retrievalCache.get(
       dto.query,
       dto.kbId,
@@ -56,6 +56,7 @@ export class RetrievalService {
       params.retrievalMode ?? 'vector',
       params.fusionMethod ?? 'rrf',
       params.rrfK ?? 60,
+      params.minDenseScore,
     );
 
     if (cached !== null) {
@@ -89,6 +90,7 @@ export class RetrievalService {
         params.fusionMethod ?? 'rrf',
         params.rrfK ?? 60,
         results,
+        params.minDenseScore,
       );
 
       this.usageLog.record({

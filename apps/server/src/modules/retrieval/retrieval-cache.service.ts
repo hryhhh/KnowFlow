@@ -3,7 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 /**
  * 检索结果缓存服务（进程内 Map）
  *
- * 按 (query, kbId, topK, minScore, retrievalMode, fusionMethod, rrfK) 哈希缓存检索结果，
+ * 按 (query, kbId, topK, minScore, retrievalMode, fusionMethod, rrfK, minDenseScore) 哈希缓存检索结果，
  * TTL 默认 5 分钟。文档删除时通过 invalidateByKbId() 主动失效指定知识库的缓存条目。
  */
 @Injectable()
@@ -24,9 +24,11 @@ export class RetrievalCacheService {
     retrievalMode: string,
     fusionMethod: string,
     rrfK: number,
+    minDenseScore: number | null | undefined,
   ): string {
+    const d = minDenseScore ?? 'none';
     let hash = 0;
-    const str = `${query}|${kbId}|${topK}|${minScore}|${retrievalMode}|${fusionMethod}|${rrfK}`;
+    const str = `${query}|${kbId}|${topK}|${minScore}|${retrievalMode}|${fusionMethod}|${rrfK}|${d}`;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
       hash = (hash << 5) - hash + char;
@@ -43,8 +45,18 @@ export class RetrievalCacheService {
     retrievalMode: string,
     fusionMethod: string,
     rrfK: number,
+    minDenseScore?: number | null,
   ): Promise<any[] | null> {
-    const key = this.makeKey(query, kbId, topK, minScore, retrievalMode, fusionMethod, rrfK);
+    const key = this.makeKey(
+      query,
+      kbId,
+      topK,
+      minScore,
+      retrievalMode,
+      fusionMethod,
+      rrfK,
+      minDenseScore,
+    );
     const entry = this.cache.get(key);
     if (!entry) return null;
     if (Date.now() > entry.expiresAt) {
@@ -63,8 +75,18 @@ export class RetrievalCacheService {
     fusionMethod: string,
     rrfK: number,
     results: any[],
+    minDenseScore?: number | null,
   ): void {
-    const key = this.makeKey(query, kbId, topK, minScore, retrievalMode, fusionMethod, rrfK);
+    const key = this.makeKey(
+      query,
+      kbId,
+      topK,
+      minScore,
+      retrievalMode,
+      fusionMethod,
+      rrfK,
+      minDenseScore,
+    );
     this.cache.set(key, { results, expiresAt: Date.now() + this.ttlMs, kbId });
   }
 
