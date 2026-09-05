@@ -12,7 +12,12 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
       POSTGRES_DB: ${POSTGRES_DB:-knowledge_rag}
     volumes:
-      - pgvector_data:/var/lib/postgresql/data
+      # 注意：这里刻意 bind mount 到本机 Docker 卷目录（数据位置保留决策）。
+      # 好处：Postgres 数据始终落在 knowledge-ai-main_pgvector_data 卷内，不受容器重建影响；
+      # 风险：该绝对路径仅在本机有效（换机器/CI 需改回命名卷 pgvector_data:/var/lib/postgresql/data），
+      # 且 bind mount 与容器启动顺序存在竞态（极端情况下入口脚本可能 initdb 空库），
+      # 因此必须配合定期 pg_dump 备份（Windows 任务计划 "KnowBase pg_dump"）。
+      - /var/lib/docker/volumes/knowledge-ai-main_pgvector_data/_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres}']
@@ -47,7 +52,7 @@ services:
     container_name: kb-server
     restart: unless-stopped
     ports:
-      - '${SERVER_PORT:-3000}:3000'
+      - '${SERVER_PORT:-3001}:3001'
     environment:
       TZ: UTC
       NODE_ENV: ${NODE_ENV:-production}
