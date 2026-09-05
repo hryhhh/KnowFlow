@@ -3,6 +3,7 @@ import { Observable } from 'rxjs';
 import { MessageEvent } from 'http';
 import { AgentChatService } from './agent-chat.service';
 import type { StreamCallbacks } from '@knowbase-x/rag-engine';
+import { normalizeSearchParams } from '../../common/search-params';
 
 export interface AgentChatStreamBody {
   query: string;
@@ -59,10 +60,11 @@ export class AgentController {
         .stream(
           body.query,
           body.kbId,
-          this.normalizeParams(body.params),
+          normalizeSearchParams(body.params),
           callbacks,
           resolvedTraceId,
           null,
+          body.sessionId ?? null,
         )
         .catch((err) => {
           emit('error', err instanceof Error ? err.message : String(err));
@@ -79,7 +81,7 @@ export class AgentController {
     const result = await this.service.orchestrate(
       body.query,
       body.kbId,
-      this.normalizeParams(body.params),
+      normalizeSearchParams(body.params),
     );
     return result;
   }
@@ -91,14 +93,5 @@ export class AgentController {
   reloadRules() {
     this.service.reloadRules();
     return { message: '路由规则已重新加载' };
-  }
-
-  private normalizeParams(params: AgentChatStreamBody['params']) {
-    return {
-      topK: params?.topK ?? 10,
-      minScore: params?.minScore ?? 0.7,
-      useReranker: params?.useReranker ?? false,
-      denseWeight: params?.denseWeight ?? 0.5,
-    };
   }
 }

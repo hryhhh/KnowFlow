@@ -1,6 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { Observable, Subscriber } from 'rxjs';
 import { MessageEvent } from 'http';
+import { generateTraceId } from '@knowbase-x/agents';
 import { retrieveAndChat } from '@knowbase-x/rag-engine';
 import type { RAGPipelineConfig, SearchParams, SourceRef } from '@knowbase-x/rag-engine';
 import { RAG_CONFIG } from '../../config/rag-config.provider';
@@ -37,7 +38,8 @@ export class ChatService {
   stream(body: ChatStreamBody, request?: any): Observable<MessageEvent> {
     const params = body.params ?? {};
     const startTime = Date.now();
-    const traceId = request?.traceId ?? '';
+    // 请求未带 x-trace-id 时按系统约定生成 16 位 nanoid（usage_logs.traceId 等列以此为准）
+    const traceId = request?.traceId || generateTraceId();
     const apiKeyId = request?.apiKey?.id ?? null;
 
     // 会话管理：有 sessionId 就用，否则新建
@@ -72,7 +74,7 @@ export class ChatService {
 
       const normalizedParams: SearchParams = {
         topK: params.topK ?? 10,
-        minScore: params.minScore ?? (Number(process.env.DEFAULT_MIN_SCORE) || 0.1),
+        minScore: params.minScore ?? (Number(process.env.DEFAULT_MIN_SCORE) || 0.7),
         useReranker: params.useReranker ?? false,
         denseWeight: params.denseWeight ?? 0.5,
         retrievalMode: params.retrievalMode,
@@ -126,9 +128,12 @@ export class ChatService {
                   }
                   subscriber.complete();
                 },
+                // AgentRuntime 事件（tool_call/tool_result/agent_completed 等）经 meta 包装转发
+                onMeta: (meta) => emit('meta', meta),
               },
               traceId,
               apiKeyId,
+              sessionId,
             )
             .catch((err: unknown) => {
               emit('error', err instanceof Error ? err.message : String(err));

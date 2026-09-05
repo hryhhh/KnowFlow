@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+import * as dotenv from 'dotenv';
+dotenv.config({ path: '.env' });
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
@@ -10,6 +12,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');
+
+  // Disable ETag — JSON API responses should not be cached with ETag
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('etag', false);
 
   // Security headers
   app.use(helmet());

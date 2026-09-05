@@ -180,7 +180,7 @@ describe('ChatService', () => {
     vi.stubEnv('AGENTS_ENABLED', 'false');
     vi.mocked(retrieveAndChat).mockImplementation((_query, _kbId, params, _config, _callbacks) => {
       expect(params.topK).toBe(10);
-      expect(params.minScore).toBe(0.1);
+      expect(params.minScore).toBe(0.7);
       expect(params.useReranker).toBe(false);
       expect(params.denseWeight).toBe(0.5);
       _callbacks.onToken('x');
@@ -190,5 +190,40 @@ describe('ChatService', () => {
 
     const obs$ = service.stream({ query: 'test', kbId: 'kb-1' });
     await collectEvents(obs$);
+  });
+
+  it('AGENTS_ENABLED=true 时转发 onMeta 为 meta 事件并传递 sessionId', async () => {
+    vi.stubEnv('AGENTS_ENABLED', 'true');
+    vi.mocked(agentChatService.stream).mockImplementation((_q, _k, _p, callbacks) => {
+      callbacks.onMeta?.({
+        type: 'tool_call',
+        timestamp: 1,
+        data: { toolName: 'rag_search', args: { query: 'x' } },
+      });
+      callbacks.onToken('Hi');
+      callbacks.onDone();
+      return Promise.resolve();
+    });
+
+    const obs$ = service.stream({ query: 'test', kbId: 'kb-1', sessionId: 'sess-9' });
+    const events = await collectEvents(obs$);
+
+    // sessionId 作为第 7 个参数传递给 AgentChatService（对话记忆依赖它）
+    expect(agentChatService.stream).toHaveBeenCalledWith(
+      'test',
+      'kb-1',
+      expect.anything(),
+      expect.anything(),
+      expect.any(String), // traceId（缺失时自动生成 UUID）
+      null,
+      'sess-9',
+    );
+    // runtime 事件经 meta 包装到达 SSE 流
+    const metaEvents = events.filter((e) => {
+      const d = JSON.parse(e.data as string);
+      return d.type === 'meta';
+    });
+    expect(metaEvents).toHaveLength(1);
+    expect(JSON.parse(metaEvents[0].data as string).value.data.toolName).toBe('rag_search');
   });
 });
