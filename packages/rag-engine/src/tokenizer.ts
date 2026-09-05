@@ -50,8 +50,9 @@ export function tokenize(text: string): string[] {
  * 例：['如何', '重置', '密码'] → "'如何' '重置' '密码'"
  */
 export function tokensToTsvString(tokens: string[]): string {
-  // tsvector 要求 token 不含空格/引号，单个 token 直接用空格分隔
-  return tokens.join(' ');
+  // tsvector 语法要求 lexeme 用单引号包裹，内部单引号写成两个（''）；
+  // tokenize 会产出 ':' '/' 等单字符 token，不加引号会导致 tsvector 解析错误
+  return tokens.map((t) => `'${t.replace(/'/g, "''")}'`).join(' ');
 }
 
 /**
