@@ -10,7 +10,7 @@ import type { Agent, AgentParams, AgentResult, ComposeStrategy, RouterRule } fro
  */
 export class Dispatcher {
   private agents: Map<string, Agent>;
-  private strategy: ComposeStrategy;
+  private readonly _strategy: ComposeStrategy;
   private allowParallel: boolean;
 
   constructor(
@@ -19,8 +19,13 @@ export class Dispatcher {
     allowParallel: boolean = true,
   ) {
     this.agents = new Map(agents.map((a) => [a.id, a]));
-    this.strategy = strategy;
+    this._strategy = strategy;
     this.allowParallel = allowParallel;
+  }
+
+  /** 供外部读取当前合成策略（用于元数据标记） */
+  get strategy(): ComposeStrategy {
+    return this._strategy;
   }
 
   /**
@@ -86,7 +91,11 @@ export class Dispatcher {
       const promises = uniqueTargets.map((id) => runAgent(id, defaultTimeoutMs));
       results = await Promise.all(promises);
     } else {
-      results = await Promise.all(uniqueTargets.map((id) => runAgent(id, defaultTimeoutMs)));
+      // 串行执行：逐个等待每个 Agent 完成后再接入下一个
+      results = [];
+      for (const id of uniqueTargets) {
+        results.push(await runAgent(id, defaultTimeoutMs));
+      }
     }
 
     return results;
