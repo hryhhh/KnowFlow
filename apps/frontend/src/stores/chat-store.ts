@@ -1,5 +1,11 @@
 import { create } from 'zustand';
-import type { ChatMessage, SourceRef, SearchParams, SessionListItem } from '../types';
+import type {
+  ChatMessage,
+  SourceRef,
+  SearchParams,
+  SessionListItem,
+  AgentActivityEvent,
+} from '../types';
 import { streamChat } from '../services/sse';
 import { sessionApi } from '../services/api';
 
@@ -12,6 +18,9 @@ interface ChatStore {
   sources: SourceRef[];
   searchParams: SearchParams;
   isStreaming: boolean;
+  // AgentActivity
+  agentEvents: AgentActivityEvent[];
+  showAgentActivity: boolean;
   // 方法
   loadSessions: (kbId: string) => Promise<void>;
   refreshSessions: (kbId: string) => Promise<void>;
@@ -21,6 +30,9 @@ interface ChatStore {
   clearAllSessions: (kbId: string) => Promise<void>;
   send: (kbId: string, query: string) => Promise<void>;
   setParams: (params: Partial<SearchParams>) => void;
+  appendAgentEvent: (event: AgentActivityEvent) => void;
+  toggleAgentActivity: () => void;
+  clearAgentEvents: () => void;
   reset: () => void;
 }
 
@@ -31,11 +43,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   sources: [],
   searchParams: {
     topK: 10,
-    minScore: 0.1,
+    minScore: 0.7,
     useReranker: false,
     denseWeight: 0.5,
   },
   isStreaming: false,
+  agentEvents: [],
+  showAgentActivity: false,
 
   loadSessions: async (kbId) => {
     const res = await sessionApi.list(kbId);
@@ -85,7 +99,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   switchSession: async (sessionId) => {
     if (sessionId === get().currentSessionId) return;
-    set({ currentSessionId: sessionId, messages: [], sources: [], isStreaming: false });
+    set({
+      currentSessionId: sessionId,
+      messages: [],
+      sources: [],
+      isStreaming: false,
+      agentEvents: [],
+      showAgentActivity: false,
+    });
     const res = await sessionApi.messages(sessionId);
     set({ messages: res.data.data });
   },
@@ -104,8 +125,17 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ sessions: [], currentSessionId: null, messages: [], sources: [] });
   },
 
+  appendAgentEvent: (event) => set((s) => ({ agentEvents: [...s.agentEvents, event] })),
+
+  toggleAgentActivity: () => set((s) => ({ showAgentActivity: !s.showAgentActivity })),
+
+  clearAgentEvents: () => set({ agentEvents: [], showAgentActivity: false }),
+
   send: async (kbId, query) => {
     if (!query.trim() || get().isStreaming) return;
+
+    // 清空上一次的 Agent 事件
+    get().clearAgentEvents();
 
     // 如果没有当前会话，先创建
     let sessionId = get().currentSessionId;
@@ -168,6 +198,33 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             ],
           }));
         },
+        onMeta: (event) => {
+          // 转发给 store 的 appendAgentEvent
+          if (
+            event.type === 'tool_call' ||
+            event.type === 'tool_result' ||
+            event.type === 'reasoning_summary' ||
+            event.type === 'agent_start' ||
+            event.type === 'agent_completed'
+          ) {
+            // 兼容两种载荷：AgentRuntime 事件为 {type, timestamp, data}，
+            // Orchestrator 路径事件为 {type, value}
+            const d = event.data ?? event.value ?? {};
+            get().appendAgentEvent({
+              type: event.type,
+              timestamp: event.timestamp ?? Date.now(),
+              toolName: d.toolName,
+              args: d.args,
+              result: d.result,
+              summary: d.summary,
+              durationMs: d.durationMs,
+              isError: d.isError,
+              status: d.status,
+              tokensUsed: d.tokensUsed,
+              data: d,
+            });
+          }
+        },
       },
       { sessionId },
     );
@@ -191,5 +248,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       isStreaming: false,
       currentSessionId: null,
       sessions: [],
+      agentEvents: [],
+      showAgentActivity: false,
     }),
 }));

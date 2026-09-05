@@ -9,6 +9,7 @@ import { apiServiceApi } from '../../services/api';
 import type { ApiServiceItem } from '../../types';
 import CreateServiceModal from './CreateServiceModal';
 import ApiUsagePanel from './ApiUsagePanel';
+import AgentThoughtPanel from '../../components/AgentThoughtPanel';
 import { Send, Bot, Loader2, MessageSquare, Trash2, Trash, Plus } from 'lucide-react';
 
 export default function ChatPage() {
@@ -28,6 +29,9 @@ export default function ChatPage() {
     deleteSession,
     clearAllSessions,
     createSession,
+    agentEvents,
+    showAgentActivity,
+    toggleAgentActivity,
   } = useChatStore();
   const [input, setInput] = useState('');
   const [services, setServices] = useState<ApiServiceItem[]>([]);
@@ -222,6 +226,16 @@ export default function ChatPage() {
                 {messages.map((m, i) => (
                   <div key={i} className={'msg ' + m.role}>
                     {m.content}
+                    {/* Agent Activity 面板（仅在最新消息下方显示，避免重复） */}
+                    {m.role === 'assistant' &&
+                      agentEvents.length > 0 &&
+                      i === messages.length - 1 && (
+                        <AgentThoughtPanel
+                          events={agentEvents}
+                          isOpen={showAgentActivity}
+                          onToggle={toggleAgentActivity}
+                        />
+                      )}
                   </div>
                 ))}
                 {isStreaming && (

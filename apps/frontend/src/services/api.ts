@@ -101,4 +101,10 @@ export const sessionApi = {
   clearAll: (kbId: string) => api.delete(`/chat/sessions`, { params: { kbId } }),
 };
 
+export const traceApi = {
+  get: (id: string) => api.get<Resp<import('../types').AgentTrace>>(`/agents/traces/${id}`),
+  list: (kbId?: string, limit = 20) =>
+    api.get<Resp<import('../types').AgentTrace[]>>(`/agents/traces`, { params: { kbId, limit } }),
+};
+
 export default api;

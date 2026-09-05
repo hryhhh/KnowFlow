@@ -5,6 +5,8 @@ export interface StreamHandlers {
   onToken: (token: string) => void;
   onDone: () => void;
   onError: (message: string) => void;
+  /** AgentRuntime SSE 事件回调（tool_call / tool_result / agent_completed 等） */
+  onMeta?: (event: any) => void;
 }
 
 /**
@@ -65,6 +67,19 @@ export async function streamChat(
             break;
           case 'error':
             handlers.onError(event.value as string);
+            break;
+          case 'tool_call':
+          case 'tool_result':
+          case 'reasoning_summary':
+          case 'agent_completed':
+          case 'trace':
+          case 'agent_start':
+          case 'agent_done':
+            handlers.onMeta?.(event);
+            break;
+          case 'meta':
+            // Controller 包装层：{ type: 'meta', value: innerEvent }
+            handlers.onMeta?.(event.value);
             break;
         }
       } catch {
