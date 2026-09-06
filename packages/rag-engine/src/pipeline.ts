@@ -62,6 +62,13 @@ export async function ingestDocument(
   docId?: string,
   progress?: (event: IngestProgressCallback) => void,
 ): Promise<{ chunkCount: number; chunks: TextChunk[] }> {
+  // 跳过测试文件，防止污染知识库
+  const fileName = path.basename(filePath);
+  if (/^gen-test-|\.test\.|\.spec\./.test(fileName)) {
+    console.warn(`[RAG] 跳过测试文件: ${fileName}`);
+    return { chunkCount: 0, chunks: [] };
+  }
+
   // 1. 加载
   progress?.({ percent: 10, stage: 'parsing' });
   const { documents } = await loadDocument(filePath, undefined, parseStrategy, agentOptions);
@@ -119,7 +126,7 @@ export async function ingestDocument(
 }
 
 /**
- * 生成 chunkId 列表（供服务端 processor 回填 chunks.chunk_id 列）
+ * 生成 chunkId 列表（供服务端 processor 回填 chunks.chunkId 列）
  */
 export function getChunkIds(chunks: TextChunk[]): string[] {
   return chunks.map((c) => c.metadata?.chunkId as string).filter(Boolean);
@@ -287,12 +294,16 @@ async function performSearch(
       }
   }
 
-  // 4. 可选重排（与 retrievalMode 独立）
+  // 4. 过滤测试文件结果（防止测试数据污染检索）
+  const TEST_FILE_PATTERN = /^gen-test-|\.test\.|\.spec\./;
+  results = results.filter((r) => !TEST_FILE_PATTERN.test(r.sourceFile));
+
+  // 5. 可选重排（与 retrievalMode 独立）
   if (resolved.useReranker && results.length > 0) {
     results = await rerank(query, results, config.embedding, { topK: resolved.topK });
   }
 
-  // 5. 写入缓存（不缓存 debug 信息，只缓存 results）
+  // 6. 写入缓存（不缓存 debug 信息，只缓存 results）
   setCachedResults(
     {
       query,

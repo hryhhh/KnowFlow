@@ -43,3 +43,13 @@ export const sanitizeText = (text: string): string => {
 /** 延迟工具 */
 export const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * 解析正整数环境变量，非法/缺失时返回默认值。
+ * parseInt 对非数字输入返回 NaN，直接用作循环上限会导致 0 轮、
+ * 用作超时会导致立即触发，因此必须兜底。
+ */
+export const parsePositiveInt = (value: string | undefined, fallback: number): number => {
+  const n = parseInt(value ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+};

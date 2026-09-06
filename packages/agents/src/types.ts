@@ -31,6 +31,13 @@ export interface RouterRules {
   };
 }
 
+/** 来源引用信息 */
+export interface SourceRef {
+  content: string;
+  sourceFile: string;
+  score: number;
+}
+
 /** Agent 执行结果 */
 export interface AgentResult {
   id: string;
@@ -118,4 +125,55 @@ export interface RouteMetadata {
   composeUsedRagPriority: boolean;
   /** 仲裁时 LLM 返回的目标 Agent */
   llmArbitrationAgent?: string;
+}
+
+// ============================================================================
+// AgentRuntime 类型（Phase 1）
+// ============================================================================
+
+/** LLM 配置 */
+export interface LLMConfig {
+  apiKey: string;
+  model: string;
+  baseURL: string;
+}
+
+/** Agent 执行结果（Runtime 模式） */
+export interface AgentRunResult {
+  status: 'completed' | 'failed' | 'truncated' | 'aborted';
+  finalAnswer: string;
+  /** 运行时上下文（类型循环依赖，使用 any 避免导入） */
+  context: any;
+  error?: string;
+}
+
+/** SSE 事件类型 */
+export interface AgentEvent {
+  type: string;
+  timestamp: number;
+  data?: Record<string, any>;
+}
+
+/** ReAct 循环的 LLM 响应 */
+export interface LLMResponse {
+  content: string;
+  /** LLM 返回的工具调用列表（id/toolName/arguments 格式） */
+  toolCalls: Array<{ id: string; toolName: string; arguments: Record<string, any> }>;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  latencyMs: number;
+}
+
+/** Agent 运行参数（传入 AgentRuntime.run()） */
+export interface AgentRunParams {
+  query: string;
+  kbId: string;
+  sessionId: string | null;
+  traceId: string;
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  searchParams: any;
+  llmConfig: LLMConfig;
+  tools: any; // ToolRegistry, 避免循环依赖
+  emitEvent: (event: AgentEvent) => void;
 }

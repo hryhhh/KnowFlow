@@ -1,16 +1,20 @@
 import type { SourceRef, SearchParams } from '../types';
 
+export interface ProcessIndicator {
+  stage: 'retrieving' | 'rag_fallback' | 'generating' | 'agent_start' | 'agent_done';
+  label: string;
+  agent?: string;
+}
+
 export interface StreamHandlers {
   onSources: (sources: SourceRef[]) => void;
   onToken: (token: string) => void;
   onDone: () => void;
   onError: (message: string) => void;
+  /** Agent SSE 事件回调（process / tool_call / tool_result / agent_completed 等） */
+  onMeta?: (event: any) => void;
 }
 
-/**
- * 通过 fetch + ReadableStream 消费 POST SSE 流式接口。
- * 后端返回 text/event-stream，每行 `data: {json}`。
- */
 export async function streamChat(
   kbId: string,
   query: string,
@@ -32,7 +36,6 @@ export async function streamChat(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-
   let sessionId = options?.sessionId ?? '';
 
   while (true) {
@@ -50,6 +53,7 @@ export async function streamChat(
       if (!payload) continue;
       try {
         const event = JSON.parse(payload);
+
         switch (event.type) {
           case 'session_id':
             sessionId = event.value as string;
@@ -66,9 +70,27 @@ export async function streamChat(
           case 'error':
             handlers.onError(event.value as string);
             break;
+          case 'process':
+            handlers.onMeta?.({ type: 'process', value: event.value });
+            break;
+          case 'tool_call':
+          case 'tool_result':
+          case 'reasoning_summary':
+          case 'agent_completed':
+          case 'trace':
+          case 'agent_start':
+          case 'agent_done':
+            handlers.onMeta?.(event);
+            break;
+          case 'meta':
+            // Controller 包装层：{ type: 'meta', value: innerEvent }
+            handlers.onMeta?.(event.value);
+            break;
+          default:
+            handlers.onMeta?.(event);
         }
-      } catch {
-        // 忽略无法解析的行
+      } catch (e) {
+        console.error('[SSE] Parse error:', e, payload.substring(0, 100));
       }
     }
   }

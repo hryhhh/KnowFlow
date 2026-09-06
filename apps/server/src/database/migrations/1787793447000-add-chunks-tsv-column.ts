@@ -2,7 +2,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class AddChunksTsvColumn1787793447000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // 1. 添加 tsv 列 + GIN 索引（原有逻辑）
+    // 1. 添加 tsv 列 + GIN 索引
     await queryRunner.query(`ALTER TABLE "chunks" ADD COLUMN IF NOT EXISTS "tsv" tsvector`);
     await queryRunner.query(
       `CREATE INDEX IF NOT EXISTS "idx_chunks_tsv" ON "chunks" USING GIN ("tsv")`,

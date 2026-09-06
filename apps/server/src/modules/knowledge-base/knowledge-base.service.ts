@@ -45,7 +45,7 @@ export class KnowledgeBaseService {
   async findAll(search?: string): Promise<KbListItem[]> {
     const qb = this.kbRepo.createQueryBuilder('kb');
     if (search) qb.where('kb.name ILIKE :s', { s: `%${search}%` });
-    const list = await qb.orderBy('kb.createdAt', 'DESC').getMany();
+    const list = await qb.orderBy('"kb"."createdAt"', 'DESC').getMany();
 
     return Promise.all(list.map((kb) => this.toListItem(kb)));
   }

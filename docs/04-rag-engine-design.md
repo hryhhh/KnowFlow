@@ -694,13 +694,17 @@ export function buildContext(retrievalResults: RetrievalResult[]): string {
 ```typescript
 // packages/rag-engine/src/pipeline.ts
 
-import { loadDocument } from "./loaders/index.js";
-import { splitDocuments } from "./splitters/recursive-splitter.js";
-import { getEmbeddings, embedQuery } from "./embeddings/openai-embeddings.js";
-import { createPGVectorStore, addDocumentsToPG, searchSimilarityWithScore } from "./stores/pgvector-store.js";
-import { streamChat, buildContext } from "./llm/chat-service.js";
-import { similaritySearch } from "./retrievers/similarity-retriever.js";
-import { rerank } from "./rerankers/cross-encoder-reranker.js";
+import { loadDocument } from './loaders/index.js';
+import { splitDocuments } from './splitters/recursive-splitter.js';
+import { getEmbeddings, embedQuery } from './embeddings/openai-embeddings.js';
+import {
+  createPGVectorStore,
+  addDocumentsToPG,
+  searchSimilarityWithScore,
+} from './stores/pgvector-store.js';
+import { streamChat, buildContext } from './llm/chat-service.js';
+import { similaritySearch } from './retrievers/similarity-retriever.js';
+import { rerank } from './rerankers/cross-encoder-reranker.js';
 
 /** 完整 RAG Pipeline 配置 */
 export interface RAGPipelineConfig {
@@ -737,7 +741,7 @@ export interface RAGPipelineConfig {
  */
 export async function ingestDocument(
   filePath: string,
-  config: RAGPipelineConfig
+  config: RAGPipelineConfig,
 ): Promise<{ chunkCount: number }> {
   // 1. 加载
   const { documents } = await loadDocument(filePath);
@@ -763,10 +767,13 @@ export async function ingestDocument(
     database: config.pgDatabase,
   });
 
-  await addDocumentsToPG(store, chunks.map(c => ({
-    content: c.pageContent,
-    metadata: c.metadata,
-  })));
+  await addDocumentsToPG(
+    store,
+    chunks.map((c) => ({
+      content: c.pageContent,
+      metadata: c.metadata,
+    })),
+  );
 
   return { chunkCount: chunks.length };
 }
@@ -784,17 +791,19 @@ export async function retrieveAndChat(
   kbId: string,
   params: SearchParams,
   config: RAGPipelineConfig,
-  callbacks: import("./llm/chat-service.js").StreamCallbacks
+  callbacks: import('./llm/chat-service.js').StreamCallbacks,
 ): Promise<void> {
   // 1. 检索（根据 retrievalMode 分支）
   let results = await performSearch(query, kbId, params, config);
 
   // 2. 发送引用来源
-  callbacks.onSources(results.map(r => ({
-    content: r.content,
-    sourceFile: r.sourceFile,
-    score: r.score,
-  })));
+  callbacks.onSources(
+    results.map((r) => ({
+      content: r.content,
+      sourceFile: r.sourceFile,
+      score: r.score,
+    })),
+  );
 
   // 3. [可选] 重排序（当前为 stub）
   if (params.useReranker && results.length > 0) {
@@ -807,7 +816,7 @@ export async function retrieveAndChat(
   await streamChat(
     { query, context },
     { apiKey: config.llmApiKey, model: config.llmModel, baseURL: config.llmBaseURL },
-    callbacks
+    callbacks,
   );
 }
 ```

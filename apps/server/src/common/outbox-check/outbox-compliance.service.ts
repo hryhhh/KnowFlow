@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, Not } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Pool } from 'pg';
 import { Document } from '../../modules/document/entities/document.entity';
 import { Chunk } from '../../modules/chunk/entities/chunk.entity';
@@ -29,8 +29,8 @@ export class OutboxComplianceService implements OnApplicationBootstrap {
    *
    * 逻辑：
    * 1. 查询所有 status='success' 且 chunkCount > 0 的文档
-   * 2. 对每个 docId，检查 langchainjs 中是否存在该 docId 的记录
-   * 3. 对每个 docId，检查 chunks.chunk_id 是否与 langchainjs.metadata.docId 对应
+   * 2. 对每个成功文档，检查 chunks 表中是否存在对应记录、langchainjs 中是否存在向量
+   * 3. 检查 chunks 表中 chunkId 为空的记录
    * 4. 输出告警日志，人工介入处理
    */
   async checkAndReport(): Promise<void> {
@@ -59,37 +59,42 @@ export class OutboxComplianceService implements OnApplicationBootstrap {
     try {
       const issues: Array<{ type: string; docId: string; detail?: string }> = [];
 
-      // 2. 检查 langchainjs 中缺失的 docId（有 chunks 但无向量）
+      // 2. 检查 chunks 表中缺失的 docId（有文档但无 chunks）
       const docIds = successDocs.map((d) => d.id);
       if (docIds.length > 0) {
+        const docsWithChunks = await this.chunkRepo
+          .createQueryBuilder('c')
+          .select('c."docId"')
+          .where('c."docId" IN (:...ids)', { ids: docIds })
+          .getMany();
+        const docsWithChunksSet = new Set(docsWithChunks.map((r: { docId: string }) => r.docId));
+        for (const doc of successDocs) {
+          if (!docsWithChunksSet.has(doc.id)) {
+            issues.push({ type: 'missing_chunks', docId: doc.id });
+          }
+        }
+
+        // 批量检查有 chunks 但 langchainjs 中无对应向量的文档
+        const idList = docIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(', ');
         const missingVectorResult = await pool.query(
-          `SELECT d.id AS doc_id FROM documents d
-           WHERE d.status = 'success' AND d.chunk_count > 0
-             AND NOT EXISTS (
-               SELECT 1 FROM langchainjs l WHERE l.metadata @> '{"docId": $1::text}'
-             )`,
-          [docIds[0]],
-        );
-        // 用 IN 子句批量检查（PostgreSQL 参数限制）
-        const idList = docIds.join("', '");
-        const missingVector = await pool.query(
           `SELECT id AS doc_id FROM documents
-           WHERE status = 'success' AND chunk_count > 0
+           WHERE status = 'success' AND "chunkCount" > 0
              AND id NOT IN (
-               SELECT DISTINCT metadata->>'docId' AS doc_id
+               SELECT DISTINCT (metadata->>'docId')::uuid AS doc_id
                FROM langchainjs
                WHERE metadata ? 'docId'
-             )`,
+             )
+             AND id IN (${idList})`,
         );
-        for (const row of missingVector.rows) {
+        for (const row of missingVectorResult.rows) {
           issues.push({ type: 'missing_vector', docId: row.doc_id });
         }
       }
 
-      // 3. 检查 chunks 表中有 tsv 但 chunk_id 为空的记录
+      // 3. 检查 chunks 表中有 tsv 但 chunkId 为空的记录
       const emptyChunkId = await this.chunkRepo
         .createQueryBuilder('c')
-        .where('c.tsv IS NOT NULL AND c.chunk_id IS NULL')
+        .where('c."chunkId" IS NULL')
         .getMany();
       for (const chunk of emptyChunkId.slice(0, 20)) {
         issues.push({
@@ -114,8 +119,10 @@ export class OutboxComplianceService implements OnApplicationBootstrap {
             : `  - [${issue.type}] docId=${issue.docId}`;
           this.logger.warn(msg);
         }
-        this.logger.warn('请手动补偿：对有 chunks 但无向量的文档重新触发摄入');
+        this.logger.warn('请手动补偿：对不一致文档重新触发摄入（有文档无 chunks 或无向量）');
       }
+    } catch (err) {
+      this.logger.error(`Outbox 一致性校验失败: ${err}`);
     } finally {
       await pool.end();
     }

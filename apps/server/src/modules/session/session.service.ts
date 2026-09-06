@@ -21,8 +21,19 @@ export interface SessionMessageItem {
   createdAt: string;
 }
 
+/**
+ * MemoryLoader 接口 — 供 ConversationMemory 调用
+ * SessionService 实现此接口以支持对话记忆。
+ */
+export interface MemoryLoader {
+  load(
+    sessionId: string | null,
+    maxMessages?: number,
+  ): Promise<Array<{ role: 'user' | 'assistant'; content: string }>>;
+}
+
 @Injectable()
-export class SessionService {
+export class SessionService implements MemoryLoader {
   constructor(
     @InjectRepository(ConversationSession)
     private readonly sessionRepo: Repository<ConversationSession>,
@@ -116,5 +127,24 @@ export class SessionService {
       await this.messageRepo.delete({ sessionId: session.id });
     }
     await this.sessionRepo.delete({ kbId });
+  }
+
+  /**
+   * 加载最近 N 条对话消息（实现 MemoryLoader 接口）
+   */
+  async load(
+    sessionId: string | null,
+    maxMessages: number = 6,
+  ): Promise<Array<{ role: 'user' | 'assistant'; content: string }>> {
+    if (!sessionId) return [];
+    const rows = await this.messageRepo.find({
+      where: { sessionId },
+      order: { createdAt: 'DESC' },
+      take: maxMessages,
+    });
+    return rows.reverse().map((row) => ({
+      role: row.role,
+      content: row.content,
+    }));
   }
 }

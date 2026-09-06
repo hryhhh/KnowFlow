@@ -5,6 +5,7 @@ import type {
   SearchProvider,
   SearchResult,
   CacheProvider,
+  SourceRef,
 } from '../types';
 import { generateAgentResultId, sanitizeText } from '../utils';
 
@@ -351,6 +352,7 @@ export class RagFlowAgent implements Agent {
     }
 
     let content = '';
+    const sources: SourceRef[] = [];
     try {
       await new Promise<void>((resolve, reject) => {
         this.streamingFn!(
@@ -358,16 +360,32 @@ export class RagFlowAgent implements Agent {
           (token) => {
             content += token;
           },
-          () => {},
+          (s) => {
+            sources.push(...s);
+          },
           resolve,
           (err) => reject(err),
         );
       });
+      // 按 uri 去重：多个检索结果可能来自同一文档，只保留第一个
+      const seen = new Set<string>();
+      const unique: typeof sources = [];
+      for (const s of sources) {
+        const key = s.sourceFile;
+        if (!seen.has(key)) {
+          seen.add(key);
+          unique.push(s);
+        }
+      }
       return {
         id: generateAgentResultId(),
         agent: this.id,
         status: 'ok',
         content,
+        sources:
+          unique.length > 0
+            ? unique.map((s) => ({ uri: s.sourceFile, title: s.sourceFile }))
+            : undefined,
         elapsedMs: Date.now() - startTime,
       };
     } catch (err: any) {

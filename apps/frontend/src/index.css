@@ -1045,3 +1045,93 @@ button {
 .spacer {
   flex: 1;
 }
+
+/* ===== Process Indicators ===== */
+.process-indicators {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.process-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
+/* ===== Citation Badge ===== */
+.citation-badge {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.citation-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.citation-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  min-width: 280px;
+  max-width: 400px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+  color: var(--text);
+  white-space: normal;
+  pointer-events: none;
+}
+
+.citation-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--border-strong);
+}
+
+.citation-tooltip-file {
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.citation-tooltip-score {
+  color: var(--text-subtle);
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.citation-tooltip-content {
+  color: var(--text-muted);
+  line-height: 1.4;
+  max-height: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

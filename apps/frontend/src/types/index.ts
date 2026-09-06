@@ -47,6 +47,21 @@ export interface SourceRef {
   score: number;
 }
 
+/** 从 LLM 回复文本中提取的引用信息 */
+export interface Citation {
+  /** 引用编号（从 1 开始） */
+  index: number;
+  /** 对应的 SourceRef */
+  source: SourceRef;
+}
+
+/** 过程状态指示（如"正在检索知识库…"） */
+export interface ProcessIndicator {
+  stage: 'retrieving' | 'rag_fallback' | 'generating' | 'agent_start' | 'agent_done';
+  label: string;
+  agent?: string;
+}
+
 export interface DebugSearchItem {
   chunkId: string;
   rankDense: number | null;
@@ -100,6 +115,8 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   sources?: SourceRef[];
+  /** 从 LLM 回复中解析出的引用上标 { index, source } */
+  citations?: Citation[];
   createdAt?: string;
 }
 
@@ -141,4 +158,50 @@ export interface ActivityItem {
   duration: number;
   status: string;
   createdAt: string;
+}
+
+/** Agent 执行事件（AgentRuntime 路径产生的 SSE 事件） */
+export interface AgentActivityEvent {
+  type: 'tool_call' | 'tool_result' | 'reasoning_summary' | 'agent_start' | 'agent_completed';
+  timestamp: number;
+  toolName?: string;
+  args?: Record<string, any>;
+  result?: string;
+  summary?: string;
+  durationMs?: number;
+  isError?: boolean;
+  status?: 'completed' | 'failed' | 'truncated';
+  tokensUsed?: { prompt: number; completion: number; total: number };
+  data?: Record<string, any>;
+}
+
+/** Trace 步骤 */
+export interface AgentTraceStep {
+  type: 'llm_call' | 'tool_call' | 'final_answer' | 'memory_load';
+  timestamp: number;
+  data: Record<string, any>;
+}
+
+/** Trace 聚合信息 */
+export interface AgentTraceSummary {
+  totalDurationMs: number;
+  llmCalls: number;
+  toolCalls: number;
+  tokensUsed: { prompt: number; completion: number; total: number };
+}
+
+/** Trace 记录 */
+export interface AgentTrace {
+  id: string;
+  sessionId: string;
+  kbId: string;
+  query: string;
+  traceId?: string;
+  status: 'running' | 'completed' | 'failed' | 'truncated';
+  startedAt: string;
+  completedAt: string | null;
+  steps: AgentTraceStep[];
+  summary: AgentTraceSummary;
+  tokensUsed: { prompt: number; completion: number; total: number };
+  errorMsg: string | null;
 }

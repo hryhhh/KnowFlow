@@ -4,7 +4,9 @@ import type { LLMConfig, RetrievalResult, SourceRef, StreamCallbacks } from '../
 
 export const DEFAULT_SYSTEM_PROMPT = `你是一个知识库助手。请根据以下参考资料回答用户问题。
 如果资料中没有相关信息，请明确告知用户，不要编造。
-回答时请尽量引用具体的来源信息，保持简洁准确。`;
+回答时请尽量引用具体的来源信息，保持简洁准确。
+引用格式要求：在需要引用参考资料的内容后，用方括号标注来源编号，例如"根据资料[1]，……"或"……学号是2023005498[1]。"。
+参考资料按顺序编号为 [1]、[2]、[3]……，你只能引用这些编号。`;
 
 export interface ChatRequest {
   query: string;

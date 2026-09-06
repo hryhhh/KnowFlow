@@ -1,6 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { Observable, Subscriber } from 'rxjs';
 import { MessageEvent } from 'http';
+import { generateTraceId } from '@knowbase-x/agents';
 import { retrieveAndChat } from '@knowbase-x/rag-engine';
 import type { RAGPipelineConfig, SearchParams, SourceRef } from '@knowbase-x/rag-engine';
 import { RAG_CONFIG } from '../../config/rag-config.provider';
@@ -37,7 +38,8 @@ export class ChatService {
   stream(body: ChatStreamBody, request?: any): Observable<MessageEvent> {
     const params = body.params ?? {};
     const startTime = Date.now();
-    const traceId = request?.traceId ?? '';
+    // 请求未带 x-trace-id 时按系统约定生成 16 位 nanoid（usage_logs.traceId 等列以此为准）
+    const traceId = request?.traceId || generateTraceId();
     const apiKeyId = request?.apiKey?.id ?? null;
 
     // 会话管理：有 sessionId 就用，否则新建
@@ -72,7 +74,7 @@ export class ChatService {
 
       const normalizedParams: SearchParams = {
         topK: params.topK ?? 10,
-        minScore: params.minScore ?? (Number(process.env.DEFAULT_MIN_SCORE) || 0.1),
+        minScore: params.minScore ?? (Number(process.env.DEFAULT_MIN_SCORE) || 0.7),
         useReranker: params.useReranker ?? false,
         denseWeight: params.denseWeight ?? 0.5,
         retrievalMode: params.retrievalMode,
@@ -87,12 +89,15 @@ export class ChatService {
       // AGENTS_ENABLED=true 时走 Agent 编排链路，否则降级传统 RAG
       if (process.env.AGENTS_ENABLED === 'true') {
         let assistantContent = '';
+        let sources: SourceRef[] = [];
         void sessionIdPromise.then(async () => {
+          // 捕获本次请求的 sessionId，避免并发请求共享变量
+          const reqSessionId = sessionId;
           // 保存用户消息
-          if (sessionId) {
-            await this.sessionService.addMessage(sessionId, 'user', body.query).catch(() => {});
+          if (reqSessionId) {
+            await this.sessionService.addMessage(reqSessionId, 'user', body.query).catch(() => {});
           }
-          emit('session_id', sessionId);
+          emit('session_id', reqSessionId);
 
           this.agentChat
             .stream(
@@ -100,7 +105,10 @@ export class ChatService {
               body.kbId,
               normalizedParams,
               {
-                onSources: (sources: SourceRef[]) => emit('sources', sources),
+                onSources: (capturedSources: SourceRef[]) => {
+                  sources = capturedSources;
+                  emit('sources', capturedSources);
+                },
                 onToken: (token: string) => {
                   assistantContent += token;
                   emit('token', token);
@@ -109,9 +117,9 @@ export class ChatService {
                   emit('done', null);
                   record('success');
                   // 保存助手回复到会话
-                  if (sessionId && assistantContent.trim()) {
+                  if (reqSessionId && assistantContent.trim()) {
                     void this.sessionService
-                      .addMessage(sessionId, 'assistant', assistantContent)
+                      .addMessage(reqSessionId, 'assistant', assistantContent, sources)
                       .catch(() => {});
                   }
                   subscriber.complete();
@@ -119,16 +127,19 @@ export class ChatService {
                 onError: (err: Error) => {
                   emit('error', err.message);
                   record('error');
-                  if (sessionId) {
+                  if (reqSessionId) {
                     void this.sessionService
-                      .addMessage(sessionId, 'assistant', `⚠️ ${err.message}`)
+                      .addMessage(reqSessionId, 'assistant', `⚠️ ${err.message}`, sources)
                       .catch(() => {});
                   }
                   subscriber.complete();
                 },
+                // AgentRuntime/Orchestrator 事件（tool_call/process/agent_completed 等）经 meta 包装转发
+                onMeta: (meta) => emit('meta', meta),
               },
               traceId,
               apiKeyId,
+              sessionId,
             )
             .catch((err: unknown) => {
               emit('error', err instanceof Error ? err.message : String(err));
@@ -141,9 +152,15 @@ export class ChatService {
 
       // 传统 RAG 单链路
       let assistantContent = '';
+      let sources: SourceRef[] = [];
       void sessionIdPromise.then(() => {
+        // 捕获本次请求的 sessionId，避免并发请求共享变量
+        const reqSessionId = sessionId;
         retrieveAndChat(body.query, body.kbId, normalizedParams, this.ragConfig, {
-          onSources: (sources: SourceRef[]) => emit('sources', sources),
+          onSources: (capturedSources: SourceRef[]) => {
+            sources = capturedSources;
+            emit('sources', capturedSources);
+          },
           onToken: (token: string) => {
             assistantContent += token;
             emit('token', token);
@@ -151,9 +168,9 @@ export class ChatService {
           onDone: () => {
             emit('done', null);
             record('success');
-            if (sessionId) {
+            if (reqSessionId) {
               void this.sessionService
-                .addMessage(sessionId, 'assistant', assistantContent)
+                .addMessage(reqSessionId, 'assistant', assistantContent, sources)
                 .catch(() => {});
             }
             subscriber.complete();
@@ -161,9 +178,9 @@ export class ChatService {
           onError: (err: Error) => {
             emit('error', err.message);
             record('error');
-            if (sessionId) {
+            if (reqSessionId) {
               void this.sessionService
-                .addMessage(sessionId, 'assistant', `⚠️ ${err.message}`)
+                .addMessage(reqSessionId, 'assistant', `⚠️ ${err.message}`, sources)
                 .catch(() => {});
             }
             subscriber.complete();

@@ -78,6 +78,38 @@ describe('Dispatcher dispatch', () => {
     expect(results[0].content).toContain('not found');
   });
 
+  it('serializes execution when allowParallel=false', async () => {
+    const executionOrder: string[] = [];
+    const agentA: Agent = {
+      id: 'a',
+      name: 'A',
+      execute: vi.fn().mockImplementation(async () => {
+        executionOrder.push('a-start');
+        await new Promise((r) => setTimeout(r, 50));
+        executionOrder.push('a-end');
+        return { id: 'r1', agent: 'a', status: 'ok', content: 'result-a', elapsedMs: 50 };
+      }),
+    };
+    const agentB: Agent = {
+      id: 'b',
+      name: 'B',
+      execute: vi.fn().mockImplementation(async () => {
+        executionOrder.push('b-start');
+        await new Promise((r) => setTimeout(r, 30));
+        executionOrder.push('b-end');
+        return { id: 'r2', agent: 'b', status: 'ok', content: 'result-b', elapsedMs: 30 };
+      }),
+    };
+    const dispatcher = new Dispatcher([agentA, agentB], 'concat' as ComposeStrategy, false);
+    const rules = [
+      { rule: makeRule('a', 10), score: 1.0 },
+      { rule: makeRule('b', 10), score: 1.0 },
+    ];
+    await dispatcher.dispatch(rules, { query: 'test', kbId: 'kb-1', traceId: 't1' }, 5000);
+    // 串行：a 全部完成后再开始 b
+    expect(executionOrder).toEqual(['a-start', 'a-end', 'b-start', 'b-end']);
+  });
+
   it('returns error for failing agent', async () => {
     const failingAgent: Agent = {
       id: 'bad-agent',

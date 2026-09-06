@@ -1,36 +1,42 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import TopStepsBar from '../../components/TopStepsBar';
+import CitationBadge from '../../components/CitationBadge';
 import { useKbStore } from '../../stores/kb-store';
-import { useChatStore } from '../../stores/chat-store';
+import { useChatStore, cleanContent } from '../../stores/chat-store';
 import { apiServiceApi } from '../../services/api';
-import type { ApiServiceItem } from '../../types';
+import type { ApiServiceItem, ProcessIndicator } from '../../types';
 import CreateServiceModal from './CreateServiceModal';
 import ApiUsagePanel from './ApiUsagePanel';
+import AgentThoughtPanel from '../../components/AgentThoughtPanel';
 import { Send, Bot, Loader2, MessageSquare, Trash2, Trash, Plus } from 'lucide-react';
 
 export default function ChatPage() {
   const { kbId } = useParams();
   const current = useKbStore((s) => s.current);
-  const {
-    messages,
-    sources,
-    searchParams,
-    isStreaming,
-    sessions,
-    currentSessionId,
-    send,
-    setParams,
-    loadSessions,
-    switchSession,
-    deleteSession,
-    clearAllSessions,
-    createSession,
-  } = useChatStore();
+  // 使用 selector 订阅每个状态，确保变化时触发重渲染
+  const messages = useChatStore((s) => s.messages);
+  const sources = useChatStore((s) => s.sources);
+  const processIndicators = useChatStore((s) => s.processIndicators);
+  const searchParams = useChatStore((s) => s.searchParams);
+  const isStreaming = useChatStore((s) => s.isStreaming);
+  const sessions = useChatStore((s) => s.sessions);
+  const currentSessionId = useChatStore((s) => s.currentSessionId);
+  const send = useChatStore((s) => s.send);
+  const setParams = useChatStore((s) => s.setParams);
+  const loadSessions = useChatStore((s) => s.loadSessions);
+  const switchSession = useChatStore((s) => s.switchSession);
+  const deleteSession = useChatStore((s) => s.deleteSession);
+  const clearAllSessions = useChatStore((s) => s.clearAllSessions);
+  const createSession = useChatStore((s) => s.createSession);
+  const agentEvents = useChatStore((s) => s.agentEvents);
+  const showAgentActivity = useChatStore((s) => s.showAgentActivity);
+  const toggleAgentActivity = useChatStore((s) => s.toggleAgentActivity);
   const [input, setInput] = useState('');
   const [services, setServices] = useState<ApiServiceItem[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   // 过滤掉空白会话（messageCount === 0），只显示有消息的会话
   const visibleSessions = sessions.filter((s) => s.messageCount > 0);
   const [showCreate, setShowCreate] = useState(false);
@@ -57,6 +63,14 @@ export default function ChatPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kbId]);
+
+  // 新消息或处理中指示器出现时自动滚动到底部
+  useEffect(() => {
+    const el = messagesEndRef.current;
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, processIndicators]);
 
   const onSubmit = () => {
     if (!kbId || !input.trim()) return;
@@ -221,17 +235,34 @@ export default function ChatPage() {
               <>
                 {messages.map((m, i) => (
                   <div key={i} className={'msg ' + m.role}>
-                    {m.content}
+                    {m.role === 'assistant'
+                      ? renderCitedContent(m.content, m.citations)
+                      : m.content}
+                    {/* Agent Activity 面板（仅在最新消息下方显示，避免重复） */}
+                    {m.role === 'assistant' &&
+                      agentEvents.length > 0 &&
+                      i === messages.length - 1 && (
+                        <AgentThoughtPanel
+                          events={agentEvents}
+                          isOpen={showAgentActivity}
+                          onToggle={toggleAgentActivity}
+                        />
+                      )}
                   </div>
                 ))}
-                {isStreaming && (
-                  <div className="msg assistant thinking">
-                    <Loader2 size={16} className="thinking-icon" />
-                    <span>正在思考…</span>
+                {processIndicators.length > 0 && (
+                  <div className="process-indicators">
+                    {processIndicators.map((p, i) => (
+                      <div key={i} className="msg assistant process-indicator">
+                        <Loader2 size={14} className="thinking-icon" />
+                        <span>{p.label}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </>
             )}
+            <div ref={messagesEndRef} />
           </div>
           <div className="chat-input">
             <input
@@ -331,4 +362,61 @@ function ParamRow({ label, children }: { label: string; children: React.ReactNod
       {children}
     </div>
   );
+}
+
+/** 将存储格式 (资料1) 转为标准格式 ([1])，并清理系统前缀 */
+function normalizeContent(content: string): string {
+  // 先清理前缀
+  let normalized = cleanContent(content);
+  // 将 "资料N" 转为 "[N]" - 匹配"资料"+1-2位数字，后面跟中文标点或行尾
+  normalized = normalized.replace(/资料(\d{1,2})(?=[，。！？、\]））]|$)/g, (_, num) => `[${num}]`);
+  return normalized;
+}
+
+/** 将 [n] 引用标记渲染为行内上标徽章（优先使用 citations，持久化后仍有效） */
+function renderCitedContent(
+  content: string,
+  citations: import('../../types').Citation[] | undefined,
+): React.ReactNode[] {
+  // 标准化内容：清理前缀并转换引用格式
+  const normalizedContent = normalizeContent(content);
+
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  // 同时匹配 [N] 和 资料N 两种格式（在标准化后的内容上匹配）
+  const re = /\[(\d+)\]/g;
+  let m: RegExpExecArray | null;
+
+  while ((m = re.exec(normalizedContent)) !== null) {
+    const idx = parseInt(m[1], 10);
+    // 从 citations 中查找对应的引用
+    const citation = citations?.find((c) => c.index === idx);
+    const source = citation?.source;
+
+    // 匹配前的普通文本（需要从原始内容中计算偏移）
+    // 由于 normalizeContent 可能改变了长度，使用 normalizedContent 的索引
+    if (m.index > lastIndex) {
+      parts.push(normalizedContent.slice(lastIndex, m.index));
+    }
+
+    // 上标徽章
+    if (source) {
+      parts.push(<CitationBadge key={`c-${m.index}`} index={idx} source={source} />);
+    } else {
+      parts.push(
+        <sup key={`c-${m.index}`} className="citation-orphan">
+          {idx}
+        </sup>,
+      );
+    }
+
+    lastIndex = m.index + m[0].length;
+  }
+
+  // 剩余文本
+  if (lastIndex < normalizedContent.length) {
+    parts.push(normalizedContent.slice(lastIndex));
+  }
+
+  return parts;
 }
