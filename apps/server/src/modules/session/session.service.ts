@@ -89,6 +89,14 @@ export class SessionService implements MemoryLoader {
     return this.sessionRepo.findOne({ where: { id } });
   }
 
+  /** 更新会话标题（首条消息发出时由前端调用） */
+  async updateTitle(id: string, title: string): Promise<void> {
+    if (!title?.trim()) return;
+    const session = await this.sessionRepo.findOne({ where: { id } });
+    if (!session) throw new NotFoundException('会话不存在');
+    await this.sessionRepo.update(id, { title: title.trim() });
+  }
+
   async getMessages(sessionId: string): Promise<SessionMessageItem[]> {
     const messages = await this.messageRepo.find({
       where: { sessionId },

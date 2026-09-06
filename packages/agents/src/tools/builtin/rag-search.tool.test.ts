@@ -32,7 +32,7 @@ describe('RagSearchTool', () => {
     const result = await tool.execute({ query: '测试查询' }, ctx);
 
     expect(mockRetrieve).toHaveBeenCalledWith('测试查询', 'kb1', {
-      topK: 5,
+      topK: 8,
       minScore: 0.5,
     });
     expect(result.isError).toBe(false);
@@ -79,6 +79,6 @@ describe('RagSearchTool', () => {
       emitEvent: vi.fn(),
     };
     await tool.execute({ query: 'x', minScore: 0.8 }, ctx);
-    expect(mockRetrieve).toHaveBeenCalledWith('x', 'kb1', { topK: 5, minScore: 0.8 });
+    expect(mockRetrieve).toHaveBeenCalledWith('x', 'kb1', { topK: 8, minScore: 0.8 });
   });
 });
