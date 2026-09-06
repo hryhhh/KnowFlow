@@ -145,8 +145,6 @@ const POSITIVE_INT_VARS = [
   'MAX_UPLOAD_SIZE_MB',
   'API_RATE_LIMIT',
   'DOCUMENT_QUEUE_ATTEMPTS',
-  'AGENT_REACT_MAX_ROUNDS',
-  'AGENT_RUNTIME_TIMEOUT_MS',
 ] as const;
 
 /** 允许为 0 的非负整数变量（0 有"禁用"语义） */

@@ -2,7 +2,13 @@ import { randomUUID } from 'node:crypto';
 import type { ToolRegistry } from '../tools/tool-registry';
 import type { AgentEvent, AgentRunParams, LLMConfig } from '../types';
 import { TraceCollector } from '../observability/trace-collector';
-import { parsePositiveInt } from '../utils';
+import { RUNTIME_DEFAULTS } from './runtime-defaults';
+
+/** AgentContext.create 的可选项：测试或调用方需要覆盖机制默认值时使用 */
+export interface AgentContextOptions {
+  /** 整体超时（毫秒），缺省取 RUNTIME_DEFAULTS.timeoutMs */
+  timeoutMs?: number;
+}
 
 /** 一条聊天消息（plain object，与 OpenAI API 格式一致） */
 export interface ChatMessage {
@@ -37,11 +43,11 @@ export class AgentContext {
   readonly emitEvent: (event: AgentEvent) => void;
   readonly trace: TraceCollector;
 
-  private constructor(params: AgentRunParams) {
+  private constructor(params: AgentRunParams, options?: AgentContextOptions) {
     this.runId = randomUUID();
 
     // 创建 AbortController，绑定整体超时
-    const timeoutMs = parsePositiveInt(process.env.AGENT_RUNTIME_TIMEOUT_MS, 30000);
+    const timeoutMs = options?.timeoutMs ?? RUNTIME_DEFAULTS.timeoutMs;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     controller.signal.addEventListener('abort', () => clearTimeout(timer));
@@ -71,8 +77,8 @@ export class AgentContext {
   }
 
   /** 静态工厂方法 */
-  static create(params: AgentRunParams): AgentContext {
-    return new AgentContext(params);
+  static create(params: AgentRunParams, options?: AgentContextOptions): AgentContext {
+    return new AgentContext(params, options);
   }
 
   private buildMessages(params: AgentRunParams): ChatMessage[] {
