@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import TopStepsBar from '../../components/TopStepsBar';
 import { traceApi } from '../../services/api';
+import { Spin } from 'antd';
 import { ChevronRight, Clock, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 import type { AgentTrace } from '../../types';
 
@@ -38,8 +39,8 @@ export default function TracePage() {
       <div className="content">
         <PageHeader title="Trace 详情" breadcrumb="" />
         <TopStepsBar active={2} />
-        <div className="empty" style={{ marginTop: 40 }}>
-          <p>加载中…</p>
+        <div style={{ padding: '80px 0', textAlign: 'center' }}>
+          <Spin size="large" />
         </div>
       </div>
     );
@@ -67,6 +68,23 @@ export default function TracePage() {
       <TopStepsBar active={2} />
 
       <div className="trace-detail" style={{ maxWidth: 900, margin: '24px auto' }}>
+        {/* 顶部导航：返回对话页（定位到产生本次 trace 的会话），kbId 缺失时降级首页 */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 12, fontSize: 13 }}>
+          <Link
+            to={
+              trace.kbId
+                ? `/knowledge-bases/${trace.kbId}/chat?sessionId=${trace.sessionId}`
+                : '/dashboard'
+            }
+            className="text-blue-500 hover:underline"
+          >
+            ← 返回对话
+          </Link>
+          <Link to="/dashboard" className="text-blue-500 hover:underline">
+            返回 Dashboard
+          </Link>
+        </div>
+
         {/* 头部概览 */}
         <div className="trace-header" style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>

@@ -6,7 +6,8 @@ import ChunkModal from './ChunkModal';
 import { chunkApi } from '../../services/api';
 import { useKbStore } from '../../stores/kb-store';
 import type { ChunkCard } from '../../types';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Button, Empty, Input, Pagination, Popconfirm } from 'antd';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 
 export default function KbChunkList() {
   const { kbId } = useParams();
@@ -49,13 +50,10 @@ export default function KbChunkList() {
   };
 
   const handleDelete = async (chunkId: string) => {
-    if (!window.confirm('确定要删除这个切片吗？')) return;
     await chunkApi.remove(chunkId);
     refresh();
     await refreshCurrent();
   };
-
-  const pages = Math.ceil(total / pageSize);
 
   return (
     <div className="content">
@@ -63,43 +61,16 @@ export default function KbChunkList() {
       <TopStepsBar active={1} />
 
       <div className="toolbar">
-        <button className="btn primary" onClick={() => setShowModal(true)}>
-          <Plus size={16} /> 新增切片
-        </button>
+        <Button type="primary" icon={<Plus size={16} />} onClick={() => setShowModal(true)}>
+          新增切片
+        </Button>
         <span style={{ color: 'var(--text-sub)' }}>共 {total} 个切片</span>
         <span className="spacer" />
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            border: '1px solid var(--border-strong)',
-            borderRadius: 'var(--radius)',
-            background: 'var(--panel)',
-            overflow: 'hidden',
-          }}
-        >
-          <Search
-            size={16}
-            style={{
-              padding: '0 8px',
-              color: 'var(--text-subtle)',
-              borderRight: '1px solid var(--border)',
-              flexShrink: 0,
-            }}
-          />
-          <input
-            className="search-input"
-            style={{ border: 'none', borderRadius: 0, boxShadow: 'none', width: 200 }}
-            placeholder="搜索切片 ID"
-          />
-        </div>
+        <Input.Search placeholder="搜索切片 ID" style={{ width: 220 }} allowClear />
       </div>
 
       {chunks.length === 0 ? (
-        <div className="empty">
-          <p>暂无切片</p>
-          <p>请先上传文档或手动添加切片</p>
-        </div>
+        <Empty description="暂无切片，请先上传文档或手动添加切片" style={{ padding: '60px 0' }} />
       ) : (
         <table className="table">
           <thead>
@@ -144,13 +115,16 @@ export default function KbChunkList() {
                   >
                     <Pencil size={14} /> 编辑
                   </button>
-                  <button
-                    className="act-btn danger"
-                    style={{ marginLeft: 6 }}
-                    onClick={() => handleDelete(c.id)}
-                  >
-                    <Trash2 size={14} /> 删除
-                  </button>
+                  <Popconfirm title="确定要删除这个切片吗？" onConfirm={() => handleDelete(c.id)}>
+                    <Button
+                      size="small"
+                      danger
+                      icon={<Trash2 size={14} />}
+                      style={{ marginLeft: 6 }}
+                    >
+                      删除
+                    </Button>
+                  </Popconfirm>
                 </td>
               </tr>
             ))}
@@ -158,19 +132,15 @@ export default function KbChunkList() {
         </table>
       )}
 
-      {pages > 1 && (
-        <div className="toolbar" style={{ marginTop: 16 }}>
-          <button className="btn" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            上一页
-          </button>
-          <span>
-            第 {page} / {pages} 页
-          </span>
-          <button className="btn" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
-            下一页
-          </button>
-        </div>
-      )}
+      <Pagination
+        style={{ marginTop: 16, textAlign: 'right' }}
+        current={page}
+        pageSize={pageSize}
+        total={total}
+        onChange={(p) => setPage(p)}
+        hideOnSinglePage
+        showTotal={(t) => `共 ${t} 个切片`}
+      />
 
       {showModal && (
         <ChunkModal

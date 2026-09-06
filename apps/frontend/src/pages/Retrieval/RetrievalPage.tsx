@@ -5,7 +5,8 @@ import TopStepsBar from '../../components/TopStepsBar';
 import { retrievalApi } from '../../services/api';
 import { useKbStore } from '../../stores/kb-store';
 import type { SearchResultItem, SearchDebugInfo, SearchParams } from '../../types';
-import { Search, Settings2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Input, Switch } from 'antd';
+import { Settings2, ChevronDown, ChevronUp } from 'lucide-react';
 
 type RetrievalMode = 'vector' | 'keyword' | 'hybrid';
 type FusionMethod = 'rrf' | 'linear';
@@ -223,18 +224,16 @@ export default function RetrievalPage() {
 
           <div className="param-row">
             <label>重排模型（Reranker）</label>
-            <span
-              className={'toggle' + (params.useReranker ? ' on' : '')}
-              onClick={() => updateParam('useReranker', !params.useReranker)}
+            <Switch
+              size="small"
+              checked={params.useReranker}
+              onChange={(v) => updateParam('useReranker', v)}
             />
           </div>
 
           <div className="param-row">
             <label>调试模式（Debug）</label>
-            <span
-              className={'toggle' + (params.debug ? ' on' : '')}
-              onClick={() => updateParam('debug', !params.debug)}
-            />
+            <Switch size="small" checked={params.debug} onChange={(v) => updateParam('debug', v)} />
             <span style={{ fontSize: 11, color: 'var(--text-sub)' }}>
               返回各通路命中明细，仅调试用
             </span>
@@ -243,45 +242,15 @@ export default function RetrievalPage() {
 
         <div className="results">
           <div className="toolbar">
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                border: '1px solid var(--border-strong)',
-                borderRadius: 'var(--radius)',
-                background: 'var(--panel)',
-                overflow: 'hidden',
-                flex: 1,
-              }}
-            >
-              <Search
-                size={16}
-                style={{
-                  padding: '0 8px',
-                  color: 'var(--text-subtle)',
-                  borderRight: '1px solid var(--border)',
-                  flexShrink: 0,
-                }}
-              />
-              <input
-                className="search-input"
-                style={{
-                  flex: 1,
-                  border: 'none',
-                  borderRadius: 0,
-                  boxShadow: 'none',
-                  width: 'auto',
-                  minWidth: 0,
-                }}
-                placeholder="输入查询词，回车检索"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && search()}
-              />
-            </div>
-            <button className="btn primary" onClick={search} disabled={loading}>
-              {loading ? '检索中…' : '检索'}
-            </button>
+            <Input.Search
+              placeholder="输入查询词，回车检索"
+              style={{ flex: 1, minWidth: 0 }}
+              allowClear
+              enterButton="检索"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onSearch={() => search()}
+            />
           </div>
 
           {/* Debug 信息面板 */}

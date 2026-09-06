@@ -45,6 +45,13 @@ export function cleanContent(text: string): string {
     .replace(/^【Web-Search】\s*\n?/, '');
 }
 
+/** 将存储格式（资料N）转为标准引用格式（[N]），并清理系统前缀 */
+export function normalizeContent(content: string): string {
+  let normalized = cleanContent(content);
+  // 匹配"资料"+1-2位数字，后面跟中文标点或行尾
+  return normalized.replace(/资料(\d{1,2})(?=[，。！？、\]））]|$)/g, (_, num) => `[${num}]`);
+}
+
 interface ChatStore {
   // 会话列表
   sessions: SessionListItem[];
@@ -170,7 +177,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ sessions: [], currentSessionId: null, messages: [], sources: [], processIndicators: [] });
   },
 
-  appendAgentEvent: (event) => set((s) => ({ agentEvents: [...s.agentEvents, event] })),
+  appendAgentEvent: (event) =>
+    set((s) => ({
+      agentEvents: [...s.agentEvents, event],
+      // 本轮首个 agent 事件到达时自动展开面板（用户手动收起后不强制再展开）
+      showAgentActivity: s.showAgentActivity || s.agentEvents.length === 0,
+    })),
 
   toggleAgentActivity: () => set((s) => ({ showAgentActivity: !s.showAgentActivity })),
 
@@ -199,10 +211,11 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       }
     }
 
-    // 添加用户消息到本地状态，并立即显示思考指示器
+    // 添加用户消息 + assistant 占位气泡（承载流式答案与实时 Agent 活动面板）
     const userMsg: ChatMessage = { role: 'user', content: query };
+    const placeholderMsg: ChatMessage = { role: 'assistant', content: '' };
     set((s) => ({
-      messages: [...s.messages, userMsg],
+      messages: [...s.messages, userMsg, placeholderMsg],
       sources: [],
       processIndicators: [{ stage: 'retrieving', label: '正在思考中…' }],
       isStreaming: true,
@@ -234,6 +247,19 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             });
           } else if (event.type === 'done') {
             set({ processIndicators: [], isStreaming: false });
+          } else if (event.type === 'answer_reset') {
+            // 工具轮次回收：流式路径中工具调用前的文本分片先清出答案区，
+            // 随后以 reasoning_summary 事件呈现在 Agent 活动面板中。
+            // 必须同时重置闭包累加器 assistant，否则下一个 token 会把旧文本整段写回
+            assistant = '';
+            set((s) => {
+              const msgs = [...s.messages];
+              const last = msgs[msgs.length - 1];
+              if (last && last.role === 'assistant' && last.content) {
+                msgs[msgs.length - 1] = { ...last, content: '' };
+              }
+              return { messages: msgs };
+            });
           } else if (
             event.type === 'tool_call' ||
             event.type === 'tool_result' ||
@@ -280,18 +306,35 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           });
         },
         onDone: () => {
-          // 清除过程指示器状态
-          set({ isStreaming: false, processIndicators: [] });
+          // 结束：清过程指示器，并把本轮 Agent 事件挂到最后一条 assistant 消息，
+          // 供会话内回看历史回答时展开当时的执行步骤
+          set((s) => {
+            const msgs = [...s.messages];
+            const last = msgs[msgs.length - 1];
+            if (last && last.role === 'assistant' && s.agentEvents.length > 0) {
+              msgs[msgs.length - 1] = { ...last, agentEvents: [...s.agentEvents] };
+            }
+            return { isStreaming: false, processIndicators: [], messages: msgs };
+          });
         },
         onError: (msg) => {
-          set((s) => ({
-            isStreaming: false,
-            processIndicators: [],
-            messages: [
-              ...s.messages,
-              { role: 'assistant', content: `⚠️ ${msg}`, sources, citations: [] },
-            ],
-          }));
+          set((s) => {
+            const msgs = [...s.messages];
+            const last = msgs[msgs.length - 1];
+            const errMsg: ChatMessage = {
+              role: 'assistant',
+              content: `⚠️ ${msg}`,
+              sources,
+              citations: [],
+            };
+            if (last && last.role === 'assistant' && !last.content) {
+              // 占位气泡尚未收到任何答案 → 原地替换为错误消息
+              msgs[msgs.length - 1] = errMsg;
+            } else {
+              msgs.push(errMsg);
+            }
+            return { isStreaming: false, processIndicators: [], messages: msgs };
+          });
         },
       },
       { sessionId },

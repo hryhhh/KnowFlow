@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Col, Input, Popconfirm, Row, Space, Steps, Tag } from 'antd';
+import { Button, Card, Col, Input, Popconfirm, Row, Space, Steps, Tag, Spin } from 'antd';
 import {
   DatabaseOutlined,
   FileTextOutlined,
@@ -260,7 +260,9 @@ export default function KnowledgeBaseList() {
 
       {/* Content */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: '#86909c' }}>加载中…</div>
+        <div style={{ padding: '80px 0', textAlign: 'center' }}>
+          <Spin size="large" />
+        </div>
       ) : list.length === 0 ? (
         <div
           style={{

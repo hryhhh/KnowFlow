@@ -1,14 +1,14 @@
 import { useEffect, useState, useRef } from 'react';
 import type { ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Select, Tooltip } from 'antd';
+import { Alert, Empty, Input, Popconfirm, Progress, Select, Tooltip, Button } from 'antd';
 import PageHeader from '../../components/PageHeader';
 import TopStepsBar from '../../components/TopStepsBar';
 import StatusBadge from '../../components/StatusBadge';
 import { docApi } from '../../services/api';
 import { useKbStore } from '../../stores/kb-store';
 import type { DocListItem } from '../../types';
-import { Upload, Search, Trash2, Cpu } from 'lucide-react';
+import { Upload, Trash2, Cpu } from 'lucide-react';
 
 type ParseStrategy = 'mineru' | 'mineru-agent' | 'basic';
 
@@ -90,13 +90,14 @@ export default function DocumentList() {
       <TopStepsBar active={1} />
 
       <div className="toolbar">
-        <button
-          className="btn primary"
+        <Button
+          type="primary"
+          icon={<Upload size={16} />}
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
         >
-          <Upload size={16} /> {uploading ? '上传中…' : '上传文档'}
-        </button>
+          {uploading ? '上传中…' : '上传文档'}
+        </Button>
         <input
           ref={fileRef}
           type="file"
@@ -119,39 +120,24 @@ export default function DocumentList() {
           />
         </div>
         <span className="spacer" />
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            border: '1px solid var(--border-strong)',
-            borderRadius: 'var(--radius)',
-            background: 'var(--panel)',
-            overflow: 'hidden',
-          }}
-        >
-          <Search
-            size={16}
-            style={{
-              padding: '0 8px',
-              color: 'var(--text-subtle)',
-              borderRight: '1px solid var(--border)',
-              flexShrink: 0,
-            }}
-          />
-          <input
-            className="search-input"
-            style={{ border: 'none', borderRadius: 0, boxShadow: 'none', width: 200 }}
-            placeholder="搜索文件名"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+        <Input.Search
+          placeholder="搜索文件名"
+          style={{ width: 220 }}
+          allowClear
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
 
       {error && (
-        <div className="badge failed" style={{ marginBottom: 12, display: 'inline-block' }}>
-          {error}
-        </div>
+        <Alert
+          type="error"
+          showIcon
+          message={error}
+          style={{ marginBottom: 12 }}
+          closable
+          onClose={() => setError('')}
+        />
       )}
 
       {/* 拖拽上传区 */}
@@ -180,10 +166,10 @@ export default function DocumentList() {
       </div>
 
       {docs.length === 0 ? (
-        <div className="empty">
-          <p>暂无文档</p>
-          <p>上传 CSV / XLSX / PDF / Word 开始</p>
-        </div>
+        <Empty
+          description="暂无文档，上传 CSV / XLSX / PDF / Word 开始"
+          style={{ padding: '60px 0' }}
+        />
       ) : (
         <>
           <table className="table">
@@ -208,32 +194,11 @@ export default function DocumentList() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <StatusBadge status={d.status} />
                       {d.status === 'processing' && (
-                        <div
-                          style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 80 }}
-                        >
-                          <div
-                            style={{
-                              flex: 1,
-                              height: 4,
-                              background: 'var(--border)',
-                              borderRadius: 2,
-                              overflow: 'hidden',
-                            }}
-                          >
-                            <div
-                              style={{
-                                width: `${d.progress ?? 0}%`,
-                                height: '100%',
-                                background: 'var(--primary)',
-                                borderRadius: 2,
-                                transition: 'width 0.3s ease',
-                              }}
-                            />
-                          </div>
-                          <span style={{ fontSize: 11, color: 'var(--text-subtle)' }}>
-                            {d.progress ?? 0}%
-                          </span>
-                        </div>
+                        <Progress
+                          size="small"
+                          percent={d.progress ?? 0}
+                          style={{ minWidth: 100, marginBottom: 0 }}
+                        />
                       )}
                       {d.status === 'failed' && d.errorMessage && (
                         <Tooltip title={d.errorMessage}>
@@ -266,13 +231,19 @@ export default function DocumentList() {
                     >
                       切片详情
                     </button>
-                    <button
-                      className="act-btn danger"
-                      style={{ marginLeft: 6 }}
-                      onClick={() => deleteDoc(d.kbId, d.id)}
+                    <Popconfirm
+                      title="确定要删除该文档吗？"
+                      onConfirm={() => deleteDoc(d.kbId, d.id)}
                     >
-                      <Trash2 size={14} /> 删除
-                    </button>
+                      <Button
+                        size="small"
+                        danger
+                        icon={<Trash2 size={14} />}
+                        style={{ marginLeft: 6 }}
+                      >
+                        删除
+                      </Button>
+                    </Popconfirm>
                   </td>
                 </tr>
               ))}
