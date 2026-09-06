@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { App, Popconfirm, Switch } from 'antd';
+import { App, InputNumber, Popconfirm, Slider, Switch } from 'antd';
 import PageHeader from '../../components/PageHeader';
 import TopStepsBar from '../../components/TopStepsBar';
 import MarkdownAnswer from '../../components/MarkdownAnswer';
@@ -314,20 +314,22 @@ export default function ChatPage() {
             调整检索参数，预览知识库命中效果
           </p>
           <ParamRow label="结果返回数量">
-            <input
-              className="input"
-              type="number"
+            <InputNumber
+              style={{ width: '100%' }}
+              min={1}
+              max={50}
               value={searchParams.topK}
-              onChange={(e) => setParams({ topK: Number(e.target.value) })}
+              onChange={(v) => setParams({ topK: Number(v ?? 10) })}
             />
           </ParamRow>
           <ParamRow label="最低相似度">
-            <input
-              className="input"
-              type="number"
-              step="0.01"
+            <InputNumber
+              style={{ width: '100%' }}
+              step={0.01}
+              min={0}
+              max={1}
               value={searchParams.minScore}
-              onChange={(e) => setParams({ minScore: Number(e.target.value) })}
+              onChange={(v) => setParams({ minScore: Number(v ?? 0.7) })}
             />
           </ParamRow>
           <ParamRow label="重排模型">
@@ -338,12 +340,12 @@ export default function ChatPage() {
             />
           </ParamRow>
           <ParamRow label="Dense Weight">
-            <input
-              className="input"
-              type="number"
-              step="0.1"
+            <Slider
+              min={0}
+              max={1}
+              step={0.1}
               value={searchParams.denseWeight}
-              onChange={(e) => setParams({ denseWeight: Number(e.target.value) })}
+              onChange={(v) => setParams({ denseWeight: v })}
             />
           </ParamRow>
 

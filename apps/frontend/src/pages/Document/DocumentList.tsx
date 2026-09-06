@@ -1,14 +1,26 @@
-import { useEffect, useState, useRef } from 'react';
-import type { ChangeEvent } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Alert, Empty, Input, Popconfirm, Progress, Select, Tooltip, Button } from 'antd';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  Alert,
+  Button,
+  Empty,
+  Input,
+  Popconfirm,
+  Progress,
+  Select,
+  Table,
+  Tooltip,
+  Upload,
+} from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import { InboxOutlined } from '@ant-design/icons';
+import { Trash2 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import TopStepsBar from '../../components/TopStepsBar';
 import StatusBadge from '../../components/StatusBadge';
 import { docApi } from '../../services/api';
 import { useKbStore } from '../../stores/kb-store';
 import type { DocListItem } from '../../types';
-import { Upload, Trash2, Cpu } from 'lucide-react';
 
 type ParseStrategy = 'mineru' | 'mineru-agent' | 'basic';
 
@@ -27,7 +39,6 @@ export default function DocumentList() {
   const [search, setSearch] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
-  const [dragOver, setDragOver] = useState(false);
   const [selectedStrategy, setSelectedStrategy] = useState<ParseStrategy>('mineru-agent');
 
   const load = async () => {
@@ -48,8 +59,6 @@ export default function DocumentList() {
     return () => clearInterval(interval);
   }, [kbId, search]);
 
-  const fileRef = useRef<HTMLInputElement>(null);
-
   const onUpload = async (file: File) => {
     if (!kbId || !file) return;
     setUploading(true);
@@ -65,24 +74,84 @@ export default function DocumentList() {
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) onUpload(file);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
-
-  const handleDragLeave = () => setDragOver(false);
-
-  const deleteDoc = async (kbId: string, docId: string) => {
-    await docApi.remove(kbId, docId);
+  const deleteDoc = async (docKbId: string, docId: string) => {
+    await docApi.remove(docKbId, docId);
     await load();
     await refreshCurrent();
   };
+
+  const columns: ColumnsType<DocListItem> = [
+    {
+      title: '文档名称',
+      dataIndex: 'name',
+      ellipsis: true,
+      render: (name: string) => <strong>{name}</strong>,
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 180,
+      render: (_, d) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <StatusBadge status={d.status} />
+          {d.status === 'processing' && (
+            <Progress
+              size="small"
+              percent={d.progress ?? 0}
+              style={{ minWidth: 100, marginBottom: 0 }}
+            />
+          )}
+          {d.status === 'failed' && d.errorMessage && (
+            <Tooltip title={d.errorMessage}>
+              <span
+                style={{
+                  fontSize: 11,
+                  color: 'var(--danger, #ff4d4f)',
+                  cursor: 'help',
+                  maxWidth: 200,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  display: 'block',
+                }}
+              >
+                {d.errorMessage.slice(0, 200)}
+              </span>
+            </Tooltip>
+          )}
+        </div>
+      ),
+    },
+    { title: '处理策略', dataIndex: 'strategy', width: 120, render: (v: string) => v || '—' },
+    { title: '切片数', dataIndex: 'chunkCount', width: 90 },
+    { title: '导入方式', dataIndex: 'importMethod', width: 110 },
+    {
+      title: '更新时间',
+      dataIndex: 'updatedAt',
+      width: 160,
+      render: (v: string) => <span style={{ color: 'var(--text-subtle)', fontSize: 12 }}>{v}</span>,
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 200,
+      render: (_, d) => (
+        <>
+          <Button
+            size="small"
+            onClick={() => navigate(`/knowledge-bases/${kbId}/documents/${d.id}/chunks`)}
+          >
+            切片详情
+          </Button>
+          <Popconfirm title="确定要删除该文档吗？" onConfirm={() => deleteDoc(d.kbId, d.id)}>
+            <Button size="small" danger icon={<Trash2 size={14} />} style={{ marginLeft: 6 }}>
+              删除
+            </Button>
+          </Popconfirm>
+        </>
+      ),
+    },
+  ];
 
   return (
     <div className="content">
@@ -90,27 +159,8 @@ export default function DocumentList() {
       <TopStepsBar active={1} />
 
       <div className="toolbar">
-        <Button
-          type="primary"
-          icon={<Upload size={16} />}
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
-        >
-          {uploading ? '上传中…' : '上传文档'}
-        </Button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".csv,.xlsx,.xls,.pdf,.docx,.doc"
-          style={{ display: 'none' }}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => {
-            const file = e.target.files?.[0];
-            if (file) onUpload(file);
-          }}
-        />
         <span style={{ color: 'var(--text-sub)', fontSize: 12 }}>支持 CSV / XLSX / PDF / Word</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Cpu size={14} style={{ color: 'var(--text-subtle)', flexShrink: 0 }} />
           <Select
             value={selectedStrategy}
             onChange={(v) => setSelectedStrategy(v as ParseStrategy)}
@@ -140,117 +190,44 @@ export default function DocumentList() {
         />
       )}
 
-      {/* 拖拽上传区 */}
-      <div
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onClick={() => fileRef.current?.click()}
-        style={{
-          border: `2px dashed ${dragOver ? 'var(--primary)' : 'var(--border-strong)'}`,
-          borderRadius: 'var(--radius-lg)',
-          padding: '24px',
-          textAlign: 'center',
-          margin: '0 0 16px',
-          cursor: 'pointer',
-          background: dragOver ? 'var(--primary-soft)' : 'transparent',
-          transition: 'all 0.2s',
+      {/* 拖拽上传区（antd Upload.Dragger，beforeUpload 返回 false 走自定义上传） */}
+      <Upload.Dragger
+        accept=".csv,.xlsx,.xls,.pdf,.docx,.doc"
+        showUploadList={false}
+        multiple={false}
+        disabled={uploading}
+        beforeUpload={(file) => {
+          onUpload(file);
+          return false;
         }}
+        style={{ marginBottom: 16, background: 'var(--panel)' }}
       >
-        <div style={{ color: 'var(--text)', fontWeight: 500 }}>
-          {dragOver ? '拖放文件到此处上传' : '拖放文件到此处，或点击选择文件'}
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--text-subtle)', marginTop: 4 }}>
+        <p className="ant-upload-drag-icon">
+          <InboxOutlined />
+        </p>
+        <p className="ant-upload-text" style={{ fontSize: 14 }}>
+          {uploading ? '上传中…' : '拖放文件到此处，或点击选择文件'}
+        </p>
+        <p className="ant-upload-hint" style={{ fontSize: 12 }}>
           支持 CSV / XLSX / PDF / DOCX / DOC 格式
-        </div>
-      </div>
+        </p>
+      </Upload.Dragger>
 
-      {docs.length === 0 ? (
-        <Empty
-          description="暂无文档，上传 CSV / XLSX / PDF / Word 开始"
-          style={{ padding: '60px 0' }}
-        />
-      ) : (
-        <>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>文档名称</th>
-                <th>状态</th>
-                <th>处理策略</th>
-                <th>切片数</th>
-                <th>导入方式</th>
-                <th>更新时间</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {docs.map((d) => (
-                <tr key={d.id}>
-                  <td>
-                    <strong>{d.name}</strong>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <StatusBadge status={d.status} />
-                      {d.status === 'processing' && (
-                        <Progress
-                          size="small"
-                          percent={d.progress ?? 0}
-                          style={{ minWidth: 100, marginBottom: 0 }}
-                        />
-                      )}
-                      {d.status === 'failed' && d.errorMessage && (
-                        <Tooltip title={d.errorMessage}>
-                          <span
-                            style={{
-                              fontSize: 11,
-                              color: 'var(--danger)',
-                              cursor: 'help',
-                              maxWidth: 200,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              display: 'block',
-                            }}
-                          >
-                            {d.errorMessage.slice(0, 200)}
-                          </span>
-                        </Tooltip>
-                      )}
-                    </div>
-                  </td>
-                  <td>{d.strategy || '—'}</td>
-                  <td>{d.chunkCount}</td>
-                  <td>{d.importMethod}</td>
-                  <td style={{ color: 'var(--text-subtle)', fontSize: 12 }}>{d.updatedAt}</td>
-                  <td>
-                    <button
-                      className="act-btn"
-                      onClick={() => navigate(`/knowledge-bases/${kbId}/documents/${d.id}/chunks`)}
-                    >
-                      切片详情
-                    </button>
-                    <Popconfirm
-                      title="确定要删除该文档吗？"
-                      onConfirm={() => deleteDoc(d.kbId, d.id)}
-                    >
-                      <Button
-                        size="small"
-                        danger
-                        icon={<Trash2 size={14} />}
-                        style={{ marginLeft: 6 }}
-                      >
-                        删除
-                      </Button>
-                    </Popconfirm>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
+      <Table
+        rowKey="id"
+        size="small"
+        columns={columns}
+        dataSource={docs}
+        locale={{
+          emptyText: (
+            <Empty
+              description="暂无文档，上传 CSV / XLSX / PDF / Word 开始"
+              style={{ padding: '40px 0' }}
+            />
+          ),
+        }}
+        pagination={false}
+      />
     </div>
   );
 }

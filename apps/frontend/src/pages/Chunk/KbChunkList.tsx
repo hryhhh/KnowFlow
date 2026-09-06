@@ -6,7 +6,8 @@ import ChunkModal from './ChunkModal';
 import { chunkApi } from '../../services/api';
 import { useKbStore } from '../../stores/kb-store';
 import type { ChunkCard } from '../../types';
-import { Button, Empty, Input, Pagination, Popconfirm } from 'antd';
+import { Button, Input, Popconfirm, Table } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 
 export default function KbChunkList() {
@@ -55,6 +56,62 @@ export default function KbChunkList() {
     await refreshCurrent();
   };
 
+  const columns: ColumnsType<ChunkCard> = [
+    {
+      title: '切片 ID',
+      key: 'index',
+      width: 80,
+      render: (_, c) => (
+        <span style={{ fontSize: 12, color: 'var(--text-subtle)' }}>#{c.index + 1}</span>
+      ),
+    },
+    {
+      title: '标题',
+      dataIndex: 'title',
+      width: 160,
+      ellipsis: true,
+      render: (t: string) => <strong>{t || '—'}</strong>,
+    },
+    { title: '内容预览', dataIndex: 'contentPreview', ellipsis: true },
+    {
+      title: '来源文件',
+      dataIndex: 'sourceFile',
+      ellipsis: true,
+      render: (v: string) => <span style={{ fontSize: 12 }}>{v}</span>,
+    },
+    { title: '字节数', dataIndex: 'tokenCount', width: 90 },
+    {
+      title: '更新时间',
+      dataIndex: 'updatedAt',
+      width: 150,
+      render: (v: string) => <span style={{ fontSize: 12, color: 'var(--text-subtle)' }}>{v}</span>,
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 170,
+      render: (_, c) => (
+        <>
+          <Button
+            size="small"
+            icon={<Pencil size={14} />}
+            onClick={() => {
+              setEditingChunk(c);
+              setShowModal(true);
+            }}
+          >
+            编辑
+          </Button>
+          <Popconfirm title="确定要删除这个切片吗？" onConfirm={() => handleDelete(c.id)}>
+            <Button size="small" danger icon={<Trash2 size={14} />} style={{ marginLeft: 6 }}>
+              删除
+            </Button>
+          </Popconfirm>
+        </>
+      ),
+    },
+  ];
+
   return (
     <div className="content">
       <PageHeader title="切片管理" breadcrumb={current?.name ?? kbId} />
@@ -69,77 +126,20 @@ export default function KbChunkList() {
         <Input.Search placeholder="搜索切片 ID" style={{ width: 220 }} allowClear />
       </div>
 
-      {chunks.length === 0 ? (
-        <Empty description="暂无切片，请先上传文档或手动添加切片" style={{ padding: '60px 0' }} />
-      ) : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>切片 ID</th>
-              <th>标题</th>
-              <th>内容预览</th>
-              <th>来源文件</th>
-              <th>字节数</th>
-              <th>更新时间</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {chunks.map((c) => (
-              <tr key={c.id}>
-                <td style={{ fontSize: 12, color: 'var(--text-subtle)' }}>#{c.index + 1}</td>
-                <td>
-                  <strong>{c.title || '—'} </strong>
-                </td>
-                <td
-                  style={{
-                    maxWidth: 300,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    color: 'var(--text-sub)',
-                  }}
-                >
-                  {c.contentPreview}
-                </td>
-                <td style={{ fontSize: 12 }}>{c.sourceFile}</td>
-                <td>{c.tokenCount}</td>
-                <td style={{ fontSize: 12, color: 'var(--text-subtle)' }}>{c.updatedAt}</td>
-                <td>
-                  <button
-                    className="act-btn"
-                    onClick={() => {
-                      setEditingChunk(c);
-                      setShowModal(true);
-                    }}
-                  >
-                    <Pencil size={14} /> 编辑
-                  </button>
-                  <Popconfirm title="确定要删除这个切片吗？" onConfirm={() => handleDelete(c.id)}>
-                    <Button
-                      size="small"
-                      danger
-                      icon={<Trash2 size={14} />}
-                      style={{ marginLeft: 6 }}
-                    >
-                      删除
-                    </Button>
-                  </Popconfirm>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <Pagination
-        style={{ marginTop: 16, textAlign: 'right' }}
-        current={page}
-        pageSize={pageSize}
-        total={total}
-        onChange={(p) => setPage(p)}
-        hideOnSinglePage
-        showTotal={(t) => `共 ${t} 个切片`}
+      <Table
+        rowKey="id"
+        size="small"
+        columns={columns}
+        dataSource={chunks}
+        locale={{ emptyText: '暂无切片，请先上传文档或手动添加切片' }}
+        pagination={{
+          current: page,
+          pageSize,
+          total,
+          onChange: (p) => setPage(p),
+          hideOnSinglePage: true,
+          showTotal: (t) => `共 ${t} 个切片`,
+        }}
       />
 
       {showModal && (

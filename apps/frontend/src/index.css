@@ -255,39 +255,6 @@ button {
 .input:focus,
 
 
-/* ===== Table ===== */
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--panel);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border);
-}
-
-.table th,
-.table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-}
-
-.table th {
-  background: #fafafa;
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--text-sub);
-}
-
-.table tr:last-child td {
-  border-bottom: none;
-}
-
-.table tr:hover td {
-  background: #fafafa;
-}
-
 /* ===== Cards ===== */
 .kb-grid {
   display: grid;
@@ -366,39 +333,6 @@ button {
 /* ===== Badge / Status ===== */
 
 /* ===== Modal ===== */
-
-/* ===== Table action buttons ===== */
-.act-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 3px 10px;
-  font-size: 13px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-strong);
-  background: var(--panel);
-  color: var(--text-sub);
-  cursor: pointer;
-  transition: all 0.15s;
-  line-height: 1.5;
-  height: 26px;
-}
-
-.act-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.act-btn.danger {
-  color: var(--error);
-  border-color: #ffa39e;
-}
-
-.act-btn.danger:hover {
-  background: var(--error-bg);
-  border-color: var(--error);
-  color: var(--error);
-}
 
 /* ===== Empty State ===== */
 .empty {
