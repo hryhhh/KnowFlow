@@ -39,8 +39,26 @@ describe('tokenize', () => {
 });
 
 describe('tokensToTsvString', () => {
-  it('should join tokens with spaces', () => {
-    expect(tokensToTsvString(['如何', '重置', '密码'])).toBe('如何 重置 密码');
+  it('should quote each lexeme', () => {
+    expect(tokensToTsvString(['如何', '重置', '密码'])).toBe("'如何' '重置' '密码'");
+  });
+
+  it('should quote bare-punctuation tokens so they do not break tsvector', () => {
+    // tokenize() 把 URL 拆成单字符 token（含 ':' '/'），裸冒号会使 tsvector 解析失败
+    expect(tokensToTsvString(['https', ':', '/', 'example', 'com'])).toBe(
+      "'https' ':' '/' 'example' 'com'",
+    );
+  });
+
+  it('should escape single quotes inside tokens', () => {
+    // token `'` → 引号包裹 + 内部翻倍 = ''''，恰好是合法 tsvector
+    expect(tokensToTsvString(['it', "'"])).toBe("'it' ''''");
+  });
+
+  it('should produce a string valid as tsvector for url-like content', () => {
+    const tsv = tokensToTsvString(tokenize('文档见 https://example.com/a_b?x=1'));
+    // 不抛错且能被 tsvector 解析的特征：每个 lexeme 都被单引号包裹
+    expect(tsv).toMatch(/^('[^']*')( '[^']*')*$/);
   });
 
   it('should return empty string for empty input', () => {

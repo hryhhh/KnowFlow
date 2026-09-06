@@ -35,6 +35,13 @@ export class Chunk {
   @Column({ type: 'text', nullable: true })
   chunkId: string;
 
+  /**
+   * tsvector 列，用于 PostgreSQL 全文检索（TSV 向量）。
+   * 由 ingest pipeline 在文本处理后写入。
+   */
+  @Column({ type: 'tsvector', nullable: true })
+  tsv: any;
+
   @CreateDateColumn()
   createdAt: Date;
 }

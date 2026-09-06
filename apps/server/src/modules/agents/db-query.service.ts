@@ -46,7 +46,6 @@ export class DbQueryService implements OnModuleDestroy {
     const possiblePaths = [
       path.resolve(process.cwd(), 'config/db-queries.yml'),
       path.resolve(__dirname, '../../../../config/db-queries.yml'),
-      path.resolve('/home/hhhry/projects/knowledge-ai-main/config/db-queries.yml'),
     ];
 
     for (const p of possiblePaths) {

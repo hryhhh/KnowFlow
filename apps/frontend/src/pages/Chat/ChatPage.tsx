@@ -10,6 +10,7 @@ import { apiServiceApi } from '../../services/api';
 import type { ApiServiceItem, ProcessIndicator } from '../../types';
 import CreateServiceModal from './CreateServiceModal';
 import ApiUsagePanel from './ApiUsagePanel';
+import AgentThoughtPanel from '../../components/AgentThoughtPanel';
 import { Send, Bot, Loader2, MessageSquare, Trash2, Trash, Plus } from 'lucide-react';
 
 export default function ChatPage() {
@@ -30,6 +31,9 @@ export default function ChatPage() {
   const deleteSession = useChatStore((s) => s.deleteSession);
   const clearAllSessions = useChatStore((s) => s.clearAllSessions);
   const createSession = useChatStore((s) => s.createSession);
+  const agentEvents = useChatStore((s) => s.agentEvents);
+  const showAgentActivity = useChatStore((s) => s.showAgentActivity);
+  const toggleAgentActivity = useChatStore((s) => s.toggleAgentActivity);
   const [input, setInput] = useState('');
   const [services, setServices] = useState<ApiServiceItem[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -234,6 +238,16 @@ export default function ChatPage() {
                     {m.role === 'assistant'
                       ? renderCitedContent(m.content, m.citations)
                       : m.content}
+                    {/* Agent Activity 面板（仅在最新消息下方显示，避免重复） */}
+                    {m.role === 'assistant' &&
+                      agentEvents.length > 0 &&
+                      i === messages.length - 1 && (
+                        <AgentThoughtPanel
+                          events={agentEvents}
+                          isOpen={showAgentActivity}
+                          onToggle={toggleAgentActivity}
+                        />
+                      )}
                   </div>
                 ))}
                 {processIndicators.length > 0 && (

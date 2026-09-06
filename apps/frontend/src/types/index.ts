@@ -159,3 +159,49 @@ export interface ActivityItem {
   status: string;
   createdAt: string;
 }
+
+/** Agent 执行事件（AgentRuntime 路径产生的 SSE 事件） */
+export interface AgentActivityEvent {
+  type: 'tool_call' | 'tool_result' | 'reasoning_summary' | 'agent_start' | 'agent_completed';
+  timestamp: number;
+  toolName?: string;
+  args?: Record<string, any>;
+  result?: string;
+  summary?: string;
+  durationMs?: number;
+  isError?: boolean;
+  status?: 'completed' | 'failed' | 'truncated';
+  tokensUsed?: { prompt: number; completion: number; total: number };
+  data?: Record<string, any>;
+}
+
+/** Trace 步骤 */
+export interface AgentTraceStep {
+  type: 'llm_call' | 'tool_call' | 'final_answer' | 'memory_load';
+  timestamp: number;
+  data: Record<string, any>;
+}
+
+/** Trace 聚合信息 */
+export interface AgentTraceSummary {
+  totalDurationMs: number;
+  llmCalls: number;
+  toolCalls: number;
+  tokensUsed: { prompt: number; completion: number; total: number };
+}
+
+/** Trace 记录 */
+export interface AgentTrace {
+  id: string;
+  sessionId: string;
+  kbId: string;
+  query: string;
+  traceId?: string;
+  status: 'running' | 'completed' | 'failed' | 'truncated';
+  startedAt: string;
+  completedAt: string | null;
+  steps: AgentTraceStep[];
+  summary: AgentTraceSummary;
+  tokensUsed: { prompt: number; completion: number; total: number };
+  errorMsg: string | null;
+}

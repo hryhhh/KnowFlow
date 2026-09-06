@@ -11,7 +11,8 @@ export interface StreamHandlers {
   onToken: (token: string) => void;
   onDone: () => void;
   onError: (message: string) => void;
-  onMeta?: (event: { type: string; value: unknown }) => void;
+  /** Agent SSE 事件回调（process / tool_call / tool_result / agent_completed 等） */
+  onMeta?: (event: any) => void;
 }
 
 export async function streamChat(
@@ -21,14 +22,12 @@ export async function streamChat(
   handlers: StreamHandlers,
   options?: { sessionId?: string },
 ): Promise<{ sessionId: string }> {
-  
   const response = await fetch('/api/chat/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ kbId, query, sessionId: options?.sessionId, params }),
   });
-  
-  
+
   if (!response.ok || !response.body) {
     handlers.onError(`请求失败: ${response.status}`);
     return { sessionId: '' };
@@ -54,7 +53,7 @@ export async function streamChat(
       if (!payload) continue;
       try {
         const event = JSON.parse(payload);
-        
+
         switch (event.type) {
           case 'session_id':
             sessionId = event.value as string;
@@ -74,6 +73,19 @@ export async function streamChat(
           case 'process':
             handlers.onMeta?.({ type: 'process', value: event.value });
             break;
+          case 'tool_call':
+          case 'tool_result':
+          case 'reasoning_summary':
+          case 'agent_completed':
+          case 'trace':
+          case 'agent_start':
+          case 'agent_done':
+            handlers.onMeta?.(event);
+            break;
+          case 'meta':
+            // Controller 包装层：{ type: 'meta', value: innerEvent }
+            handlers.onMeta?.(event.value);
+            break;
           default:
             handlers.onMeta?.(event);
         }
@@ -82,6 +94,6 @@ export async function streamChat(
       }
     }
   }
-  
+
   return { sessionId };
 }

@@ -8,7 +8,6 @@ import { IntentRouter } from './router/intent-router';
 export class Orchestrator {
   private readonly router: IntentRouter;
   private readonly dispatcher: Dispatcher;
-  private readonly strategy: ComposeStrategy;
 
   constructor(
     router: IntentRouter,
@@ -18,7 +17,6 @@ export class Orchestrator {
   ) {
     this.router = router;
     this.dispatcher = new Dispatcher(agents, strategy, allowParallel);
-    this.strategy = strategy;
   }
 
   /**
@@ -53,7 +51,8 @@ export class Orchestrator {
 
     // 标记合成策略使用情况（在 compose 之后，因为 rag-priority 是动态判断的）
     const composeUsedRagPriority =
-      this.strategy === 'rag-priority' && agentResults.some((r) => r.agent === 'ragflow');
+      this.dispatcher.strategy === 'rag-priority' &&
+      agentResults.some((r) => r.agent === 'ragflow');
 
     return {
       traceId,

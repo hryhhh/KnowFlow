@@ -19,8 +19,8 @@ export class UsageLog {
   @Column({ type: 'varchar', length: 64, nullable: true })
   apiKeyId: string | null;
 
-  /** 链路追踪 ID（agent 编排时填充） */
-  @Column({ type: 'varchar', length: 32, nullable: true })
+  /** 链路追踪 ID（agent 编排时填充；64 位容纳 UUID/nanoid 及外部 x-trace-id） */
+  @Column({ type: 'varchar', length: 64, nullable: true })
   traceId: string | null;
 
   /** 调用耗时（毫秒） */

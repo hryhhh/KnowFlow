@@ -40,6 +40,7 @@ KnowBase X 当前是一个多 Agent 路由的 RAG 问答平台（[08-agent-orche
 ### 决策 4：Trace 存储方案
 
 首期新建 `agent_traces` 单表（JSONB 存 steps），不拆多表。与 `usage_logs` 职责分离：
+
 - `usage_logs`：调用统计（次数、耗时、状态）
 - `agent_traces`：执行详情（每步 LLM/Tool 调用、token 消耗）
 
@@ -47,12 +48,12 @@ KnowBase X 当前是一个多 Agent 路由的 RAG 问答平台（[08-agent-orche
 
 ## 三、子 PRD 索引
 
-| 文档 | 内容范围 | 所属 Phase | 主要修改文件 |
-|------|---------|-----------|------------|
-| [13-agent-tool-system-prd.md](13-agent-tool-system-prd.md) | Tool 抽象层 + 5 个内置工具 + LegacyAdapter | Phase 1 | `packages/agents/src/tools/` |
-| [14-agent-runtime-prd.md](14-agent-runtime-prd.md) | AgentRuntime + ReAct 循环 + 对话记忆 + Trace 表 | Phase 1-2 | `packages/agents/src/runtime/` + DB migration |
-| [15-agent-observability-prd.md](15-agent-observability-prd.md) | SSE 事件协议 + Trace API + 后端集成 | Phase 2 | `apps/server/src/modules/agents/trace/` |
-| [16-agent-frontend-prd.md](16-agent-frontend-prd.md) | AgentActivity 面板 + chat-store + sse.ts 改造 | Phase 1-2 | `apps/frontend/src/` |
+| 文档                                                           | 内容范围                                        | 所属 Phase | 主要修改文件                                  |
+| -------------------------------------------------------------- | ----------------------------------------------- | ---------- | --------------------------------------------- |
+| [13-agent-tool-system-prd.md](13-agent-tool-system-prd.md)     | Tool 抽象层 + 5 个内置工具 + LegacyAdapter      | Phase 1    | `packages/agents/src/tools/`                  |
+| [14-agent-runtime-prd.md](14-agent-runtime-prd.md)             | AgentRuntime + ReAct 循环 + 对话记忆 + Trace 表 | Phase 1-2  | `packages/agents/src/runtime/` + DB migration |
+| [15-agent-observability-prd.md](15-agent-observability-prd.md) | SSE 事件协议 + Trace API + 后端集成             | Phase 2    | `apps/server/src/modules/agents/trace/`       |
+| [16-agent-frontend-prd.md](16-agent-frontend-prd.md)           | AgentActivity 面板 + chat-store + sse.ts 改造   | Phase 1-2  | `apps/frontend/src/`                          |
 
 ---
 
@@ -79,37 +80,37 @@ Phase 1 (3周)                    Phase 2 (2周)               Phase 3 (2周)
 
 ## 五、环境变量汇总
 
-| 变量名 | 默认值 | Phase | 说明 |
-|-------|-------|-------|------|
-| `AGENT_RUNTIME_ENABLED` | `false` | P1 | 是否启用 AgentRuntime |
-| `AGENT_REACT_MAX_ROUNDS` | `5` | P1 | ReAct 最大推理轮数 |
-| `AGENT_RUNTIME_TIMEOUT_MS` | `30000` | P1 | 整体超时(ms) |
-| `AGENT_MEMORY_MAX_MESSAGES` | `6` | P2 | 注入对话历史的最大的消息数 |
-| `AGENT_TRACE_ENABLED` | `true` | P2 | 是否记录结构化 trace |
-| `AGENT_SUPERVISOR_ENABLED` | `false` | P3 | 是否启用 Supervisor 模式 |
-| `API_CALL_ALLOWED_DOMAINS` | `` | P1 | call_http_api 域名白名单（逗号分隔） |
+| 变量名                      | 默认值  | Phase | 说明                                 |
+| --------------------------- | ------- | ----- | ------------------------------------ |
+| `AGENT_RUNTIME_ENABLED`     | `false` | P1    | 是否启用 AgentRuntime                |
+| `AGENT_REACT_MAX_ROUNDS`    | `5`     | P1    | ReAct 最大推理轮数                   |
+| `AGENT_RUNTIME_TIMEOUT_MS`  | `30000` | P1    | 整体超时(ms)                         |
+| `AGENT_MEMORY_MAX_MESSAGES` | `6`     | P2    | 注入对话历史的最大的消息数           |
+| `AGENT_TRACE_ENABLED`       | `true`  | P2    | 是否记录结构化 trace                 |
+| `AGENT_SUPERVISOR_ENABLED`  | `false` | P3    | 是否启用 Supervisor 模式             |
+| `API_CALL_ALLOWED_DOMAINS`  | ``      | P1    | call_http_api 域名白名单（逗号分隔） |
 
 ---
 
 ## 六、风险与缓解
 
-| 风险 | 概率 | 影响 | 缓解措施 |
-|------|------|------|---------|
-| LLM tool calling 不稳定（模型不支持或返回格式错误） | 中 | 高 | try-catch + 重试 1 次；失败时降级到现有路由模式 |
-| ReAct 循环导致 token 消耗超预期 | 中 | 中 | `AGENT_REACT_MAX_ROUNDS=5` + `AGENT_RUNTIME_TIMEOUT_MS=30000` 双重限制 |
-| 工具执行超时影响用户体验 | 低 | 中 | 每个工具独立超时（web_search 3s，query_database 5s），超时返回部分结果 |
-| 前端 SSE 事件类型不兼容旧客户端 | 低 | 低 | 新事件增量，旧客户端忽略未知 type |
-| 对话历史注入导致 prompt 超长 | 中 | 中 | `AGENT_MEMORY_MAX_MESSAGES=6` 限制条数；后续加摘要机制 |
+| 风险                                                | 概率 | 影响 | 缓解措施                                                               |
+| --------------------------------------------------- | ---- | ---- | ---------------------------------------------------------------------- |
+| LLM tool calling 不稳定（模型不支持或返回格式错误） | 中   | 高   | try-catch + 重试 1 次；失败时降级到现有路由模式                        |
+| ReAct 循环导致 token 消耗超预期                     | 中   | 中   | `AGENT_REACT_MAX_ROUNDS=5` + `AGENT_RUNTIME_TIMEOUT_MS=30000` 双重限制 |
+| 工具执行超时影响用户体验                            | 低   | 中   | 每个工具独立超时（web_search 3s，query_database 5s），超时返回部分结果 |
+| 前端 SSE 事件类型不兼容旧客户端                     | 低   | 低   | 新事件增量，旧客户端忽略未知 type                                      |
+| 对话历史注入导致 prompt 超长                        | 中   | 中   | `AGENT_MEMORY_MAX_MESSAGES=6` 限制条数；后续加摘要机制                 |
 
 ---
 
 ## 七、向后兼容性保证
 
-| 场景 | 配置 | 行为 |
-|------|------|------|
-| 完全不升级 | `AGENT_RUNTIME_ENABLED=false`（默认） | 与当前代码行为完全一致，零影响 |
-| 仅启用 Runtime | `AGENT_RUNTIME_ENABLED=true` | 走新链路，旧接口 `/api/agents/routeStream` 仍然可用 |
-| 回退到路由模式 | `AGENT_RUNTIME_ENABLED=false` | 立即生效，无需重启（runtime 实例被废弃） |
+| 场景           | 配置                                  | 行为                                                |
+| -------------- | ------------------------------------- | --------------------------------------------------- |
+| 完全不升级     | `AGENT_RUNTIME_ENABLED=false`（默认） | 与当前代码行为完全一致，零影响                      |
+| 仅启用 Runtime | `AGENT_RUNTIME_ENABLED=true`          | 走新链路，旧接口 `/api/agents/routeStream` 仍然可用 |
+| 回退到路由模式 | `AGENT_RUNTIME_ENABLED=false`         | 立即生效，无需重启（runtime 实例被废弃）            |
 
 ---
 
@@ -117,14 +118,14 @@ Phase 1 (3周)                    Phase 2 (2周)               Phase 3 (2周)
 
 以下内容列入未来规划，本期不实现：
 
-| 功能 | 原因 | 预计进入版本 |
-|------|------|------------|
-| Supervisor 多 Agent 协作 | 现有路由模式已满足需求，复杂度高 | V0.7 |
-| Planning 系统 | 需 YAML DSL，开发成本高 | V0.8 |
-| Workflow 引擎 | 与 ReAct 重叠，先跑通 ReAct | V0.9 |
-| MCP 支持 | 需引入新 SDK | V1.0+ |
-| Human-in-the-loop | 无用户认证，审批无意义 | V1.0+ |
-| Permission 系统 | 内网使用，DB Query 已有参数化保护 | V1.0+ |
-| Long-term Memory | 先用 Conversation Memory 验证效果 | V0.5+ |
-| 成本 USD 换算 | 国内模型价格变动频繁 | 后续 |
-| Evaluation 系统 | 需要标注数据 | V1.0+ |
+| 功能                     | 原因                              | 预计进入版本 |
+| ------------------------ | --------------------------------- | ------------ |
+| Supervisor 多 Agent 协作 | 现有路由模式已满足需求，复杂度高  | V0.7         |
+| Planning 系统            | 需 YAML DSL，开发成本高           | V0.8         |
+| Workflow 引擎            | 与 ReAct 重叠，先跑通 ReAct       | V0.9         |
+| MCP 支持                 | 需引入新 SDK                      | V1.0+        |
+| Human-in-the-loop        | 无用户认证，审批无意义            | V1.0+        |
+| Permission 系统          | 内网使用，DB Query 已有参数化保护 | V1.0+        |
+| Long-term Memory         | 先用 Conversation Memory 验证效果 | V0.5+        |
+| 成本 USD 换算            | 国内模型价格变动频繁              | 后续         |
+| Evaluation 系统          | 需要标注数据                      | V1.0+        |
