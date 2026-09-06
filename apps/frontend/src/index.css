@@ -256,78 +256,12 @@ button {
 
 
 /* ===== Cards ===== */
-.kb-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
-}
-
-.kb-card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: var(--shadow-sm);
-}
-
-.kb-card:hover {
-  border-color: var(--primary);
-  box-shadow: var(--shadow);
-  transform: translateY(-2px);
-}
 
 .kb-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 12px;
-}
-
-.kb-icon {
-  font-size: 28px;
-}
-
-.kb-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.action-btn {
-  background: none;
-  border: none;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--text-sub);
-  transition: all 0.2s;
-}
-
-.action-btn:hover {
-  background: var(--bg);
-  color: var(--text);
-}
-
-.kb-card h3 {
-  margin: 0 0 8px;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.kb-card p {
-  margin: 0 0 12px;
-  color: var(--text-sub);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.meta {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: var(--text-subtle);
 }
 
 /* ===== Badge / Status ===== */
@@ -653,72 +587,12 @@ button {
 }
 
 /* ===== Chunk grid ===== */
-.chunk-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: 16px;
-}
-
-.chunk-card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.2s;
-}
-
-.chunk-card:hover {
-  border-color: var(--primary);
-  box-shadow: var(--shadow);
-}
 
 .chunk-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 10px;
-}
-
-.chunk-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.chunk-idx {
-  font-size: 12px;
-  color: var(--text-subtle);
-  font-weight: 500;
-}
-
-.chunk-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chunk-content {
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: inherit;
-  font-size: 13px;
-  color: var(--text-sub);
-  line-height: 1.6;
-  margin: 0 0 10px;
-  max-height: 120px;
-  overflow: hidden;
-}
-
-.chunk-meta {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: var(--text-subtle);
 }
 
 /* ===== Code block ===== */
@@ -826,35 +700,6 @@ button {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-}
-
-.citation-tooltip {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  min-width: 280px;
-  max-width: 400px;
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  background: var(--panel);
-  border: 1px solid var(--border-strong);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  font-size: 12px;
-  color: var(--text);
-  white-space: normal;
-  pointer-events: none;
-}
-
-.citation-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: var(--border-strong);
 }
 
 .citation-tooltip-file {
