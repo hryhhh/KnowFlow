@@ -5,6 +5,7 @@ import { generateTraceId } from '@knowbase-x/agents';
 import { retrieveAndChat } from '@knowbase-x/rag-engine';
 import type { RAGPipelineConfig, SearchParams, SourceRef } from '@knowbase-x/rag-engine';
 import { RAG_CONFIG } from '../../config/rag-config.provider';
+import { RETRIEVAL_DEFAULTS } from '../../config/defaults';
 import { env } from '../../config/env';
 import { UsageLogService } from '../usage/usage-log.service';
 import { SessionService } from '../session/session.service';
@@ -75,14 +76,14 @@ export class ChatService {
 
       const normalizedParams: SearchParams = {
         topK: params.topK ?? 10,
-        minScore: params.minScore ?? env.rag.minScore,
+        minScore: params.minScore ?? RETRIEVAL_DEFAULTS.minScore,
         useReranker: params.useReranker ?? false,
         denseWeight: params.denseWeight ?? 0.5,
         retrievalMode: params.retrievalMode,
         fusionMethod: params.fusionMethod,
         rrfK: params.rrfK,
-        candidateMultiplier: params.candidateMultiplier ?? env.rag.candidateMultiplier,
-        minDenseScore: params.minDenseScore ?? env.rag.minDenseScore,
+        candidateMultiplier: params.candidateMultiplier ?? RETRIEVAL_DEFAULTS.candidateMultiplier,
+        minDenseScore: params.minDenseScore ?? RETRIEVAL_DEFAULTS.minDenseScore,
       };
 
       // AGENTS_ENABLED=true 时走 Agent 编排链路，否则降级传统 RAG

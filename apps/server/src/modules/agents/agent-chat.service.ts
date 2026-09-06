@@ -27,6 +27,7 @@ import {
 } from '@knowbase-x/agents';
 import { normalizeSearchParams } from '../../common/search-params';
 import { env } from '../../config/env';
+import { AGENT_DEFAULTS, RETRIEVAL_DEFAULTS, WEB_SEARCH_DEFAULTS } from '../../config/defaults';
 import type { Agent, AgentResult, RouteMetadata } from '@knowbase-x/agents';
 import { UsageLogService } from '../usage/usage-log.service';
 import { DbQueryService } from './db-query.service';
@@ -73,10 +74,10 @@ export class AgentChatService {
     private readonly sessionService: SessionService,
   ) {
     this.agentsEnabled = env.agents.enabled;
-    this.composeStrategy = env.agents.composeStrategy;
-    this.allowParallel = env.agents.routerAllowParallel;
-    this.confidenceThreshold = env.agents.routerConfidenceThreshold;
-    this.alwaysIncludeAgents = env.agents.alwaysIncludeAgents;
+    this.composeStrategy = AGENT_DEFAULTS.composeStrategy;
+    this.allowParallel = AGENT_DEFAULTS.routerAllowParallel;
+    this.confidenceThreshold = AGENT_DEFAULTS.routerConfidenceThreshold;
+    this.alwaysIncludeAgents = AGENT_DEFAULTS.alwaysIncludeAgents;
     this.runtimeEnabled = env.agents.runtimeEnabled;
 
     if (this.agentsEnabled) {
@@ -112,8 +113,8 @@ export class AgentChatService {
     }
 
     const webAgent = new WebSearchAgent(webProvider, this.redisCache, {
-      cacheTtlSeconds: env.webSearch.cacheTtlSeconds,
-      providerTimeoutMs: env.webSearch.providerTimeoutMs,
+      cacheTtlSeconds: WEB_SEARCH_DEFAULTS.cacheTtlSeconds,
+      providerTimeoutMs: WEB_SEARCH_DEFAULTS.providerTimeoutMs,
       maxResults: 1,
     });
     this.agentInstances.set(webAgent.id, webAgent);
@@ -138,8 +139,8 @@ export class AgentChatService {
           retrievalMode: params.retrievalMode,
           fusionMethod: params.fusionMethod,
           rrfK: params.rrfK,
-          candidateMultiplier: params.candidateMultiplier ?? env.rag.candidateMultiplier,
-          minDenseScore: params.minDenseScore ?? env.rag.minDenseScore,
+          candidateMultiplier: params.candidateMultiplier ?? RETRIEVAL_DEFAULTS.candidateMultiplier,
+          minDenseScore: params.minDenseScore ?? RETRIEVAL_DEFAULTS.minDenseScore,
         },
         this.ragConfig,
         callbacks,
@@ -197,7 +198,9 @@ export class AgentChatService {
             {
               topK: params.topK,
               minScore: params.minScore,
-              useReranker: false,
+              // hybrid 检索（稠密+关键词融合）：精确词面（如分级标记「S级」）不再
+              // 依赖向量语义相近度。rerank 本身是 rag-engine 的占位实现（按原序截断），无副作用
+              useReranker: true,
               denseWeight: 0.5,
             },
             this.ragConfig,
@@ -471,7 +474,7 @@ export class AgentChatService {
 
       // 加载对话记忆（SessionService 实现了 MemoryLoader 接口，类型安全）
       const memory = new ConversationMemory(this.sessionService as unknown as MemoryLoader);
-      const maxMessages = env.agents.memoryMaxMessages;
+      const maxMessages = AGENT_DEFAULTS.memoryMaxMessages;
       const messages = await memory.load(sessionId, maxMessages);
       // 用户消息在进入本方法前已入库，若记忆末条与当前问题重复则剔除，
       // 避免同一条问题在 prompt 中出现两次

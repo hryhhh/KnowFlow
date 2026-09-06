@@ -7,7 +7,7 @@ import type {
   SearchDebugInfo,
 } from '@knowbase-x/rag-engine';
 import { RAG_CONFIG } from '../../config/rag-config.provider';
-import { env } from '../../config/env';
+import { RETRIEVAL_DEFAULTS } from '../../config/defaults';
 import { SearchDto } from './dto/search.dto';
 import { UsageLogService } from '../usage/usage-log.service';
 import { RetrievalCacheService } from './retrieval-cache.service';
@@ -36,14 +36,14 @@ export class RetrievalService {
     const startTime = Date.now();
     const params: SearchParams = {
       topK: dto.topK ?? 10,
-      minScore: dto.minScore ?? env.rag.minScore,
+      minScore: dto.minScore ?? RETRIEVAL_DEFAULTS.minScore,
       useReranker: dto.useReranker ?? false,
       denseWeight: dto.denseWeight ?? 0.5,
       retrievalMode: dto.retrievalMode,
       fusionMethod: dto.fusionMethod,
       rrfK: dto.rrfK,
-      candidateMultiplier: dto.candidateMultiplier ?? env.rag.candidateMultiplier,
-      minDenseScore: dto.minDenseScore ?? env.rag.minDenseScore,
+      candidateMultiplier: dto.candidateMultiplier ?? RETRIEVAL_DEFAULTS.candidateMultiplier,
+      minDenseScore: dto.minDenseScore ?? RETRIEVAL_DEFAULTS.minDenseScore,
       debug: dto.debug ?? false,
     };
 

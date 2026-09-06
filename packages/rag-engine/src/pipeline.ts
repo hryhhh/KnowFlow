@@ -32,8 +32,8 @@ import type {
   SearchDebugInfo,
 } from './types.js';
 
-/** 默认每路候选倍数，可通过环境变量 DEFAULT_CANDIDATE_MULTIPLIER 覆盖 */
-const DEFAULT_CANDIDATE_MULTIPLIER = Number(process.env.DEFAULT_CANDIDATE_MULTIPLIER) || 3;
+/** 默认每路候选倍数（产品决策值，收编为常量；服务端可通过 SearchParams.candidateMultiplier 显式传入） */
+const DEFAULT_CANDIDATE_MULTIPLIER = 3;
 /** candidateMultiplier 硬上限，防止极端参数导致 OOM */
 const MAX_CANDIDATE_MULTIPLIER = 10;
 

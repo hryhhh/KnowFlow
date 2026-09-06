@@ -71,7 +71,6 @@ services:
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1024}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-100}
-      DEFAULT_MIN_SCORE: ${DEFAULT_MIN_SCORE:-0.70}
     depends_on:
       postgres-vector:
         condition: service_healthy

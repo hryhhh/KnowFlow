@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { env } from '../../config/env';
+import { RETRIEVAL_DEFAULTS } from '../../config/defaults';
 
 /**
  * 检索结果缓存服务（进程内 Map）
@@ -14,7 +14,7 @@ export class RetrievalCacheService {
   private readonly ttlMs: number;
 
   constructor() {
-    this.ttlMs = env.rag.resultCacheTtlMs;
+    this.ttlMs = RETRIEVAL_DEFAULTS.resultCacheTtlMs;
   }
 
   private makeKey(

@@ -10,6 +10,7 @@
  * - 数值解析统一走 intEnv/numEnv，杜绝 `Number(x) || fallback` 吞掉合法 0 的问题
  * - app.module.ts 通过 ConfigModule 的 validate 钩子在启动时执行 validateEnv，
  *   必填缺失或取值非法直接启动失败（fail fast），而不是运行到一半静默回退
+ * - 业务默认参数（检索/Agent 编排/Web Search 机制）不在此处，见 config/defaults.ts
  */
 
 function strEnv(key: string, fallback: string): string {
@@ -22,21 +23,6 @@ function intEnv(key: string, fallback: number): number {
   if (v === undefined || v.trim() === '') return fallback;
   const n = Number.parseInt(v, 10);
   return Number.isNaN(n) ? fallback : n;
-}
-
-function numEnv(key: string, fallback: number): number {
-  const v = process.env[key];
-  if (v === undefined || v.trim() === '') return fallback;
-  const n = Number(v);
-  return Number.isNaN(n) ? fallback : n;
-}
-
-/** 可缺省的浮点数：未设置/空串/非法值 → null（如 DEFAULT_MIN_DENSE_SCORE 的"不施加"语义） */
-function numOrNullEnv(key: string): number | null {
-  const v = process.env[key];
-  if (v === undefined || v.trim() === '') return null;
-  const n = Number(v);
-  return Number.isNaN(n) ? null : n;
 }
 
 function boolEnv(key: string, fallback: boolean): boolean {
@@ -100,14 +86,6 @@ export const env = {
       dimensions: intEnv('EMBEDDING_DIMENSIONS', 1024),
     };
   },
-  get rag() {
-    return {
-      minScore: numEnv('DEFAULT_MIN_SCORE', 0.7),
-      minDenseScore: numOrNullEnv('DEFAULT_MIN_DENSE_SCORE'),
-      candidateMultiplier: intEnv('DEFAULT_CANDIDATE_MULTIPLIER', 3),
-      resultCacheTtlMs: intEnv('RAG_RESULT_CACHE_TTL_MS', 300000),
-    };
-  },
   get upload() {
     return {
       maxMb: intEnv('MAX_UPLOAD_SIZE_MB', 100),
@@ -125,23 +103,12 @@ export const env = {
       legacyToolsEnabled: boolEnv('AGENT_LEGACY_TOOLS_ENABLED', false),
       traceEnabled: boolEnv('AGENT_TRACE_ENABLED', false),
       fallbackEnabled: boolEnv('AGENT_RUNTIME_FALLBACK', true),
-      reactMaxRounds: intEnv('AGENT_REACT_MAX_ROUNDS', 5),
-      timeoutMs: intEnv('AGENT_RUNTIME_TIMEOUT_MS', 30000),
-      memoryMaxMessages: intEnv('AGENT_MEMORY_MAX_MESSAGES', 6),
-      alwaysIncludeAgents: listEnv('AGENT_ALWAYS_INCLUDE_AGENTS', ['ragflow']),
-      routerConfidenceThreshold: intEnv('AGENT_ROUTER_CONFIDENCE_THRESHOLD', 70),
-      composeStrategy: strEnv('AGENT_COMPOSE_STRATEGY', 'rag-priority'),
-      routerAllowParallel: boolEnv('AGENT_ROUTER_ALLOW_PARALLEL', true),
-      apiCallAllowedDomains: listEnv('API_CALL_ALLOWED_DOMAINS', []),
-      apiCallAllowPrivate: boolEnv('API_CALL_ALLOW_PRIVATE', false),
     };
   },
   get webSearch() {
     return {
       provider: strEnv('WEB_SEARCH_PROVIDER', 'tavily'),
       apiKey: strEnv('WEB_SEARCH_API_KEY', ''),
-      cacheTtlSeconds: intEnv('WEB_SEARCH_CACHE_TTL_SECONDS', 300),
-      providerTimeoutMs: intEnv('WEB_SEARCH_PROVIDER_TIMEOUT_MS', 5000),
     };
   },
   get dbQuery() {
@@ -177,28 +144,17 @@ const POSITIVE_INT_VARS = [
   'EMBEDDING_DIMENSIONS',
   'MAX_UPLOAD_SIZE_MB',
   'API_RATE_LIMIT',
-  'WEB_SEARCH_PROVIDER_TIMEOUT_MS',
   'DOCUMENT_QUEUE_ATTEMPTS',
   'AGENT_REACT_MAX_ROUNDS',
   'AGENT_RUNTIME_TIMEOUT_MS',
-  'AGENT_MEMORY_MAX_MESSAGES',
-  'AGENT_ROUTER_CONFIDENCE_THRESHOLD',
-  'DEFAULT_CANDIDATE_MULTIPLIER',
 ] as const;
 
 /** 允许为 0 的非负整数变量（0 有"禁用"语义） */
 const NON_NEGATIVE_INT_VARS = [
-  'RAG_RESULT_CACHE_TTL_MS',
-  'WEB_SEARCH_CACHE_TTL_SECONDS',
   'DOCUMENT_QUEUE_BACKOFF_MS',
   'DOCUMENT_QUEUE_REMOVE_ON_COMPLETE',
   'DOCUMENT_QUEUE_REMOVE_ON_FAIL',
 ] as const;
-
-/** 取值范围 [0, 1] 的比例变量 */
-const UNIT_INTERVAL_VARS = ['DEFAULT_MIN_SCORE', 'DEFAULT_MIN_DENSE_SCORE'] as const;
-
-const COMPOSE_STRATEGIES = ['rag-priority', 'concat', 'llm-summarize', 'rerank-and-merge'];
 
 const SEARCH_PROVIDERS = ['tavily', 'serper'];
 
@@ -228,22 +184,6 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
   };
   for (const key of POSITIVE_INT_VARS) checkInt(key, 1);
   for (const key of NON_NEGATIVE_INT_VARS) checkInt(key, 0);
-
-  for (const key of UNIT_INTERVAL_VARS) {
-    const v = raw(key);
-    if (v === undefined) continue;
-    const n = Number(v);
-    if (Number.isNaN(n) || n < 0 || n > 1) {
-      errors.push(`${key} 取值必须在 [0, 1]（当前值 "${v}"）`);
-    }
-  }
-
-  const composeStrategy = raw('AGENT_COMPOSE_STRATEGY');
-  if (composeStrategy && !COMPOSE_STRATEGIES.includes(composeStrategy)) {
-    errors.push(
-      `AGENT_COMPOSE_STRATEGY 必须为 ${COMPOSE_STRATEGIES.join(' | ')}（当前值 "${composeStrategy}"）`,
-    );
-  }
 
   const provider = raw('WEB_SEARCH_PROVIDER');
   if (provider && !SEARCH_PROVIDERS.includes(provider.toLowerCase())) {

@@ -127,10 +127,6 @@ function buildService(agentsEnabled: boolean = false): AgentChatService {
 describe('AgentChatService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv('AGENT_COMPOSE_STRATEGY', 'rag-priority');
-    vi.stubEnv('AGENT_ROUTER_ALLOW_PARALLEL', '');
-    vi.stubEnv('AGENT_ROUTER_CONFIDENCE_THRESHOLD', '70');
-    vi.stubEnv('AGENT_ALWAYS_INCLUDE_AGENTS', 'ragflow');
   });
 
   afterEach(() => {
