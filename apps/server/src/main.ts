@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { env } from './config/env';
 import { HttpExceptionFilter, AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { TraceIdInterceptor } from './modules/agents/interceptor/trace-id.interceptor';
 
@@ -20,11 +21,8 @@ async function bootstrap() {
   // Security headers
   app.use(helmet());
 
-  // CORS — allow specific origins via CORS_ALLOWED_ORIGINS env var (comma-separated)
-  const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
+  // CORS — allow specific origins via env (comma-separated), fallback: allow all
+  const allowedOrigins = env.app.corsAllowedOrigins;
   app.enableCors({
     origin: allowedOrigins.length > 0 ? allowedOrigins : '*',
     credentials: true,
@@ -42,7 +40,7 @@ async function bootstrap() {
   // 全局 trace_id 拦截器：为每个请求注入 request.traceId
   app.useGlobalInterceptors(new TraceIdInterceptor());
 
-  const port = process.env.SERVER_PORT ?? 3000;
+  const port = env.app.port;
   await app.listen(port);
   // eslint-disable-next-line no-console
   console.log(`🚀 KnowBase X server listening on http://localhost:${port}`);

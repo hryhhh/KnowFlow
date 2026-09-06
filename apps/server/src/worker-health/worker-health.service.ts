@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { DOCUMENT_INGEST_QUEUE_NAME } from '../modules/ingestion/ingestion.constants';
+import { env } from '../config/env';
 
 /**
  * Worker 健康检查服务
@@ -18,8 +19,8 @@ export class WorkerHealthService {
     try {
       this.queue = new Queue(DOCUMENT_INGEST_QUEUE_NAME, {
         connection: {
-          host: process.env.REDIS_HOST ?? 'localhost',
-          port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
+          host: env.redis.host,
+          port: env.redis.port,
         },
       });
       // ping 验证 Redis 连接

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RedisClientService } from '../../common/redis/redis-client.service';
+import { env } from '../../config/env';
 
 /**
  * 会话与热点元数据 Redis 缓存
@@ -20,7 +21,7 @@ export class SessionCacheService {
 
   constructor(redis: RedisClientService) {
     this.redis = redis;
-    this.ttlSeconds = parseInt(process.env.SESSION_CACHE_TTL_SECONDS ?? '60', 10);
+    this.ttlSeconds = env.session.cacheTtlSeconds;
   }
 
   private key(...parts: string[]): string {

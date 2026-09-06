@@ -2,6 +2,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { DOCUMENT_INGEST_QUEUE_NAME } from './ingestion.constants';
+import { env } from '../../config/env';
 import type { DocumentIngestJobPayload } from './ingestion.types';
 
 /**
@@ -31,14 +32,14 @@ export class IngestionQueue {
       await this.queue.add('process-document', payload, {
         jobId,
         // 指数退避重试
-        attempts: parseInt(process.env.DOCUMENT_QUEUE_ATTEMPTS ?? '3', 10),
+        attempts: env.queue.attempts,
         backoff: {
           type: 'exponential',
-          delay: parseInt(process.env.DOCUMENT_QUEUE_BACKOFF_MS ?? '2000', 10),
+          delay: env.queue.backoffMs,
         },
         // 保留已完成和失败 job 以支持排障
-        removeOnComplete: parseInt(process.env.DOCUMENT_QUEUE_REMOVE_ON_COMPLETE ?? '1000', 10),
-        removeOnFail: parseInt(process.env.DOCUMENT_QUEUE_REMOVE_ON_FAIL ?? '100', 10),
+        removeOnComplete: env.queue.removeOnComplete,
+        removeOnFail: env.queue.removeOnFail,
         // 并发限制由 Worker 配置控制
         priority: 1,
       });

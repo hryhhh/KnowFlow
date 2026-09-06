@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { DocumentService } from './document.service';
+import { env } from '../../config/env';
 
 /** 上传文件的简化类型，避免依赖 Express.Multer.File（@types/express v5 兼容性断裂） */
 interface UploadedFile {
@@ -19,7 +20,7 @@ interface UploadedFile {
   size: number;
 }
 
-const MAX_UPLOAD_SIZE_MB = parseInt(process.env.MAX_UPLOAD_SIZE_MB ?? '100', 10);
+const MAX_UPLOAD_SIZE_MB = env.upload.maxMb;
 const MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
 
 /** 过滤文件名中的非法字符，防止路径穿越 */

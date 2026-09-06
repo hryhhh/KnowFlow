@@ -1,6 +1,11 @@
 import 'reflect-metadata';
+import * as dotenv from 'dotenv';
+// CLI 入口负责加载 .env（env.ts 不做加载，避免污染测试环境）；dotenv 不覆盖已有变量
+dotenv.config({ path: '.env' });
+dotenv.config({ path: '../.env' });
 import { DataSource } from 'typeorm';
 import * as path from 'node:path';
+import { env } from '../config/env';
 
 /**
  * TypeORM 数据源配置（供 migration:run 和 migration:revert 脚本使用）
@@ -10,12 +15,12 @@ import * as path from 'node:path';
  */
 const dataSource = new DataSource({
   type: 'postgres',
-  host: process.env.DATABASE_HOST ?? 'localhost',
-  port: parseInt(process.env.DATABASE_PORT ?? '5432', 10),
-  username: process.env.DATABASE_USER ?? 'postgres',
-  password: process.env.DATABASE_PASSWORD ?? '123456',
-  database: process.env.DATABASE_NAME ?? 'knowledge_rag',
-  ssl: process.env.DATABASE_SSL === 'true',
+  host: env.database.host,
+  port: env.database.port,
+  username: env.database.user,
+  password: env.database.password,
+  database: env.database.name,
+  ssl: env.database.ssl,
   entities: [path.join(__dirname, '../modules/**/*.entity{.ts,.js}')],
   migrations: [path.join(__dirname, '../migrations/*{.ts,.js}')],
 });

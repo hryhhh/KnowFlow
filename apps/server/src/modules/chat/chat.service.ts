@@ -5,6 +5,7 @@ import { generateTraceId } from '@knowbase-x/agents';
 import { retrieveAndChat } from '@knowbase-x/rag-engine';
 import type { RAGPipelineConfig, SearchParams, SourceRef } from '@knowbase-x/rag-engine';
 import { RAG_CONFIG } from '../../config/rag-config.provider';
+import { env } from '../../config/env';
 import { UsageLogService } from '../usage/usage-log.service';
 import { SessionService } from '../session/session.service';
 import { AgentChatService } from '../agents/agent-chat.service';
@@ -74,20 +75,18 @@ export class ChatService {
 
       const normalizedParams: SearchParams = {
         topK: params.topK ?? 10,
-        minScore: params.minScore ?? (Number(process.env.DEFAULT_MIN_SCORE) || 0.7),
+        minScore: params.minScore ?? env.rag.minScore,
         useReranker: params.useReranker ?? false,
         denseWeight: params.denseWeight ?? 0.5,
         retrievalMode: params.retrievalMode,
         fusionMethod: params.fusionMethod,
         rrfK: params.rrfK,
-        candidateMultiplier:
-          params.candidateMultiplier ?? (Number(process.env.DEFAULT_CANDIDATE_MULTIPLIER) || 3),
-        minDenseScore:
-          params.minDenseScore ?? (Number(process.env.DEFAULT_MIN_DENSE_SCORE) || null),
+        candidateMultiplier: params.candidateMultiplier ?? env.rag.candidateMultiplier,
+        minDenseScore: params.minDenseScore ?? env.rag.minDenseScore,
       };
 
       // AGENTS_ENABLED=true 时走 Agent 编排链路，否则降级传统 RAG
-      if (process.env.AGENTS_ENABLED === 'true') {
+      if (env.agents.enabled) {
         let assistantContent = '';
         let sources: SourceRef[] = [];
         void sessionIdPromise.then(async () => {

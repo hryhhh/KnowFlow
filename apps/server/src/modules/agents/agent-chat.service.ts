@@ -26,6 +26,7 @@ import {
   type LLMConfig,
 } from '@knowbase-x/agents';
 import { normalizeSearchParams } from '../../common/search-params';
+import { env } from '../../config/env';
 import type { Agent, AgentResult, RouteMetadata } from '@knowbase-x/agents';
 import { UsageLogService } from '../usage/usage-log.service';
 import { DbQueryService } from './db-query.service';
@@ -71,16 +72,12 @@ export class AgentChatService {
     private readonly traceService: TraceService,
     private readonly sessionService: SessionService,
   ) {
-    this.agentsEnabled = process.env.AGENTS_ENABLED === 'true';
-    this.composeStrategy = process.env.AGENT_COMPOSE_STRATEGY ?? 'rag-priority';
-    this.allowParallel = process.env.AGENT_ROUTER_ALLOW_PARALLEL !== 'false';
-    this.confidenceThreshold = parseInt(process.env.AGENT_ROUTER_CONFIDENCE_THRESHOLD ?? '70', 10);
-    const rawAlwaysInclude = process.env.AGENT_ALWAYS_INCLUDE_AGENTS ?? 'ragflow';
-    this.alwaysIncludeAgents = rawAlwaysInclude
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    this.runtimeEnabled = process.env.AGENT_RUNTIME_ENABLED === 'true';
+    this.agentsEnabled = env.agents.enabled;
+    this.composeStrategy = env.agents.composeStrategy;
+    this.allowParallel = env.agents.routerAllowParallel;
+    this.confidenceThreshold = env.agents.routerConfidenceThreshold;
+    this.alwaysIncludeAgents = env.agents.alwaysIncludeAgents;
+    this.runtimeEnabled = env.agents.runtimeEnabled;
 
     if (this.agentsEnabled) {
       this.initAgents();
@@ -98,8 +95,8 @@ export class AgentChatService {
     this.agentInstances.set(dbAgent.id, dbAgent);
 
     // 2. Web Search Agent
-    const providerName = process.env.WEB_SEARCH_PROVIDER ?? 'tavily';
-    const apiKey = process.env.WEB_SEARCH_API_KEY ?? '';
+    const providerName = env.webSearch.provider;
+    const apiKey = env.webSearch.apiKey;
 
     let webProvider: ReturnType<typeof createSearchProvider>;
     if (!apiKey) {
@@ -115,8 +112,8 @@ export class AgentChatService {
     }
 
     const webAgent = new WebSearchAgent(webProvider, this.redisCache, {
-      cacheTtlSeconds: parseInt(process.env.WEB_SEARCH_CACHE_TTL_SECONDS ?? '3600'),
-      providerTimeoutMs: parseInt(process.env.WEB_SEARCH_PROVIDER_TIMEOUT_MS ?? '5000'),
+      cacheTtlSeconds: env.webSearch.cacheTtlSeconds,
+      providerTimeoutMs: env.webSearch.providerTimeoutMs,
       maxResults: 1,
     });
     this.agentInstances.set(webAgent.id, webAgent);
@@ -141,10 +138,8 @@ export class AgentChatService {
           retrievalMode: params.retrievalMode,
           fusionMethod: params.fusionMethod,
           rrfK: params.rrfK,
-          candidateMultiplier:
-            params.candidateMultiplier ?? (Number(process.env.DEFAULT_CANDIDATE_MULTIPLIER) || 3),
-          minDenseScore:
-            params.minDenseScore ?? (Number(process.env.DEFAULT_MIN_DENSE_SCORE) || null),
+          candidateMultiplier: params.candidateMultiplier ?? env.rag.candidateMultiplier,
+          minDenseScore: params.minDenseScore ?? env.rag.minDenseScore,
         },
         this.ragConfig,
         callbacks,
@@ -162,19 +157,11 @@ export class AgentChatService {
     }
 
     // 5. 初始化 IntentRouter
-    const llmConfig =
-      process.env.LLM_API_KEY && process.env.LLM_MODEL
-        ? {
-            apiKey: process.env.LLM_API_KEY,
-            model: process.env.LLM_MODEL,
-            baseURL: process.env.LLM_BASE_URL ?? '',
-          }
-        : undefined;
-
-    this.router = new IntentRouter(
-      process.env.ROUTER_RULES_PATH ?? path.resolve(process.cwd(), 'config/router.rules.yml'),
-      llmConfig,
-    );
+    // 默认路径解析（env / cwd / 上一级 config）由 IntentRouter 内部处理
+    const llmConfig = env.llm.apiKey
+      ? { apiKey: env.llm.apiKey, model: env.llm.model, baseURL: env.llm.baseURL }
+      : undefined;
+    this.router = new IntentRouter(undefined, llmConfig);
 
     // 6. 初始化 Orchestrator
     this.orchestrator = new Orchestrator(
@@ -228,8 +215,8 @@ export class AgentChatService {
     );
 
     // 3. web_search — 复用现有 SearchProvider
-    const providerName = process.env.WEB_SEARCH_PROVIDER ?? 'tavily';
-    const apiKey = process.env.WEB_SEARCH_API_KEY ?? '';
+    const providerName = env.webSearch.provider;
+    const apiKey = env.webSearch.apiKey;
     let webProvider: any;
     if (!apiKey) {
       webProvider = { search: async () => [] };
@@ -250,7 +237,7 @@ export class AgentChatService {
 
     // 6. LegacyAgentAdapter — 降级路径（默认不注册：legacy 工具内嵌完整 Agent/LLM 调用，
     //    会被 ReAct 循环当成普通工具重复消耗 token，仅在明确启用时暴露给 LLM）
-    if (process.env.AGENT_LEGACY_TOOLS_ENABLED === 'true') {
+    if (env.agents.legacyToolsEnabled) {
       for (const [id, agent] of this.agentInstances) {
         this.toolRegistry.register(
           new LegacyAgentAdapter(agent, `${id}_legacy`, `Legacy ${agent.name} adapter`),
@@ -264,8 +251,7 @@ export class AgentChatService {
   /** 从 config/db-queries.yml 加载 SQL 模板 */
   private loadDbTemplates(agent: DbQueryAgent): void {
     const templatePath =
-      process.env.DB_QUERIES_TEMPLATE_PATH ??
-      path.resolve(__dirname, '../../../../../config/db-queries.yml');
+      env.dbQuery.templatesPath || path.resolve(__dirname, '../../../../../config/db-queries.yml');
     try {
       const content = require('fs').readFileSync(templatePath, 'utf-8');
       const config = require('js-yaml').load(content) as { templates: any[] };
@@ -472,7 +458,7 @@ export class AgentChatService {
     const resolvedParams = normalizeSearchParams(params);
 
     // LLM 配置校验：缺失时快速失败，避免等待 LLM API 超时后才报错
-    if (!process.env.LLM_API_KEY) {
+    if (!env.llm.apiKey) {
       this.logger.warn('LLM_API_KEY 未配置，AgentRuntime 无法执行');
       callbacks.onError(new Error('LLM_API_KEY 未配置，请检查环境变量后重试'));
       callbacks.onDone();
@@ -485,7 +471,7 @@ export class AgentChatService {
 
       // 加载对话记忆（SessionService 实现了 MemoryLoader 接口，类型安全）
       const memory = new ConversationMemory(this.sessionService as unknown as MemoryLoader);
-      const maxMessages = parseInt(process.env.AGENT_MEMORY_MAX_MESSAGES ?? '6', 10);
+      const maxMessages = env.agents.memoryMaxMessages;
       const messages = await memory.load(sessionId, maxMessages);
       // 用户消息在进入本方法前已入库，若记忆末条与当前问题重复则剔除，
       // 避免同一条问题在 prompt 中出现两次
@@ -496,9 +482,9 @@ export class AgentChatService {
 
       // 构建 LLM 配置
       const llmConfig: LLMConfig = {
-        apiKey: process.env.LLM_API_KEY,
-        model: process.env.LLM_MODEL ?? 'gpt-4',
-        baseURL: process.env.LLM_BASE_URL ?? '',
+        apiKey: env.llm.apiKey,
+        model: env.llm.model,
+        baseURL: env.llm.baseURL,
       };
 
       // 运行 AgentRuntime
@@ -510,6 +496,9 @@ export class AgentChatService {
       });
 
       const runtime = new AgentRuntime();
+      // 标记本次 run 是否已通过 answer_delta 流式推出答案：
+      // true 则跳过结束后的人工分块，仅在流式关闭/降级场景兜底
+      let streamedAnswer = false;
       const result = await runtime.run({
         query,
         kbId,
@@ -520,6 +509,15 @@ export class AgentChatService {
         llmConfig,
         tools: this.toolRegistry!,
         emitEvent: (event: any) => {
+          // 流式答案分片：直接转入 token 通道（线上仍是顶层 token 事件，前端无需感知）
+          if (event?.type === 'answer_delta') {
+            const delta = event.data?.delta;
+            if (typeof delta === 'string' && delta.length > 0) {
+              streamedAnswer = true;
+              callbacks.onToken(delta);
+            }
+            return;
+          }
           // rag_search 产生的检索来源转成 sources 事件，恢复前端来源列表
           if (event?.type === 'sources' && Array.isArray(event.data?.sources)) {
             const sources: SourceRef[] = event.data.sources.map((s: any) => ({
@@ -535,11 +533,7 @@ export class AgentChatService {
       });
 
       // ===== 失败降级：回退到 Orchestrator 路由链路（PRD-12 §六 风险缓解）=====
-      if (
-        result.status === 'failed' &&
-        this.orchestrator &&
-        process.env.AGENT_RUNTIME_FALLBACK !== 'false'
-      ) {
+      if (result.status === 'failed' && this.orchestrator && env.agents.fallbackEnabled) {
         this.logger.warn(
           `AgentRuntime 执行失败，降级到 Orchestrator 路由链路: ${result.error ?? 'unknown'}`,
         );
@@ -565,8 +559,9 @@ export class AgentChatService {
         result.context.trace.recordMemoryLoad(messages.length);
       }
 
-      // 将 finalAnswer 分块推送到 onToken（模拟流式）
-      if (result.finalAnswer) {
+      // 答案兜底推送：仅当答案从未流式流出时（AGENT_LLM_STREAMING=false、
+      // provider 回退非流式、truncated 状态等），按 20 字符分块推送到 onToken
+      if (result.finalAnswer && !streamedAnswer) {
         const chunkSize = 20;
         for (let i = 0; i < result.finalAnswer.length; i += chunkSize) {
           callbacks.onToken(result.finalAnswer.slice(i, i + chunkSize));
@@ -607,7 +602,7 @@ export class AgentChatService {
       this.logger.error(`AgentRuntime 执行失败: ${errorMessage}`);
       callbacks.onMeta?.({ type: 'agent_error', value: { error: errorMessage, traceId } });
       // 异常也降级到 Orchestrator（PRD-12 §六），仅在可用时
-      if (this.orchestrator && process.env.AGENT_RUNTIME_FALLBACK !== 'false') {
+      if (this.orchestrator && env.agents.fallbackEnabled) {
         this.logger.warn('AgentRuntime 异常，降级到 Orchestrator 路由链路');
         return this.runOrchestrator(
           query,
@@ -641,7 +636,7 @@ export class AgentChatService {
     context: any;
     error?: string;
   }): Promise<void> {
-    if (process.env.AGENT_TRACE_ENABLED !== 'true' || !result.context?.trace) return;
+    if (!env.agents.traceEnabled || !result.context?.trace) return;
     const traceStatus = result.status === 'aborted' ? 'failed' : result.status;
     const errorMsg =
       result.error ?? (result.status === 'truncated' ? 'Reached max reasoning rounds' : undefined);

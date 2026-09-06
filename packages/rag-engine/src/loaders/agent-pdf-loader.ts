@@ -4,8 +4,9 @@ import type { Document } from '@langchain/core/documents';
 
 /** Agent 轻量解析 API 配置 */
 const AGENT_API_BASE = process.env.MINERU_AGENT_API_BASE_URL ?? 'https://mineru.net/api/v1/agent';
-const AGENT_POLL_INTERVAL_MS = Number(process.env.MINERU_AGENT_POLL_INTERVAL_MS ?? '3000');
-const AGENT_POLL_TIMEOUT_S = Number(process.env.MINERU_AGENT_POLL_TIMEOUT_S ?? '120');
+/** 轮询机制参数（内部实现细节，不随部署环境变化，按 12-Factor 收编为代码常量） */
+const AGENT_POLL_INTERVAL_MS = 3000;
+const AGENT_POLL_TIMEOUT_S = 120;
 
 /** Agent API 提交请求体 */
 interface AgentSubmitBody {

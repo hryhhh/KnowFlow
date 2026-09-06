@@ -8,6 +8,7 @@ import {
   DEFAULT_REMOVE_ON_FAIL,
 } from './ingestion.constants';
 import { IngestionQueue } from './ingestion.queue';
+import { env } from '../../config/env';
 
 /**
  * API 进程专用模块：注册 BullMQ Redis 连接和队列，不包含任何 processor。
@@ -19,8 +20,8 @@ import { IngestionQueue } from './ingestion.queue';
   imports: [
     BullModule.forRoot({
       connection: {
-        host: process.env.REDIS_HOST ?? 'localhost',
-        port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
+        host: env.redis.host,
+        port: env.redis.port,
       },
     }),
     BullModule.registerQueue({

@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { env } from '../../config/env';
 
 /**
  * 检索结果缓存服务（进程内 Map）
@@ -13,7 +14,7 @@ export class RetrievalCacheService {
   private readonly ttlMs: number;
 
   constructor() {
-    this.ttlMs = parseInt(process.env.RAG_RESULT_CACHE_TTL_MS ?? '300000', 10);
+    this.ttlMs = env.rag.resultCacheTtlMs;
   }
 
   private makeKey(

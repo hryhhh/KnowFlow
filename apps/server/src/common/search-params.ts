@@ -1,4 +1,5 @@
 import type { SearchParams } from '@knowbase-x/rag-engine';
+import { env } from '../config/env';
 
 /**
  * 归一化检索参数，应用默认值
@@ -7,14 +8,13 @@ import type { SearchParams } from '@knowbase-x/rag-engine';
 export function normalizeSearchParams(params: Partial<SearchParams> | undefined): SearchParams {
   return {
     topK: params?.topK ?? 10,
-    minScore: params?.minScore ?? 0.7,
+    minScore: params?.minScore ?? env.rag.minScore,
     useReranker: params?.useReranker ?? false,
     denseWeight: params?.denseWeight ?? 0.5,
     retrievalMode: params?.retrievalMode,
     fusionMethod: params?.fusionMethod,
     rrfK: params?.rrfK,
-    candidateMultiplier:
-      params?.candidateMultiplier ?? (Number(process.env.DEFAULT_CANDIDATE_MULTIPLIER) || 3),
-    minDenseScore: params?.minDenseScore ?? (Number(process.env.DEFAULT_MIN_DENSE_SCORE) || null),
+    candidateMultiplier: params?.candidateMultiplier ?? env.rag.candidateMultiplier,
+    minDenseScore: params?.minDenseScore ?? env.rag.minDenseScore,
   };
 }

@@ -355,6 +355,119 @@ describe('AgentChatService', () => {
     expect(traceService.save).toHaveBeenCalledOnce();
   });
 
+  it('AgentRuntime 路径：answer_delta 实时转发 onToken，结束后不再人工分块', async () => {
+    vi.stubEnv('LLM_API_KEY', 'test-key');
+    vi.stubEnv('AGENT_TRACE_ENABLED', 'true');
+    const runtimeRun = vi.fn().mockImplementation(async (params: any) => {
+      params.emitEvent({ type: 'answer_delta', timestamp: Date.now(), data: { delta: '流式' } });
+      params.emitEvent({ type: 'answer_delta', timestamp: Date.now(), data: { delta: '答案' } });
+      // 兜底分块若误触发，这 120 字符会以 20 字符块出现
+      return makeRuntimeResult({ finalAnswer: 'x'.repeat(120) });
+    });
+    vi.mocked(AgentRuntime).mockImplementation(function () {
+      return { run: runtimeRun } as any;
+    });
+
+    const { service } = buildRuntimeService();
+    const callbacks = {
+      onSources: vi.fn(),
+      onToken: vi.fn(),
+      onDone: vi.fn(),
+      onError: vi.fn(),
+      onMeta: vi.fn(),
+    };
+
+    await service.stream(
+      '问题',
+      'kb-1',
+      undefined,
+      callbacks as any,
+      'trace-1',
+      'key-1',
+      'session-1',
+    );
+
+    expect(callbacks.onToken).toHaveBeenNthCalledWith(1, '流式');
+    expect(callbacks.onToken).toHaveBeenNthCalledWith(2, '答案');
+    expect(callbacks.onToken).toHaveBeenCalledTimes(2);
+    expect(callbacks.onDone).toHaveBeenCalledOnce();
+  });
+
+  it('AgentRuntime 路径：answer_reset 经 onMeta 透传，不进 token 通道', async () => {
+    vi.stubEnv('LLM_API_KEY', 'test-key');
+    vi.stubEnv('AGENT_TRACE_ENABLED', 'true');
+    const runtimeRun = vi.fn().mockImplementation(async (params: any) => {
+      params.emitEvent({ type: 'answer_delta', timestamp: Date.now(), data: { delta: '部分' } });
+      params.emitEvent({ type: 'answer_reset', timestamp: Date.now() });
+      params.emitEvent({ type: 'tool_call', timestamp: Date.now(), data: { toolName: 't' } });
+      return makeRuntimeResult({ finalAnswer: '最终' });
+    });
+    vi.mocked(AgentRuntime).mockImplementation(function () {
+      return { run: runtimeRun } as any;
+    });
+
+    const { service } = buildRuntimeService();
+    const callbacks = {
+      onSources: vi.fn(),
+      onToken: vi.fn(),
+      onDone: vi.fn(),
+      onError: vi.fn(),
+      onMeta: vi.fn(),
+    };
+
+    await service.stream(
+      '问题',
+      'kb-1',
+      undefined,
+      callbacks as any,
+      'trace-1',
+      'key-1',
+      'session-1',
+    );
+
+    expect(callbacks.onMeta).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'answer_reset' }),
+    );
+    expect(callbacks.onMeta).toHaveBeenCalledWith(expect.objectContaining({ type: 'tool_call' }));
+    // answer_reset 不进 token 通道；本轮已流出的"部分"计入 streamedAnswer，
+    // 兜底分块整体跳过（finalAnswer='最终' 不再重复推送）
+    expect(callbacks.onToken).toHaveBeenCalledTimes(1);
+    expect(callbacks.onToken).toHaveBeenCalledWith('部分');
+  });
+
+  it('AgentRuntime 路径：无流式分片时按 20 字符兜底分块（truncated 场景）', async () => {
+    vi.stubEnv('LLM_API_KEY', 'test-key');
+    vi.stubEnv('AGENT_TRACE_ENABLED', 'true');
+    const runtimeRun = vi
+      .fn()
+      .mockResolvedValue(makeRuntimeResult({ status: 'truncated', finalAnswer: 'y'.repeat(45) }));
+    vi.mocked(AgentRuntime).mockImplementation(function () {
+      return { run: runtimeRun } as any;
+    });
+
+    const { service } = buildRuntimeService();
+    const callbacks = {
+      onSources: vi.fn(),
+      onToken: vi.fn(),
+      onDone: vi.fn(),
+      onError: vi.fn(),
+      onMeta: vi.fn(),
+    };
+
+    await service.stream(
+      '问题',
+      'kb-1',
+      undefined,
+      callbacks as any,
+      'trace-1',
+      'key-1',
+      'session-1',
+    );
+
+    expect(callbacks.onToken).toHaveBeenCalledTimes(3); // 20 + 20 + 5
+    expect(callbacks.onToken).toHaveBeenLastCalledWith('yyyyy');
+  });
+
   it('AgentRuntime 失败时降级到 Orchestrator 路由链路，用户仍收到回答', async () => {
     vi.stubEnv('LLM_API_KEY', 'test-key');
     vi.stubEnv('AGENT_TRACE_ENABLED', 'true');

@@ -1,4 +1,7 @@
 import 'reflect-metadata';
+import * as dotenv from 'dotenv';
+// 入口负责加载 .env（env.ts 不做加载，避免污染测试环境）；dotenv 不覆盖已有变量
+dotenv.config({ path: '.env' });
 import { NestFactory } from '@nestjs/core';
 import { WorkerModule } from './worker.module';
 import { Logger } from '@nestjs/common';
