@@ -51,3 +51,6 @@ test-worktree/
 
 # Claude Code settings (local preferences)
 .claude/
+
+# ZCode session artifacts (local plans)
+.zcode/
