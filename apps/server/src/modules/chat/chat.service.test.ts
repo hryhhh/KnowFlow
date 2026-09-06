@@ -50,7 +50,6 @@ describe('ChatService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv('AGENTS_ENABLED', '');
-    vi.stubEnv('DEFAULT_MIN_SCORE', '');
     sessionService = makeMockSessionService();
     usageLog = makeMockUsageLog();
     agentChatService = makeMockAgentChatService();
