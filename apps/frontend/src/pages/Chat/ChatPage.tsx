@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { App, InputNumber, Popconfirm, Slider, Switch } from 'antd';
+import { App, Button, InputNumber, Slider, Switch } from 'antd';
+import { Bubble, Conversations, Sender, Welcome } from '@ant-design/x';
 import PageHeader from '../../components/PageHeader';
 import TopStepsBar from '../../components/TopStepsBar';
 import MarkdownAnswer from '../../components/MarkdownAnswer';
@@ -12,7 +13,7 @@ import type { ApiServiceItem, ProcessIndicator } from '../../types';
 import CreateServiceModal from './CreateServiceModal';
 import ApiUsagePanel from './ApiUsagePanel';
 import AgentThoughtPanel from '../../components/AgentThoughtPanel';
-import { Send, Bot, Loader2, MessageSquare, Trash2, Trash, Plus } from 'lucide-react';
+import { Bot, Loader2, MessageSquare, Trash2, Trash, Plus } from 'lucide-react';
 
 export default function ChatPage() {
   const { kbId } = useParams();
@@ -180,42 +181,20 @@ export default function ChatPage() {
                 </button>
               </div>
             </div>
-            <div className="session-list">
-              {visibleSessions.length === 0 ? (
-                <p style={{ fontSize: 12, color: 'var(--text-sub)', margin: 0 }}>暂无历史会话</p>
-              ) : (
-                visibleSessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className={`session-item ${session.id === currentSessionId ? 'active' : ''}`}
-                    onClick={() => switchSession(session.id)}
-                  >
-                    <div className="session-item-content">
-                      <div className="session-item-title">{session.title}</div>
-                      <div className="session-item-time">
-                        {formatTime(session.createdAt)} · {session.messageCount} 条消息
-                      </div>
-                    </div>
-                    <Popconfirm
-                      title="删除会话"
-                      description="确定删除该会话？"
-                      okText="删除"
-                      okButtonProps={{ danger: true }}
-                      cancelText="取消"
-                      onConfirm={() => handleDeleteSession(session.id)}
-                    >
-                      <button
-                        className="session-item-delete"
-                        title="删除会话"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </Popconfirm>
-                  </div>
-                ))
-              )}
-            </div>
+            <Conversations
+              items={visibleSessions.map((s) => ({ key: s.id, label: s.title }))}
+              activeKey={currentSessionId ?? undefined}
+              onActiveChange={(id) => switchSession(String(id))}
+              menu={(session) => ({
+                items: [{ key: 'delete', danger: true, label: '删除', icon: <Trash2 size={12} /> }],
+                onClick: ({ key }) => {
+                  if (key === 'delete') handleDeleteSession(String(session.key));
+                },
+              })}
+            />
+            {visibleSessions.length === 0 && (
+              <p style={{ fontSize: 12, color: 'var(--text-sub)', margin: 0 }}>暂无历史会话</p>
+            )}
           </div>
 
           {/* 下：引用来源 */}
@@ -243,18 +222,17 @@ export default function ChatPage() {
         <div className="conversation">
           <div className="messages">
             {messages.length === 0 ? (
-              <div className="empty">
-                <Bot
-                  size={40}
-                  strokeWidth={1.5}
-                  style={{ color: 'var(--text-subtle)', marginBottom: 12 }}
-                />
-                <p style={{ fontWeight: 500, fontSize: 15 }}>知识库助手</p>
-                <p>我可以阅读知识库的资料并使用自然语言回答你的问题</p>
-                <p style={{ fontSize: 12, color: 'var(--text-subtle)', marginTop: 8 }}>
-                  开始对话后将自动创建新会话
-                </p>
-              </div>
+              <Welcome
+                variant="borderless"
+                icon={<Bot size={28} strokeWidth={1.5} />}
+                title="知识库助手"
+                description="我可以阅读知识库的资料并使用自然语言回答你的问题"
+                extra={
+                  <span style={{ fontSize: 12, color: 'var(--text-subtle)' }}>
+                    开始对话后将自动创建新会话
+                  </span>
+                }
+              />
             ) : (
               <>
                 {messages.map((m, i) => (
@@ -292,19 +270,14 @@ export default function ChatPage() {
             )}
             <div ref={messagesEndRef} />
           </div>
-          <div className="chat-input">
-            <input
-              className="input"
-              placeholder="我可以阅读知识库的资料并使用自然语言回答你的问题"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
-            />
-            <button className="btn primary" onClick={onSubmit} disabled={isStreaming}>
-              <Send size={16} />
-              {isStreaming ? '回答中…' : '发送'}
-            </button>
-          </div>
+          <Sender
+            placeholder="我可以阅读知识库的资料并使用自然语言回答你的问题"
+            value={input}
+            onChange={(v) => setInput(v)}
+            onSubmit={() => onSubmit()}
+            onCancel={() => {}}
+            loading={isStreaming}
+          />
         </div>
 
         {/* 右：参数设置 */}
