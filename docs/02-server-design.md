@@ -1,7 +1,7 @@
 # 后端 Server 设计文档
 
 > NestJS 11 后端 API 服务设计，涵盖模块划分、接口定义、数据库表结构、SSE 流式响应等。
-> 最后更新：2026-08-28
+> 最后更新：2026-09-06
 
 ## 一、技术选型
 
@@ -103,13 +103,18 @@ apps/server/src/
 │   ├── agents/                       # 多 Agent 编排（AGENTS_ENABLED=true 时启用）
 │   │   ├── agent.module.ts
 │   │   ├── agent.controller.ts       # /api/agents/*
-│   │   ├── agent-chat.service.ts     # IntentRouter + Orchestrator + Dispatcher
+│   │   ├── agent-chat.service.ts     # 双链路：AgentRuntime(ReAct) / IntentRouter+Orchestrator
 │   │   ├── db-query.service.ts       # 参数化 SQL 执行
+│   │   ├── trace/                    # Agent Trace 可观测（AGENT_TRACE_ENABLED=true 时落库）
+│   │   │   ├── trace.controller.ts   # GET /api/agents/traces/:id、GET /api/agents/traces
+│   │   │   ├── trace.service.ts
+│   │   │   └── entities/
+│   │   │       └── agent-trace.entity.ts
 │   │   ├── cache/
 │   │   │   ├── cache.module.ts
 │   │   │   └── redis-cache.provider.ts  # Web Search 结果缓存
 │   │   ├── interceptor/
-│   │   │   └── trace-id.interceptor.ts  # X-Trace-Id 传播
+│   │   │   └── trace-id.interceptor.ts  # X-Trace-Id 传播（全局注册）
 │   │   └── providers/
 │   │       └── index.ts              # Tavily / Serper (Google) Search Provider
 │   │
@@ -143,9 +148,9 @@ apps/server/src/
 │       ├── ingestion.types.ts
 │       └── ingestion.processor.ts    # 消费 job，更新 DB 进度
 │
-└── worker-health/                    # Worker 健康检查（独立端口 3001）
+└── worker-health/                    # Worker 内部状态汇总（Worker 无 HTTP 端口）
     ├── worker-health.module.ts
-    ├── worker-health.controller.ts   # GET /health
+    ├── worker-health.controller.ts   # GET /health（仅注册，进程不监听 HTTP）
     └── worker-health.service.ts
 ```
 
@@ -258,6 +263,24 @@ apps/server/src/
 | compose_used_rag_priority | BOOLEAN     | 是否使用 rag-priority 合成策略 |
 | llm_arbitration_agent     | VARCHAR(32) | 仲裁选定的 Agent               |
 | created_at                | TIMESTAMP   | 创建时间                       |
+
+### 3.8 agent_traces（Agent 执行 Trace 表）
+
+> `AGENT_TRACE_ENABLED=true` 时由 TraceService 在 SSE `done` 之前写入；与 `usage_logs` 职责分离（本表存执行详情，后者存调用统计）。
+
+| 字段         | 类型        | 说明                                                      |
+| ------------ | ----------- | --------------------------------------------------------- |
+| id           | VARCHAR(64) | PK，即运行 ID（runId / 外部 x-trace-id）                  |
+| session_id   | VARCHAR(64) | 会话 ID                                                   |
+| kb_id        | VARCHAR(64) | 知识库 ID                                                 |
+| query        | TEXT        | 用户问题                                                  |
+| status       | VARCHAR(16) | running / completed / failed / truncated / aborted→failed |
+| started_at   | TIMESTAMPTZ | 开始时间                                                  |
+| completed_at | TIMESTAMPTZ | 结束时间                                                  |
+| steps        | JSONB       | 步骤列表：`llm_call` / `tool_call` / `final_answer` 等    |
+| summary      | JSONB       | 汇总（轮数、工具调用数、耗时等）                          |
+| tokens_used  | JSONB       | token 用量（prompt / completion / total）                 |
+| error_msg    | TEXT        | 错误信息                                                  |
 
 ## 四、API 接口定义
 
@@ -420,10 +443,14 @@ POST  /api/service-calls/:svcId/chat/stream  # 外部服务 SSE 调用
 
 > 当 `AGENTS_ENABLED=true` 时，通过 `/api/agents/routeStream` 路由，额外包含：
 >
-> - `trace` — 全链路 trace ID
-> - `agent_start` — Agent 开始执行 `{ agent: string }`
-> - `agent_done` — Agent 完成执行 `{ agent: string, duration: number }`
-> - `meta` — 可观测元数据 `{ type: 'llm_arbitration' | 'rag_included' | 'compose_strategy', ... }`
+> - `trace_id` — 全链路 trace ID `{ traceId: string }`
+> - `process` — 过程指示 `{ stage: 'retrieving' | 'generating' | 'rag_fallback', label }`
+> - `agent_start` — Agent 开始执行 `{ agent: string, traceId }`
+> - `agent_done` — Agent 完成执行 `{ agent: string, status, elapsedMs }`
+> - `agent_error` — 编排出错 `{ error, traceId }`
+> - `llm_arbitration` / `rag_included` / `compose_strategy` — 可观测元数据事件
+>
+> 当 `AGENT_RUNTIME_ENABLED=true` 时走 AgentRuntime 链路，额外包含 `trace` / `tool_call` / `tool_result` / `agent_completed` 等事件，详见 [12-agent-upgrade-overview.md](12-agent-upgrade-overview.md)。
 
 ### 4.6 Agent 编排模块（AGENTS_ENABLED=true）
 
@@ -431,9 +458,11 @@ POST  /api/service-calls/:svcId/chat/stream  # 外部服务 SSE 调用
 POST  /api/agents/routeStream   # SSE 流式多 Agent 路由
 POST  /api/agents/route         # 同步多 Agent 路由（非流式）
 POST  /api/agents/rules/reload  # 热重载路由规则（YAML 文件）
+GET   /api/agents/traces/:id    # 查询单次 Agent 执行 trace
+GET   /api/agents/traces?kbId=&limit=  # Trace 列表（limit 1..100）
 ```
 
-**路由规则文件：** `config/agent-rules.yml`（支持热重载）
+**路由规则文件：** `config/router.rules.yml`（仓库根目录，支持热重载；路径解析见 `resolveRouterRulesPath()`）
 
 **Web Search Provider：**
 
@@ -455,6 +484,7 @@ GET  /api/dashboard/recent-activities  # 最近活动（创建KB、上传文档�
 GET    /api/chat/sessions?kbId=xxx        # 会话列表
 POST   /api/chat/sessions                 # 创建会话（携带首条消息）
 GET    /api/chat/sessions/:id/messages    # 会话消息历史
+PATCH  /api/chat/sessions/:id/title       # 更新会话标题（空白标题兜底"新会话"）
 DELETE /api/chat/sessions/:id             # 删除会话
 DELETE /api/chat/sessions?kbId=xxx        # 清空知识库下所有会话
 ```
@@ -469,22 +499,13 @@ DELETE /api/api-services/:serviceId       # 删除服务
 
 > 注：API Key 在服务创建时同步生成，无需单独创建接口。Key 前缀 `ek_`，存储为 SHA-256 哈希。
 
-### 4.10 Worker 健康检查（独立端口）
+### 4.10 Worker 进程
 
-```
-GET  http://localhost:3001/health   # Worker 健康检查（docker-compose healthcheck 使用）
-```
+Worker 以 `createApplicationContext()` 启动，**不监听任何 HTTP 端口**，仅消费 BullMQ 队列；`worker-health/` 模块提供服务内部的状态汇总逻辑，但不对外暴露 HTTP 健康端点。观测 Worker 状态的方式：
 
-**响应：**
-
-```json
-{
-  "status": "ok",
-  "info": {
-    "redis": { "status": "up" },
-    "queue": { "status": "up", "activeJobs": 0 }
-  }
-}
+```bash
+docker compose logs -f worker     # 容器日志（"Worker 进程已启动，等待队列任务..."）
+docker inspect kb-worker          # 容器运行状态
 ```
 
 ## 五、核心业务流程
@@ -538,7 +559,7 @@ API 进程启动时运行 `OutboxComplianceService.checkAndReport()`：
     ↓
 [minScore 过滤] → 仅 hybrid+linear 和 vector 模式生效
     ↓ [可选]
-[Reranker] → CrossEncoder（当前为 stub，返回空列表）
+[Reranker] → Bi-Encoder 重排（useReranker=true 时；Cross-Encoder 仍为 stub）
     ↓
 [Prompt 构建] → 上下文 + 问题
     ↓
@@ -549,12 +570,32 @@ API 进程启动时运行 `OutboxComplianceService.checkAndReport()`：
 
 ### 5.4 多 Agent 编排流程（AGENTS_ENABLED=true）
 
+`AgentChatService.stream()` 为双链路设计（详见 [12-agent-upgrade-overview.md](12-agent-upgrade-overview.md)）：
+
+**链路 A — AgentRuntime（`AGENT_RUNTIME_ENABLED=true`）**
+
+```
+[加载对话记忆 ConversationMemory]
+    ↓
+[AgentRuntime.run()] → ReAct 循环：
+    LLM 推理（绑定 5 个内置工具）→ tool_calls → ToolExecutor 执行
+    → 追加消息 → 重复，直到产出最终答案或达到 AGENT_REACT_MAX_ROUNDS
+    ↓
+[流式输出 answer_delta + sources]
+    ↓
+[AGENT_TRACE_ENABLED=true → 保存 agent_traces] → [记录 UsageLog]
+    ↓
+[失败且 AGENT_RUNTIME_FALLBACK=true → 回退链路 B]
+```
+
+**链路 B — Orchestrator（Legacy 路由，默认）**
+
 ```
 [用户提问 query]
     ↓
 [IntentRouter] → YAML 规则匹配（优先级 + minScore）
-    ├── 置信度 ≥ 阈值 → 直接路由
-    └── 置信度 < 阈值 → LLM 仲裁
+    ├── 最高命中 priority ≥ 阈值(70) → 直接路由
+    └── 最高命中 priority < 阈值 → LLM 仲裁
     ↓
 [alwaysInclude 注入] → 强制包含 ragflow
     ↓
@@ -567,7 +608,7 @@ API 进程启动时运行 `OutboxComplianceService.checkAndReport()`：
     ↓
 [降级] → 若编排结果为空，回退到传统 RAG
     ↓
-[SSE 流式输出] → 同时推送 trace/agent_start/agent_done/meta 事件
+[SSE 流式输出] → 同时推送 trace_id/agent_start/agent_done/meta 事件
 ```
 
 ### 5.5 限流机制
@@ -608,9 +649,9 @@ streamChat(@Body() dto: ChatStreamDto): Observable<MessageEvent> {
 ### 6.2 异步文档处理（BullMQ Worker）
 
 - **API 进程**：仅负责文件落盘、创建记录、入队，立即返回
-- **Worker 进程**：独立 Node 进程（`worker.main.ts`），消费 `document-ingest` 队列
+- **Worker 进程**：独立 Node 进程（`worker.main.ts`），消费 `document-ingest` 队列，不监听 HTTP 端口
 - **队列配置**：并发数、重试次数、退避策略均可通过环境变量配置
-- **Worker 健康检查**：独立端口 3001 提供 `/health` 端点
+- **优雅退出**：监听 SIGTERM/SIGINT，等待在途任务完成后关闭
 
 ### 6.3 PGVector 连接
 
@@ -622,34 +663,41 @@ streamChat(@Body() dto: ChatStreamDto): Observable<MessageEvent> {
 
 ## 七、环境变量配置
 
-完整环境变量清单见项目根目录 `.env.example`，关键字段：
+完整环境变量清单见项目根目录 `.env.example`（统一校验入口 `apps/server/src/config/env.ts`），关键字段：
 
-| 变量                                    | 默认值                       | 说明                           |
-| --------------------------------------- | ---------------------------- | ------------------------------ |
-| `DATABASE_HOST/PORT/USER/PASSWORD/NAME` | —                            | PostgreSQL 连接                |
-| `DATABASE_SSL`                          | `false`                      | 生产环境设为 `true`            |
-| `REDIS_HOST/PORT`                       | —                            | Redis 连接                     |
-| `LLM_API_KEY/BASE_URL/MODEL`            | —                            | LLM 配置                       |
-| `EMBEDDING_MODEL/DIMENSIONS`            | `text-embedding-v4` / `1024` | 嵌入模型                       |
-| `SERVER_PORT`                           | `3000`                       | API 端口                       |
-| `FRONTEND_DEV_PORT`                     | `5173`                       | 前端开发端口                   |
-| `DEFAULT_CHUNK_SIZE/OVERLAP`            | `1000` / `200`               | 切片参数                       |
-| `DEFAULT_TOP_K/MIN_SCORE/DENSE_WEIGHT`  | `10` / `0.7` / `0.5`         | 检索默认值                     |
-| `DEFAULT_MIN_DENSE_SCORE`               | `0.3`                        | hybrid 模式 dense 候选过滤阈值 |
-| `DEFAULT_CANDIDATE_MULTIPLIER`          | `3`                          | 每路候选倍数（上限 10）        |
-| `RAG_RESULT_CACHE_TTL_MS`               | `300000`                     | 检索结果缓存 TTL（毫秒）       |
-| `API_KEY_PREFIX`                        | `ek_`                        | API Key 前缀                   |
-| `CORS_ALLOWED_ORIGINS`                  | （空）                       | 生产环境填写前端域名           |
-| `MAX_UPLOAD_SIZE_MB`                    | `100`                        | 上传大小限制                   |
-| `DOCUMENT_QUEUE_CONCURRENCY`            | `2`                          | Worker 并发数                  |
-| `DOCUMENT_QUEUE_ATTEMPTS`               | `3`                          | 最大重试次数                   |
-| `DOCUMENT_QUEUE_BACKOFF_MS`             | `2000`                       | 退避间隔                       |
-| `DOCUMENT_QUEUE_REMOVE_ON_COMPLETE`     | `1000`                       | 完成后保留条数                 |
-| `DOCUMENT_QUEUE_REMOVE_ON_FAIL`         | `100`                        | 失败后保留条数                 |
-| `AGENT_ALWAYS_INCLUDE_AGENTS`           | `ragflow`                    | 强制包含的 Agent（逗号分隔）   |
-| `AGENT_ROUTER_CONFIDENCE_THRESHOLD`     | `70`                         | LLM 仲裁触发阈值（百分制）     |
-| `AGENT_COMPOSE_STRATEGY`                | `rag-priority`               | 合成策略                       |
-| `AGENT_ROUTER_ALLOW_PARALLEL`           | `true`                       | 允许并行执行                   |
-| `AGENTS_ENABLED`                        | （未设置）                   | 启用多 Agent 编排              |
-| `WEB_SEARCH_CACHE_TTL_SECONDS`          | —                            | Web Search 结果缓存 TTL        |
-| `API_RATE_LIMIT`                        | `60`                         | 限流默认 QPM                   |
+| 变量                                                                    | 默认值                                          | 说明                                       |
+| ----------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------ |
+| `DATABASE_HOST/PORT/USER/PASSWORD/NAME`                                 | —                                               | PostgreSQL 连接                            |
+| `DATABASE_SSL`                                                          | `false`                                         | 生产环境设为 `true`                        |
+| `REDIS_HOST/PORT`                                                       | —                                               | Redis 连接                                 |
+| `LLM_API_KEY/BASE_URL/MODEL`                                            | —（必填，缺失启动失败）                         | LLM 配置                                   |
+| `EMBEDDING_MODEL/DIMENSIONS`                                            | `text-embedding-v4` / `1024`                    | 嵌入模型（维度启动时校验）                 |
+| `SERVER_PORT`                                                           | `3000`                                          | API 端口                                   |
+| `FRONTEND_DEV_PORT`                                                     | `5173`                                          | 前端开发端口                               |
+| `DEFAULT_MIN_SCORE`                                                     | `0.7`                                           | 相似度阈值（仅 vector/hybrid+linear 生效） |
+| `DEFAULT_MIN_DENSE_SCORE`                                               | `0.3`                                           | hybrid 模式 dense 候选过滤阈值             |
+| `DEFAULT_CANDIDATE_MULTIPLIER`                                          | `3`                                             | 每路候选倍数（上限 10）                    |
+| `RAG_RESULT_CACHE_TTL_MS`                                               | `300000`                                        | 检索结果缓存 TTL（毫秒），0 禁用           |
+| `CORS_ALLOWED_ORIGINS`                                                  | （空=`*`）                                      | 生产环境填写前端域名                       |
+| `MAX_UPLOAD_SIZE_MB`                                                    | `100`                                           | 上传大小限制                               |
+| `SESSION_CACHE_TTL_SECONDS`                                             | `60`                                            | 会话 Redis 缓存 TTL                        |
+| `DOCUMENT_QUEUE_CONCURRENCY`                                            | `2`                                             | Worker 并发数                              |
+| `DOCUMENT_QUEUE_ATTEMPTS`                                               | `3`                                             | 最大重试次数                               |
+| `DOCUMENT_QUEUE_BACKOFF_MS`                                             | `2000`                                          | 退避间隔                                   |
+| `DOCUMENT_QUEUE_REMOVE_ON_COMPLETE`                                     | `1000`                                          | 完成后保留条数                             |
+| `DOCUMENT_QUEUE_REMOVE_ON_FAIL`                                         | `100`                                           | 失败后保留条数                             |
+| `DB_READONLY_URL` / `DB_QUERIES_TEMPLATE_PATH`                          | —                                               | db-query 只读连接 / SQL 模板文件路径       |
+| `WEB_SEARCH_PROVIDER`                                                   | `tavily`                                        | `tavily` \| `serper`                       |
+| `WEB_SEARCH_API_KEY`                                                    | —                                               | 搜索服务 Key                               |
+| `WEB_SEARCH_CACHE_TTL_SECONDS` / `WEB_SEARCH_PROVIDER_TIMEOUT_MS`       | —                                               | 搜索缓存 TTL / 超时                        |
+| `MINERU_API_URL/BACKEND/EFFORT`                                         | `http://localhost:8000` / `pipeline` / `medium` | 自托管 MinerU（见 06 号文档）              |
+| `MINERU_AGENT_API_BASE_URL`                                             | MinerU 云端 Agent API                           | `mineru-agent` 解析策略使用                |
+| `AGENTS_ENABLED`                                                        | `false`                                         | 启用多 Agent 编排（总开关）                |
+| `AGENT_ALWAYS_INCLUDE_AGENTS`                                           | `ragflow`                                       | 强制包含的 Agent（逗号分隔）               |
+| `AGENT_ROUTER_CONFIDENCE_THRESHOLD`                                     | `70`                                            | LLM 仲裁触发阈值（百分制）                 |
+| `AGENT_COMPOSE_STRATEGY`                                                | `rag-priority`                                  | 合成策略                                   |
+| `AGENT_ROUTER_ALLOW_PARALLEL`                                           | `true`                                          | 允许并行执行                               |
+| `AGENT_RUNTIME_*` / `AGENT_TRACE_ENABLED` / `AGENT_MEMORY_MAX_MESSAGES` | 见 12 号文档                                    | AgentRuntime 链路配置                      |
+| `API_RATE_LIMIT`                                                        | `60`                                            | 限流默认 QPM                               |
+
+> 注：切片参数（chunkSize=1000 / chunkOverlap=200）与 API Key 前缀（`ek_`）为代码内常量（`rag-config.provider.ts`、`api-key.service.ts`），不通过环境变量配置；topK=10、denseWeight=0.5 在 `normalizeSearchParams()` 中硬编码为默认值。

@@ -1,7 +1,7 @@
 # RAG Engine 核心引擎设计文档
 
 > RAG (Retrieval-Augmented Generation) 核心引擎的模块化设计，涵盖文档加载、文本切片、向量化嵌入、向量存储、检索器与 LLM 集成。
-> 最后更新：2026-08-28
+> 最后更新：2026-09-06
 
 ## 一、引擎架构总览
 
@@ -139,21 +139,25 @@ export async function loadXLSX(options: XLSXLoadOptions): Promise<Document[]> {
 }
 ```
 
-### 3.3 PDF Loader
+### 3.3 PDF Loader（三种解析策略）
 
-**职责：** 解析 PDF 文件，按页面或段落切分。
+PDF 解析按 `parseStrategy` 分发（默认 `mineru-agent`，见 `apps/server` 文档服务）：
+
+| 策略           | 实现                  | 说明                                                                  |
+| -------------- | --------------------- | --------------------------------------------------------------------- |
+| `mineru-agent` | `agent-pdf-loader.ts` | MinerU 云端 Agent API（`MINERU_AGENT_API_BASE_URL`），返回 Markdown   |
+| `mineru`       | `pdf-loader.ts`       | 自托管 MinerU `/file_parse`（`MINERU_API_URL`），失败时降级 pdf-parse |
+| `basic`        | `pdf-loader.ts` 内部  | pdf-parse 纯文本兜底，无外部依赖                                      |
+
+自托管部署详见 [06-self-hosted-mineru.md](06-self-hosted-mineru.md)。MinerU 输出的 Markdown 交给 `markdown-splitter.ts` 按标题层级切片。
 
 ```typescript
-// packages/rag-engine/src/loaders/pdf-loader.ts
+// packages/rag-engine/src/loaders/pdf-loader.ts（节选）
+// POST {MINERU_API_URL}/file_parse → 返回 Markdown ZIP → AdmZip 解压
+// 环境变量：MINERU_API_URL / MINERU_BACKEND / MINERU_EFFORT
 
-import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
-
-export async function loadPDF(filePath: string): Promise<Document[]> {
-  const loader = new PDFLoader(filePath, {
-    parsedItemSeparator: '\n\n', // 页面间分隔符
-  });
-  return await loader.load();
-}
+// packages/rag-engine/src/loaders/agent-pdf-loader.ts（节选）
+// POST {MINERU_AGENT_API_BASE_URL}/parse/file → 轮询 /parse/:task_id
 ```
 
 ### 3.4 Word Loader
@@ -174,17 +178,28 @@ export async function loadWord(filePath: string): Promise<Document[]> {
 ### 3.5 统一加载入口
 
 ```typescript
-// packages/rag-engine/src/loaders/index.ts
+// packages/rag-engine/src/loaders/index.ts（节选）
 
-import path from 'node:path';
+/** 文档解析策略 */
+export type ParseStrategy = 'mineru' | 'mineru-agent' | 'basic';
 
-type FileType = 'csv' | 'xlsx' | 'pdf' | 'word';
+export interface LoadDocumentOptions {
+  parseStrategy?: ParseStrategy;
+  /** Agent API 可选参数，仅在 parseStrategy="mineru-agent" 时生效 */
+  agentOptions?: {
+    language?: string;
+    enableTable?: boolean;
+    isOcr?: boolean;
+    enableFormula?: boolean;
+    pageRange?: string;
+  };
+}
 
 export function detectFileType(filename: string): FileType {
   const ext = path.extname(filename).toLowerCase();
   const map: Record<string, FileType> = {
     '.csv': 'csv',
-    '.xlsx': 'xls',
+    '.xlsx': 'xlsx',
     '.xls': 'xlsx',
     '.pdf': 'pdf',
     '.docx': 'word',
@@ -193,36 +208,14 @@ export function detectFileType(filename: string): FileType {
   return map[ext] ?? 'csv'; // 默认当 CSV 处理
 }
 
-export interface LoadResult {
-  documents: Document[];
-  fileType: FileType;
-  totalChars: number;
-}
-
-export async function loadDocument(filePath: string, fileType?: FileType): Promise<LoadResult> {
-  const detectedType = fileType || detectFileType(filePath);
-  let documents: Document[] = [];
-
-  switch (detectedType) {
-    case 'csv':
-      documents = await loadCSV({ filePath });
-      break;
-    case 'xlsx':
-      documents = await loadXLSX({ filePath });
-      break;
-    case 'pdf':
-      documents = await loadPDF(filePath);
-      break;
-    case 'word':
-      documents = await loadWord(filePath);
-      break;
-  }
-
-  return {
-    documents,
-    fileType: detectedType,
-    totalChars: documents.reduce((sum, d) => sum + d.pageContent.length, 0),
-  };
+export async function loadDocument(
+  filePath: string,
+  fileType?: FileType,
+  parseStrategy?: ParseStrategy,
+  agentOptions?: LoadDocumentOptions['agentOptions'],
+): Promise<LoadResult> {
+  // 按 fileType 分发到对应 Loader；PDF 再按 parseStrategy 分发到
+  // agent-pdf-loader（mineru-agent）或 pdf-loader（mineru / basic）
 }
 ```
 
@@ -284,25 +277,13 @@ export async function splitText(
 }
 ```
 
-### 4.2 SemanticSplitter（高级）
+### 4.2 MarkdownSplitter（MinerU 输出专用）
 
-基于语义边界的智能切片（可选增强功能）：
+MinerU 解析 PDF 后输出 Markdown，`markdown-splitter.ts` 按标题层级（# ~ ####）切块，保留标题路径作为切片标题，保证语义单元完整。
 
-```typescript
-// packages/rag-engine/src/splitters/semantic-splitter.ts
+### 4.3 SemanticSplitter（高级，未接入 Pipeline）
 
-/**
- * 语义切片思路：
- * 1. 先用 Embedding 计算相邻句子的相似度
- * 2. 相似度骤降的位置作为边界
- * 3. 在语义边界处切分
- *
- * 适用场景：长篇论文、报告等结构化程度低的文档
- */
-export class SemanticSplitter {
-  // 实现略，依赖 Embedding 模型
-}
-```
+基于句向量相似度的语义边界切片，已实现并导出（`SemanticSplitter` 类），但因需要额外调用 Embedding 计算句间相似度、延迟高，暂未接入 `ingestDocument` 流程。适用长篇论文/报告，作为可选离线策略（见 [17-rag-optimizations.md](17-rag-optimizations.md) §2.1）。
 
 ## 五、向量化嵌入 (Embeddings)
 
@@ -445,17 +426,17 @@ export async function searchSimilarityWithScore(
 **Docker PGVector 配置：**
 
 ```yaml
-# docker-compose.yml
+# docker-compose.yml（节选）
 services:
-  postgres-vector-server:
+  postgres-vector:
     image: pgvector/pgvector:pg16
-    container_name: postgres-vector-server
+    container_name: kb-pgvector
     ports:
-      - '5432:5432'
+      - '${POSTGRES_PORT:-5433}:5432' # 宿主机默认 5433，避免与本机 PG 冲突
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123456
-      POSTGRES_DB: rag
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-in-production}
+      POSTGRES_DB: ${POSTGRES_DB:-knowledge_rag}
 ```
 
 ### 6.2 Memory Store（开发环境）
@@ -564,6 +545,33 @@ export async function sparseSearch(
     metadata: { chunkId: row.id, kbId: filter.kbId },
   }));
 }
+```
+
+### 7.3 混合检索器（hybrid-retriever.ts）
+
+双路并行召回 + 融合，是默认推荐的检索模式（设计细节见 [07-hybrid-retrieval.md](07-hybrid-retrieval.md)）：
+
+```typescript
+// packages/rag-engine/src/retrievers/hybrid-retriever.ts（节选）
+
+interface HybridSearchParams {
+  query: string;
+  kbId: string;
+  topK: number;
+  minScore?: number;
+  fusionMethod?: 'rrf' | 'linear'; // 默认 rrf
+  rrfK?: number; // 默认 60
+  denseWeight?: number; // linear 权重，默认 0.5
+  candidateMultiplier?: number; // 每路候选 = topK × 倍数（硬上限 10）
+  minDenseScore?: number | null; // 仅过滤 dense 候选阶段
+}
+
+// 并行执行 dense（PGVector）与 sparse（tsvector）检索，
+// 各取 topK × candidateMultiplier 条候选，再经 rrfFuse / linearFuse 融合取 topK
+export async function hybridSearch(
+  params: HybridSearchParams,
+  config: RAGConfig,
+): Promise<RetrievalResult[]>;
 ```
 
 ## 八、重排序 (Rerankers)
@@ -781,7 +789,7 @@ export async function ingestDocument(
 /**
  * Pipeline Stage 2: Retrieval & Generation (检索与生成)
  *
- * 用户问题 → 按 retrievalMode 分支检索 → [可选]重排序 → 构建 Prompt → LLM 流式输出
+ * 用户问题 → 归一化 retrievalMode → 分支检索 → [可选]重排 → 构建 Prompt → LLM 流式输出
  *
  * retrievalMode 支持: vector | keyword | hybrid
  * hybrid 模式下并行执行 dense + sparse 检索，通过 RRF 或 Linear 融合
@@ -793,25 +801,25 @@ export async function retrieveAndChat(
   config: RAGPipelineConfig,
   callbacks: import('./llm/chat-service.js').StreamCallbacks,
 ): Promise<void> {
-  // 1. 检索（根据 retrievalMode 分支）
-  let results = await performSearch(query, kbId, params, config);
+  // 1. 归一化：未传 retrievalMode 时按 useReranker 兼容映射（打 [DEPRECATED] 日志）
+  //    useReranker=true → 'hybrid'，否则 'vector'
+  const resolved = normalizeRetrievalMode(params);
 
-  // 2. 发送引用来源
+  // 2. 检索（performSearch 按 retrievalMode 分支；含结果缓存与 minScore 过滤）
+  let results = await performSearch(query, kbId, resolved, config);
+
+  // 3. 发送引用来源
   callbacks.onSources(
-    results.map((r) => ({
-      content: r.content,
-      sourceFile: r.sourceFile,
-      score: r.score,
-    })),
+    results.map((r) => ({ content: r.content, sourceFile: r.sourceFile, score: r.score })),
   );
 
-  // 3. [可选] 重排序（当前为 stub）
-  if (params.useReranker && results.length > 0) {
-    // TODO: 接入实际 Cross-Encoder 推理
-    // results = await rerank({ query, results, topK: params.topK });
+  // 4. [可选] 重排序：Bi-Encoder 重排（与检索模式独立）；
+  //    Cross-Encoder 为 stub（原样返回），见 17 号文档 §4.1
+  if (resolved.useReranker && results.length > 0) {
+    results = await rerank(query, results, config.embedding, { topK: resolved.topK });
   }
 
-  // 4. 构建上下文并调用 LLM
+  // 5. 构建上下文并调用 LLM
   const context = buildContext(results);
   await streamChat(
     { query, context },
@@ -824,17 +832,24 @@ export async function retrieveAndChat(
 ## 十一、统一导出
 
 ```typescript
-// packages/rag-engine/src/index.ts
+// packages/rag-engine/src/index.ts（与实际文件对齐）
 
 // Loaders
-export { loadCSV } from './loaders/csv-loader.js';
-export { loadXLSX } from './loaders/xlsx-loader.js';
-export { loadPDF } from './loaders/pdf-loader.js';
-export { loadWord } from './loaders/word-loader.js';
-export { loadDocument, detectFileType } from './loaders/index.js';
+export {
+  loadCSV,
+  loadXLSX,
+  loadPDF,
+  loadWord,
+  loadDocument,
+  detectFileType,
+  type ParseStrategy,
+  type LoadDocumentOptions,
+} from './loaders/index.js';
 
 // Splitters
 export { splitDocuments, splitText } from './splitters/recursive-splitter.js';
+export { splitMarkdownDocuments } from './splitters/markdown-splitter.js';
+export { SemanticSplitter } from './splitters/semantic-splitter.js';
 
 // Embeddings
 export { getEmbeddings, embedDocuments, embedQuery } from './embeddings/openai-embeddings.js';
@@ -842,36 +857,48 @@ export { getEmbeddings, embedDocuments, embedQuery } from './embeddings/openai-e
 // Stores
 export {
   createPGVectorStore,
+  ensureCachedPGVectorStore,
   addDocumentsToPG,
   searchSimilarityWithScore,
+  deleteByDocId,
 } from './stores/pgvector-store.js';
+export {
+  writeSparseIndex,
+  deleteSparseByDocId,
+  deleteSparseByKbId,
+} from './stores/sparse-store.js';
 export { createMemoryStore, createMemoryStoreFromTexts } from './stores/memory-store.js';
 
-// Retrievers
-export { similaritySearch } from './retrievers/similarity-retriever.js';
-export { sparseSearch } from './retrievers/sparse-retriever.js';
-export { hybridSearch } from './retrievers/hybrid-retriever.js';
-
-// Fusion
-export { rrfFuse } from './fusion/rrf.js';
-export { linearFuse } from './fusion/linear.js';
+// Cache
+export {
+  getCachedResults,
+  setCachedResults,
+  invalidateByKbId,
+  getCacheStats,
+} from './cache/search-cache.js';
 
 // Tokenizer
 export { tokenize, tokensToTsvString, tokensToTsQuery } from './tokenizer.js';
 
-// Cache
-export { SearchCache } from './cache/search-cache.js';
+// Retrievers
+export { similaritySearch, type VectorStoreLike } from './retrievers/similarity-retriever.js';
+export { hybridSearch, type HybridSearchParams } from './retrievers/hybrid-retriever.js';
+export { sparseSearch, type SparseSearchParams } from './retrievers/sparse-retriever.js';
+
+// Fusion
+export { rrfFuse, linearFuse } from './fusion/index.js';
 
 // Rerankers
 export { rerank } from './rerankers/bi-encoder-reranker.js';
 
 // LLM
-export { streamChat, buildContext } from './llm/chat-service.js';
+export { streamChat, buildContext, DEFAULT_SYSTEM_PROMPT } from './llm/chat-service.js';
 
 // Pipeline
-export { ingestDocument, retrieveAndChat } from './pipeline.js';
+export { ingestDocument, retrieve, retrieveAndChat, getChunkIds } from './pipeline.js';
 
-// Types
-export type { RAGPipelineConfig } from './pipeline.js';
-export type { RetrievalResult, SourceRef } from './llm/chat-service.js';
+// Types（FileType / LoadResult / TextChunk / SearchParams / RetrievalResult /
+//        SourceRef / StreamCallbacks / SearchDebugInfo / EmbeddingConfig / LLMConfig /
+//        PGConfig / RAGPipelineConfig / IngestProgressCallback 等）
+export type { SearchParams, RetrievalResult, SourceRef, RAGPipelineConfig } from './types.js';
 ```

@@ -32,11 +32,11 @@ rag-engine → AdmZip 解压 → Markdown
 
 ## 二、三种解析策略对比
 
-| 策略值                 | 说明                  | 文件大小 | 页数   | 隐私           | 依赖               |
-| ---------------------- | --------------------- | -------- | ------ | -------------- | ------------------ |
-| `mineru-agent`（默认） | 云端 MinerU Agent API | ≤10 MB   | ≤20 页 | 上传到外部服务 | 无需额外服务       |
-| `mineru`               | 本地自托管 MinerU API | 无限制   | 无限制 | 完全本地       | 需启动 Docker 服务 |
-| `basic`                | pdf-parse 纯文本兜底  | 无限制   | 无限制 | 完全本地       | 无依赖             |
+| 策略值                 | 说明                  | 文件大小 | 页数   | 隐私           | 依赖                                                  |
+| ---------------------- | --------------------- | -------- | ------ | -------------- | ----------------------------------------------------- |
+| `mineru-agent`（默认） | 云端 MinerU Agent API | ≤10 MB   | ≤20 页 | 上传到外部服务 | 无需额外服务；端点经 `MINERU_AGENT_API_BASE_URL` 配置 |
+| `mineru`               | 本地自托管 MinerU API | 无限制   | 无限制 | 完全本地       | 需启动 Docker 服务                                    |
+| `basic`                | pdf-parse 纯文本兜底  | 无限制   | 无限制 | 完全本地       | 无依赖                                                |
 
 ---
 
@@ -90,6 +90,8 @@ docker compose --profile mineru-cpu up -d
 ```
 
 > ⚠️ 注意：MinerU 服务在 `profiles: ["mineru-cpu"]` 下，**不会**被 `pnpm infra:up` 自动启动，必须显式带上 `--profile`。
+>
+> ⚠️ 注意：现行 docker-compose.yml 将该服务的 `entrypoint` 覆盖为 `mineru-api`（不走 start-mineru.sh 懒加载脚本）。若 `mineru_models` 卷为空，首次启动前需先手动下载模型（临时移除 entrypoint 覆盖启动一次，或执行 `mineru-models-download -s huggingface -m all`）。
 
 ### 步骤 4：等待模型下载（首次必须）
 
@@ -272,7 +274,7 @@ docker exec kb-mineru-api du -sh /root/.cache/huggingface/hub
 
 # === 清理重建（会重新下载模型）===
 docker compose --profile mineru-cpu down
-docker volume rm kb-main_mineru_models   # 删除 volume
+docker volume rm knowledge-ai-main_mineru_models   # 删除 volume
 docker compose --profile mineru-cpu up -d
 ```
 
@@ -306,7 +308,7 @@ docker logs kb-mineru-api
 docker exec kb-mineru-api curl -I https://huggingface.co
 
 # 检查 volume 是否挂载
-docker volume inspect kb-main_mineru_models
+docker volume inspect knowledge-ai-main_mineru_models
 ```
 
 ### 8.3 API 返回 500 / 解析失败

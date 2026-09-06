@@ -1,7 +1,7 @@
 # KnowBase X — 智能知识库系统
 
 > 基于 LangChain.js 的企业级 RAG 知识库平台，支持文档上传、智能切片、向量检索、对话问答与 API 服务化。
-> 最后更新：2026-08-28
+> 最后更新：2026-09-06
 
 ## 一、项目概述
 
@@ -19,6 +19,8 @@ KnowBase X 是一个**检索增强生成（RAG）**驱动的智能知识库系�
 ### 扩展能力
 
 - **多 Agent 编排**：IntentRouter + Orchestrator + Dispatcher，支持 DbQueryAgent / WebSearchAgent / RagFlowAgent 并行执行，rag-priority 合成策略
+- **自主 Agent Runtime**：ReAct 循环 + 5 个内置工具（rag_search / query_database / web_search / read_file / call_http_api）+ 对话记忆，`AGENT_RUNTIME_ENABLED` 开关
+- **可观测性**：结构化 Trace（agent_traces 表 + Trace 详情页）、Agent Activity 实时面板、全链路 trace_id
 - **混合检索**：BM25(tsvector) + Vector 双路召回，RRF / Linear 融合，支持中文 N-gram 分词
 - **异步摄入**：BullMQ Worker 架构，进度追踪，重试与幂等
 - **会话管理**：对话历史持久化，多会话切换
@@ -91,10 +93,11 @@ knowbase-x/
 │   │   │   │   ├── Chunk/            # 切片管理页
 │   │   │   │   ├── Retrieval/        # 知识检索页
 │   │   │   │   ├── Chat/             # 知识问答页
+│   │   │   │   ├── Trace/            # Agent Trace 详情页
 │   │   │   │   └── ApiTest/          # API 测试页
-│   │   │   ├── components/       # 公共组件
-│   │   │   ├── services/         # API 调用封装
-│   │   │   ├── stores/           # 状态管理
+│   │   │   ├── components/       # 公共组件（含 AgentThoughtPanel）
+│   │   │   ├── services/         # API 调用封装（api.ts / sse.ts）
+│   │   │   ├── stores/           # 状态管理（kb-store / chat-store）
 │   │   │   └── types/            # 类型定义
 │   │   └── ...
 │   │
@@ -107,13 +110,13 @@ knowbase-x/
 │       │   │   ├── retrieval/        # 检索模块（混合检索）
 │       │   │   ├── chat/             # 对话问答模块
 │       │   │   ├── session/          # 会话管理模块
-│       │   │   ├── agents/           # 多 Agent 编排模块
+│       │   │   ├── agents/           # 多 Agent 编排模块（含 trace/ 可观测）
 │       │   │   ├── api-service/      # 外部服务调用模块
 │       │   │   ├── dashboard/        # 仪表盘统计模块
 │       │   │   ├── usage/            # 调用日志模块
 │       │   │   └── ingestion/        # BullMQ 异步摄入模块
 │       │   ├── common/               # 公共：限流、Outbox 校验、Redis
-│       │   ├── config/               # 配置模块 (RAG Pipeline)
+│       │   ├── config/               # 配置模块 (env.ts / RAG Pipeline)
 │       │   └── database/             # TypeORM 数据源 + Migrations
 │       └── worker.main.ts          # Worker 进程入口
 │
@@ -159,26 +162,31 @@ knowbase-x/
 └── packages/
     └── agents/                   # 多 Agent 编排包
         ├── src/
-        │   ├── router/           # IntentRouter（YAML 规则 + LLM 仲裁）
+        │   ├── router/           # IntentRouter（YAML 规则 + LLM 仲裁 + 热重载）
         │   ├── orchestrator.ts   # Orchestrator（编排调度）
         │   ├── dispatcher.ts     # Dispatcher（并行执行）
-        │   └── agents/           # Agent 实现
-        │       ├── db-query-agent.ts
-        │       ├── web-search-agent.ts
-        │       └── ragflow-agent.ts
+        │   ├── agents/           # Agent 实现 + LegacyAgentAdapter
+        │   │   ├── db-query-agent.ts
+        │   │   ├── web-search-agent.ts
+        │   │   └── ragflow-agent.ts
+        │   ├── tools/            # Tool 抽象层（base-tool / tool-registry / tool-executor）
+        │   │   └── builtin/      # 5 个内置工具（rag_search / query_database /
+        │   │                     #   web_search / read_file / call_http_api）
+        │   ├── runtime/          # AgentRuntime + ReAct 循环（AGENT_RUNTIME_ENABLED）
+        │   ├── memory/           # ConversationMemory 对话记忆
+        │   └── observability/    # TraceCollector 执行步骤收集
 │
-└── docs/                         # 本套设计文档
+└── docs/                         # 设计文档
     ├── 01-project-overview.md    # 项目总览 (本文件)
     ├── 02-server-design.md       # 后端设计
     ├── 03-frontend-design.md     # 前端设计
     ├── 04-rag-engine-design.md   # RAG 引擎设计
     ├── 05-deployment.md          # 部署方案
-    ├── 06-hybrid-retrieval.md       # 混合检索 PRD + 设计文档
-    ├── 08-self-hosted-mineru.md  # MinerU 自托管指南
-    ├── 09-agent-orchestration-v2.md # 多 Agent 编排 PRD
-    ├── 10-async-document-ingestion-upgrade-plan.md # 异步摄入计划(已完成)
-    ├── 11-hybrid-retrieval-impl-plan.md     # 混合检索实施计划(已完成)
-    └── 12-remaining-tasks-plan.md   # 剩余任务(已全部完成)
+    ├── 06-self-hosted-mineru.md  # MinerU 自托管指南
+    ├── 07-hybrid-retrieval.md    # 混合检索设计
+    ├── 08-agent-orchestration-v2.md # 多 Agent 路由编排 PRD (Legacy 链路)
+    ├── 12-agent-upgrade-overview.md # Agent 系统总览 (Tool/Runtime/可观测)
+    └── 17-rag-optimizations.md   # RAG 待优化点清单
 ```
 
 ## 五、功能模块一览
@@ -225,8 +233,10 @@ knowbase-x/
 - 会话管理：历史会话侧边栏、新建/删除会话、标题自动更新
 - RAG 回答：引用来源标注在右侧面板（含相似度分数）
 - 多 Agent 编排（`AGENTS_ENABLED=true`）：IntentRouter 路由 → Dispatcher 并行 → rag-priority 合成
+- 自主 Agent Runtime（`AGENT_RUNTIME_ENABLED=true`）：ReAct 循环调用工具作答，支持多步推理与对话记忆
+- Agent Activity 面板：实时展示 tool_call / tool_result 等执行事件，可跳转 Trace 详情页
 - 模型回答参数配置区（同检索参数，含检索模式选择）
-- 流式输出 (SSE)，支持 trace/agent_start/agent_done/meta 可观测事件
+- 流式输出 (SSE)，支持 trace_id / agent_start / agent_done / tool_call 等可观测事件
 
 ### 5.6 服务调用 / API (Step 4)
 
@@ -241,17 +251,18 @@ knowbase-x/
 
 ## 六、开发计划
 
-| 阶段    | 内容            | 产物                                        |
-| ------- | --------------- | ------------------------------------------- |
-| Phase 0 | 设计文档        | `docs/*.md`                                 |
-| Phase 1 | 项目脚手架      | monorepo 结构、依赖安装、基础配置           |
-| Phase 2 | RAG Engine 核心 | 文档加载、切片、向量化、向量存储、检索      |
-| Phase 3 | 后端 API        | NestJS 模块、数据库表、RESTful 接口、SSE    |
-| Phase 4 | 前端 UI         | 页面路由、组件、交互逻辑、状态管理          |
-| Phase 5 | 集联调 & 部署   | 前后端联调、Docker 部署、API 文档           |
-| Phase 6 | 混合检索升级    | BM25 + Vector + RRF/Linear 融合 ✅          |
-| Phase 7 | 异步摄入升级    | BullMQ Worker 架构 ✅                       |
-| Phase 8 | 多 Agent 编排   | IntentRouter + Orchestrator + Dispatcher ✅ |
+| 阶段    | 内容            | 产物                                                         |
+| ------- | --------------- | ------------------------------------------------------------ |
+| Phase 0 | 设计文档        | `docs/*.md`                                                  |
+| Phase 1 | 项目脚手架      | monorepo 结构、依赖安装、基础配置                            |
+| Phase 2 | RAG Engine 核心 | 文档加载、切片、向量化、向量存储、检索                       |
+| Phase 3 | 后端 API        | NestJS 模块、数据库表、RESTful 接口、SSE                     |
+| Phase 4 | 前端 UI         | 页面路由、组件、交互逻辑、状态管理                           |
+| Phase 5 | 集联调 & 部署   | 前后端联调、Docker 部署、API 文档                            |
+| Phase 6 | 混合检索升级    | BM25 + Vector + RRF/Linear 融合 ✅                           |
+| Phase 7 | 异步摄入升级    | BullMQ Worker 架构 ✅                                        |
+| Phase 8 | 多 Agent 编排   | IntentRouter + Orchestrator + Dispatcher ✅                  |
+| Phase 9 | Agent 自主升级  | Tool 系统 + AgentRuntime(ReAct) + Trace 可观测 + 前端面板 ✅ |
 
 ## 七、参考资料
 

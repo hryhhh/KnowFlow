@@ -7,7 +7,9 @@ v1.0：单链路 RAG → 多智能体架构设计
 v2.0：补充实现细节、架构决策、接口契约与部署方案
 v2.1（本次）：强化 RAG 召回优先级、引入软默认规则与置信度仲裁、优化合成策略，解决换问法导致误路由问题
 
-最后更新：2026-08-28
+最后更新：2026-09-06（对齐现行实现：规则文件、阈值语义、SSE 事件名）
+
+> **范围说明**：本文档描述 **Legacy 路由链路**（`AGENTS_ENABLED=true, AGENT_RUNTIME_ENABLED=false` 时的 IntentRouter → Orchestrator → Compose）。基于工具调用与 ReAct 的 AgentRuntime 链路见 [12-agent-upgrade-overview.md](12-agent-upgrade-overview.md)。
 
 1. 概要（Summary）
    将现有单链路 RAG 改造为「1 主智能体 + N 子智能体」架构。
@@ -59,7 +61,7 @@ Dispatcher 支持「始终候选列表」与合成阶段的 RAG 优先策略。
 当没有更高优先级的明确规则强排除时，保证 ragflow 进入候选列表。
 
 新增：置信度仲裁
-如果最高分规则的置信度 < 配置阈值（默认 0.85），或存在多个意图冲突，则调用轻量 LLM 做最终仲裁（≤ 500ms，compact 模型，只输出目标 Agent 列表 + 理由）。
+如果最高命中规则的 priority < 配置阈值（`AGENT_ROUTER_CONFIDENCE_THRESHOLD`，百分制，默认 70），则调用轻量 LLM 做最终仲裁（≤ 500ms，compact 模型，只输出目标 Agent 名称）。注意阈值与规则 priority 同一量纲（百分制），代码判断为严格小于（`<`），priority 恰好等于阈值时不触发仲裁。
 
 最终输出最多 maxMatchedRules 个 Agent（可配置是否强制包含 ragflow）。
 
@@ -100,25 +102,27 @@ API 端点：
 - `POST /api/agents/route` — 同步路由（非流式，返回合成结果）
 - `POST /api/agents/rules/reload` — 热重载路由规则（YAML 文件变更时自动加载，也可手动触发）
 
-SSE 事件说明：
+SSE 事件说明（与 `agent-chat.service.ts` 实际推送对齐）：
 
-| 事件类型      | 触发时机       | 数据结构                                                |
-| ------------- | -------------- | ------------------------------------------------------- |
-| `trace`       | 请求开始       | `{ traceId: string }`                                   |
-| `agent_start` | Agent 开始执行 | `{ agent: string, traceId?: string }`                   |
-| `agent_done`  | Agent 执行完成 | `{ agent: string, duration: number, traceId?: string }` |
-| `sources`     | 检索来源就绪   | `SourceRef[]`                                           |
-| `token`       | LLM 流式输出   | `string`                                                |
-| `done`        | 回答完成       | `null`                                                  |
-| `error`       | 发生错误       | `string`（错误信息）                                    |
-| `meta`        | 可观测元数据   | `{ type: 'llm_arbitration'                              | 'rag_included' | 'compose_strategy', ... }` |
+| 事件类型                                                | 触发时机                 | 数据结构                                                       |
+| ------------------------------------------------------- | ------------------------ | -------------------------------------------------------------- |
+| `trace_id`                                              | 请求开始                 | `{ traceId: string }`                                          |
+| `process`                                               | 过程指示                 | `{ stage: 'retrieving'\|'generating'\|'rag_fallback', label }` |
+| `agent_start`                                           | Agent 开始执行           | `{ agent: string, traceId: string }`                           |
+| `agent_done`                                            | Agent 执行完成           | `{ agent: string, status: string, elapsedMs: number }`         |
+| `agent_error`                                           | 编排执行出错             | `{ error: string, traceId: string }`                           |
+| `sources`                                               | 检索来源就绪             | `SourceRef[]`                                                  |
+| `token`                                                 | LLM 流式输出             | `string`                                                       |
+| `done`                                                  | 回答完成                 | `null`                                                         |
+| `error`                                                 | 发生错误                 | `string`（错误信息）                                           |
+| `llm_arbitration` / `rag_included` / `compose_strategy` | 可观测元数据（独立事件） | 如 `{ by: 'always_include' }`、`{ strategy: 'rag-priority' }`  |
 
 **降级策略：** 当所有 Agent 均无有效结果时，系统自动回退到传统单链路 RAG（直接调用 rag-engine）。
 
 **Web Search 缓存：** 使用 `RedisCacheProvider`，TTL 由 `WEB_SEARCH_CACHE_TTL_SECONDS` 控制，避免重复请求。
 新增配置项见第 15 节。
 
-9. 路由规则示例（配置）——v2.1 推荐
+9. 路由规则示例（配置）——与 `config/router.rules.yml` 现行文件一致
    YAMLrules:
 
 - id: kb-docs-strict
@@ -127,21 +131,18 @@ SSE 事件说明：
   targetAgent: "ragflow"
   priority: 100
   minScore: 0.9
-  examples:
-  - "这个文档里怎么说的"
-  - "知识库有没有相关说明"
-    enabled: true
+  enabled: true
 
-- id: db-stats
-  pattern: "\\b(多少|统计|数量|列表|top\\b|新增客户|增长)"
+- id: db-stats # 另有 db-stats-entity(89) / db-list(88) / db-stat(85) / db-person(85) 等细化规则
+  pattern: "(多少|统计|数量|排行|趋势|...)"
   intent: "db_query"
   targetAgent: "db-query"
   priority: 90
   minScore: 0.85
   enabled: true
 
-- id: web-latest
-  pattern: "\\b(最新|发布|新闻|动态|今天|近日)"
+- id: web-news # 另有 web-weather(78) / web-realtime(75) / web-general(70)
+  pattern: "(最新|新闻|发布|...)"
   intent: "web_search"
   targetAgent: "web-search"
   priority: 80
@@ -158,7 +159,7 @@ SSE 事件说明：
   minScore: 0.0
   enabled: true
 
-- id: combined-fallback
+- id: llm-fallback
   pattern: ""
   intent: "fallback"
   targetAgent: "llm-intent-classifier"
@@ -168,11 +169,11 @@ SSE 事件说明：
 
 settings:
 maxMatchedRules: 3
-defaultAgentTimeoutMs: 3000
+defaultAgentTimeoutMs: 30000
 allowParallel: true
-alwaysIncludeAgents: ["ragflow"] # 关键配置
-routerConfidenceThreshold: 0.85 # 低于此值触发 LLM 仲裁
-composeStrategy: "rag-priority" # 新默认 10. 可观测性、日志与追踪
+alwaysIncludeAgents: ['ragflow'] # 关键配置
+routerConfidenceThreshold: 70 # 百分制；最高命中 priority < 70 时触发 LLM 仲裁
+composeStrategy: 'rag-priority' 10. 可观测性、日志与追踪
 在原有基础上增加以下字段：
 
 triggered_llm_arbitration: boolean
@@ -204,7 +205,7 @@ rag-priority 合成在 RAG 有结果/无结果两种情况下的表现。
 15. 环境变量（新增/调整）
     Bash# ---- 路由与调度（v2.1 新增）----
     AGENT_ALWAYS_INCLUDE_AGENTS=ragflow # 逗号分隔，始终加入候选
-    AGENT_ROUTER_CONFIDENCE_THRESHOLD=0.85 # 低于此值触发 LLM 仲裁
+    AGENT_ROUTER_CONFIDENCE_THRESHOLD=70 # 百分制；最高命中 priority < 70 时触发 LLM 仲裁
     AGENT_COMPOSE_STRATEGY=rag-priority # 新默认：rag-priority | concat | llm-summarize | rerank-and-merge
 
 # 其余变量与 v2.0 保持一致
