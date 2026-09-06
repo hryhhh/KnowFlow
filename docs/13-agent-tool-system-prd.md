@@ -88,7 +88,11 @@ export class ToolRegistry {
   }
 
   /** 返回所有工具的 name + description + parameters，供 LLM tool calling 使用 */
-  getAllDefinitions(): Array<{ name: string; description: string; parameters: Record<string, any> }> {
+  getAllDefinitions(): Array<{
+    name: string;
+    description: string;
+    parameters: Record<string, any>;
+  }> {
     return Array.from(this.tools.values()).map((t) => ({
       name: t.name,
       description: t.description,
@@ -133,11 +137,7 @@ export class ToolExecutor {
         this.validateArgs(args, tool.parameters);
       }
 
-      const result = await this.runWithTimeout(
-        tool.execute(args, ctx),
-        timeout,
-        ctx.signal,
-      );
+      const result = await this.runWithTimeout(tool.execute(args, ctx), timeout, ctx.signal);
 
       result.durationMs = Date.now() - startTime;
 
@@ -162,20 +162,25 @@ export class ToolExecutor {
     }
   }
 
-  private runWithTimeout<T>(
-    promise: Promise<T>,
-    ms: number,
-    signal: AbortSignal,
-  ): Promise<T> {
+  private runWithTimeout<T>(promise: Promise<T>, ms: number, signal: AbortSignal): Promise<T> {
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`Tool ${tool.name} timeout after ${ms}ms`)), ms);
+      const timer = setTimeout(
+        () => reject(new Error(`Tool ${tool.name} timeout after ${ms}ms`)),
+        ms,
+      );
       signal.addEventListener('abort', () => {
         clearTimeout(timer);
         reject(new Error('Tool execution aborted'));
       });
       promise.then(
-        (v) => { clearTimeout(timer); resolve(v); },
-        (e) => { clearTimeout(timer); reject(e); },
+        (v) => {
+          clearTimeout(timer);
+          resolve(v);
+        },
+        (e) => {
+          clearTimeout(timer);
+          reject(e);
+        },
       );
     });
   }
@@ -216,7 +221,11 @@ export class RagSearchTool implements Tool {
   };
 
   constructor(
-    private readonly retrieveFn: (query: string, kbId: string, params: any) => Promise<RetrievalResult[]>,
+    private readonly retrieveFn: (
+      query: string,
+      kbId: string,
+      params: any,
+    ) => Promise<RetrievalResult[]>,
   ) {}
 
   async execute(args: Record<string, any>, ctx: ToolContext): Promise<ToolResult> {
@@ -239,6 +248,7 @@ export class RagSearchTool implements Tool {
 ```
 
 **实现要点**：
+
 - 直接调用 `retrieve()`（非流式），拿完整结果后返回
 - 不从 `RAGFlowAgent` 复制逻辑，避免重复代码
 - 注入点：`AgentChatService` 在初始化时将 `retrieve` 函数传给 `RagSearchTool`
@@ -254,13 +264,22 @@ export class RagSearchTool implements Tool {
 
 export class DbQueryTool implements Tool {
   readonly name = 'query_database';
-  readonly description = '查询结构化数据库（知识库元数据、业务数据等）。通过预定义 SQL 模板执行参数化查询，防止 SQL 注入。';
+  readonly description =
+    '查询结构化数据库（知识库元数据、业务数据等）。通过预定义 SQL 模板执行参数化查询，防止 SQL 注入。';
   readonly parameters = {
     type: 'object',
     properties: {
       templateId: {
         type: 'string',
-        enum: ['kb_stats', 'doc_stats', 'chunk_stats', 'doc_list', 'kb_list', 'doc_creation_trend', 'top_docs_by_chunks'],
+        enum: [
+          'kb_stats',
+          'doc_stats',
+          'chunk_stats',
+          'doc_list',
+          'kb_list',
+          'doc_creation_trend',
+          'top_docs_by_chunks',
+        ],
         description: '查询模板 ID，从可用模板列表中选择',
       },
       params: {
@@ -292,12 +311,16 @@ export class DbQueryTool implements Tool {
       return `总计 ${rows[0][key]} 条`;
     }
     const cols = Object.keys(rows[0]);
-    return [cols.join(' | '), ...rows.map((r) => cols.map((c) => String(r[c] ?? '')).join(' | '))].join('\n');
+    return [
+      cols.join(' | '),
+      ...rows.map((r) => cols.map((c) => String(r[c] ?? '')).join(' | ')),
+    ].join('\n');
   }
 }
 ```
 
 **实现要点**：
+
 - `templateId` 用 enum 约束，LLM 只能选预定义模板，不能传任意 SQL
 - 必需参数（`kbId`）由系统自动注入，LLM 不需要传
 - 复用现有 `DbQueryService`，零新增依赖
@@ -349,7 +372,8 @@ export class WebSearchTool implements Tool {
 
 export class ReadFileTool implements Tool {
   readonly name = 'read_file';
-  readonly description = '读取已上传文件的内容（PDF/Word/CSV 等），返回文本内容。适用于需要查看原始文件内容的场景。';
+  readonly description =
+    '读取已上传文件的内容（PDF/Word/CSV 等），返回文本内容。适用于需要查看原始文件内容的场景。';
   readonly parameters = {
     type: 'object',
     properties: {
@@ -363,7 +387,12 @@ export class ReadFileTool implements Tool {
     const uploadsDir = process.env.UPLOADS_DIR ?? path.resolve(process.cwd(), 'uploads');
     const resolvedPath = path.resolve(uploadsDir, args.path);
     if (!resolvedPath.startsWith(uploadsDir)) {
-      return { toolCallId: '', content: '', isError: true, error: { message: '路径访问被拒绝', code: 'PATH_TRAVERSAL' } };
+      return {
+        toolCallId: '',
+        content: '',
+        isError: true,
+        error: { message: '路径访问被拒绝', code: 'PATH_TRAVERSAL' },
+      };
     }
     const content = await fs.promises.readFile(resolvedPath, 'utf-8');
     return { toolCallId: '', content, isError: false, structured: { size: content.length } };
@@ -394,11 +423,19 @@ export class CallHttpApiTool implements Tool {
 
   async execute(args: Record<string, any>, ctx: ToolContext): Promise<ToolResult> {
     // 域名白名单检查
-    const allowedDomains = (process.env.API_CALL_ALLOWED_DOMAINS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+    const allowedDomains = (process.env.API_CALL_ALLOWED_DOMAINS ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
     if (allowedDomains.length > 0) {
       const domain = new URL(args.url).hostname;
       if (!allowedDomains.some((d) => domain.endsWith(d))) {
-        return { toolCallId: '', content: '', isError: true, error: { message: `域名 ${domain} 不在白名单中`, code: 'DOMAIN_NOT_ALLOWED' } };
+        return {
+          toolCallId: '',
+          content: '',
+          isError: true,
+          error: { message: `域名 ${domain} 不在白名单中`, code: 'DOMAIN_NOT_ALLOWED' },
+        };
       }
     }
     const response = await fetch(args.url, {
@@ -408,7 +445,12 @@ export class CallHttpApiTool implements Tool {
       signal: ctx.signal,
     });
     const text = await response.text();
-    return { toolCallId: '', content: text, isError: false, structured: { status: response.status } };
+    return {
+      toolCallId: '',
+      content: text,
+      isError: false,
+      structured: { status: response.status },
+    };
   }
 }
 ```
@@ -431,7 +473,11 @@ export class LegacyAgentAdapter implements Tool {
   ) {}
 
   readonly name = this.toolName;
-  readonly parameters = { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] };
+  readonly parameters = {
+    type: 'object',
+    properties: { query: { type: 'string' } },
+    required: ['query'],
+  };
 
   async execute(args: Record<string, any>, _ctx: ToolContext): Promise<ToolResult> {
     const result = await this.agent.execute({
@@ -495,16 +541,16 @@ private initTools(): ToolRegistry {
 
 ## 六、测试策略
 
-| 测试文件 | 测试内容 | 验证方式 |
-|---------|---------|---------|
-| `tools/base-tool.test.ts` | ToolRegistry 增删查、getAllDefinitions 格式 | 纯单元测试，无外部依赖 |
-| `tools/tool-executor.test.ts` | 超时、参数校验、结果截断、异常捕获 | Mock Tool 实现 |
-| `tools/builtin/rag-search.tool.test.ts` | 调用 retrieve()、结果格式化、空结果处理 | Mock retrieve 函数 |
-| `tools/builtin/db-query.tool.test.ts` | 模板匹配、formatRows、空结果 | Mock DbQueryService |
-| `tools/builtin/web-search.tool.test.ts` | provider 调用、去重、截断 | Mock SearchProvider |
-| `tools/builtin/read-file.tool.test.ts` | 路径穿越防护、正常读取 | 临时文件系统 |
-| `tools/builtin/call-http-api.tool.test.ts` | 域名白名单、GET/POST、超时 | Mock fetch |
-| `agents/legacy-adapter.test.ts` | Agent 调用结果映射 | Mock Agent |
+| 测试文件                                   | 测试内容                                    | 验证方式               |
+| ------------------------------------------ | ------------------------------------------- | ---------------------- |
+| `tools/base-tool.test.ts`                  | ToolRegistry 增删查、getAllDefinitions 格式 | 纯单元测试，无外部依赖 |
+| `tools/tool-executor.test.ts`              | 超时、参数校验、结果截断、异常捕获          | Mock Tool 实现         |
+| `tools/builtin/rag-search.tool.test.ts`    | 调用 retrieve()、结果格式化、空结果处理     | Mock retrieve 函数     |
+| `tools/builtin/db-query.tool.test.ts`      | 模板匹配、formatRows、空结果                | Mock DbQueryService    |
+| `tools/builtin/web-search.tool.test.ts`    | provider 调用、去重、截断                   | Mock SearchProvider    |
+| `tools/builtin/read-file.tool.test.ts`     | 路径穿越防护、正常读取                      | 临时文件系统           |
+| `tools/builtin/call-http-api.tool.test.ts` | 域名白名单、GET/POST、超时                  | Mock fetch             |
+| `agents/legacy-adapter.test.ts`            | Agent 调用结果映射                          | Mock Agent             |
 
 **回归要求**：所有现有测试（`pnpm test`）必须通过。
 
@@ -523,17 +569,17 @@ private initTools(): ToolRegistry {
 
 ## 八、文件清单
 
-| 操作 | 文件路径 | 说明 |
-|------|---------|------|
-| 新建 | `packages/agents/src/tools/base-tool.ts` | Tool 接口定义 |
-| 新建 | `packages/agents/src/tools/tool-registry.ts` | 工具注册中心 |
-| 新建 | `packages/agents/src/tools/tool-executor.ts` | 执行器（超时/校验/截断） |
-| 新建 | `packages/agents/src/tools/builtin/rag-search.tool.ts` | rag_search 工具 |
-| 新建 | `packages/agents/src/tools/builtin/db-query.tool.ts` | query_database 工具 |
-| 新建 | `packages/agents/src/tools/builtin/web-search.tool.ts` | web_search 工具 |
-| 新建 | `packages/agents/src/tools/builtin/read-file.tool.ts` | read_file 工具 |
-| 新建 | `packages/agents/src/tools/builtin/call-http-api.tool.ts` | call_http_api 工具 |
-| 新建 | `packages/agents/src/agents/legacy-adapter.ts` | Legacy Agent → Tool 适配器 |
-| 修改 | `packages/agents/src/types.ts` | 新增 ToolCall/ToolResult/ToolContext 类型 |
-| 修改 | `packages/agents/src/index.ts` | 导出新模块 |
-| 修改 | `apps/server/src/modules/agents/agent-chat.service.ts` | 新增 initTools() 并注册到 AgentRuntime |
+| 操作 | 文件路径                                                  | 说明                                      |
+| ---- | --------------------------------------------------------- | ----------------------------------------- |
+| 新建 | `packages/agents/src/tools/base-tool.ts`                  | Tool 接口定义                             |
+| 新建 | `packages/agents/src/tools/tool-registry.ts`              | 工具注册中心                              |
+| 新建 | `packages/agents/src/tools/tool-executor.ts`              | 执行器（超时/校验/截断）                  |
+| 新建 | `packages/agents/src/tools/builtin/rag-search.tool.ts`    | rag_search 工具                           |
+| 新建 | `packages/agents/src/tools/builtin/db-query.tool.ts`      | query_database 工具                       |
+| 新建 | `packages/agents/src/tools/builtin/web-search.tool.ts`    | web_search 工具                           |
+| 新建 | `packages/agents/src/tools/builtin/read-file.tool.ts`     | read_file 工具                            |
+| 新建 | `packages/agents/src/tools/builtin/call-http-api.tool.ts` | call_http_api 工具                        |
+| 新建 | `packages/agents/src/agents/legacy-adapter.ts`            | Legacy Agent → Tool 适配器                |
+| 修改 | `packages/agents/src/types.ts`                            | 新增 ToolCall/ToolResult/ToolContext 类型 |
+| 修改 | `packages/agents/src/index.ts`                            | 导出新模块                                |
+| 修改 | `apps/server/src/modules/agents/agent-chat.service.ts`    | 新增 initTools() 并注册到 AgentRuntime    |

@@ -374,7 +374,10 @@ function normalizeContent(content: string): string {
 }
 
 /** 将 [n] 引用标记渲染为行内上标徽章（优先使用 citations，持久化后仍有效） */
-function renderCitedContent(content: string, citations: import('../../types').Citation[] | undefined): React.ReactNode[] {
+function renderCitedContent(
+  content: string,
+  citations: import('../../types').Citation[] | undefined,
+): React.ReactNode[] {
   // 标准化内容：清理前缀并转换引用格式
   const normalizedContent = normalizeContent(content);
 
@@ -387,7 +390,7 @@ function renderCitedContent(content: string, citations: import('../../types').Ci
   while ((m = re.exec(normalizedContent)) !== null) {
     const idx = parseInt(m[1], 10);
     // 从 citations 中查找对应的引用
-    const citation = citations?.find(c => c.index === idx);
+    const citation = citations?.find((c) => c.index === idx);
     const source = citation?.source;
 
     // 匹配前的普通文本（需要从原始内容中计算偏移）

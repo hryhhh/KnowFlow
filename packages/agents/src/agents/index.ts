@@ -357,8 +357,12 @@ export class RagFlowAgent implements Agent {
       await new Promise<void>((resolve, reject) => {
         this.streamingFn!(
           params,
-          (token) => { content += token; },
-          (s) => { sources.push(...s); },
+          (token) => {
+            content += token;
+          },
+          (s) => {
+            sources.push(...s);
+          },
           resolve,
           (err) => reject(err),
         );
@@ -368,14 +372,20 @@ export class RagFlowAgent implements Agent {
       const unique: typeof sources = [];
       for (const s of sources) {
         const key = s.sourceFile;
-        if (!seen.has(key)) { seen.add(key); unique.push(s); }
+        if (!seen.has(key)) {
+          seen.add(key);
+          unique.push(s);
+        }
       }
       return {
         id: generateAgentResultId(),
         agent: this.id,
         status: 'ok',
         content,
-        sources: unique.length > 0 ? unique.map((s) => ({ uri: s.sourceFile, title: s.sourceFile })) : undefined,
+        sources:
+          unique.length > 0
+            ? unique.map((s) => ({ uri: s.sourceFile, title: s.sourceFile }))
+            : undefined,
         elapsedMs: Date.now() - startTime,
       };
     } catch (err: any) {

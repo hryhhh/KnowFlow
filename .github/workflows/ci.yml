@@ -42,20 +42,24 @@ jobs:
       - run: pnpm --filter @knowbase-x/rag-engine test
       - run: pnpm --filter @knowbase-x/server test
 
-  e2e-tests:
-    name: E2E Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: latest
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - name: Start frontend dev server
-        run: pnpm --filter @knowbase-x/frontend dev &
-      - run: pnpm exec playwright test --config tests/playwright.config.ts
+  # E2E 暂不在 CI 启用：现有用例依赖后端 API/数据库/种子数据（硬编码 kbId、SSE 流），
+  # 且端口与 vite dev (5174) 不一致，仅前端容器跑不绿。待补齐 CI 测试环境后再启用：
+  # - 起后端 + PostgreSQL(pgvector) + Redis，注入 .env 等价变量
+  # - 修正 playwright.config.ts 的 baseURL 与用例中的固定端口/KB ID
+  # e2e-tests:
+  #   name: E2E Tests
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: pnpm/action-setup@v4
+  #       with:
+  #         version: latest
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 22
+  #         cache: pnpm
+  #     - run: pnpm install --frozen-lockfile
+  #     - run: pnpm exec playwright install --with-deps chromium
+  #     - name: Start frontend dev server
+  #       run: pnpm --filter @knowbase-x/frontend dev &
+  #     - run: pnpm exec playwright test --config playwright.config.ts

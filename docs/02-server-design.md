@@ -166,64 +166,64 @@ apps/server/src/
 
 ### 3.2 documents（文档表）
 
-| 字段             | 类型         | 约束                    | 说明                                    |
-| ---------------- | ------------ | ----------------------- | --------------------------------------- |
-| id               | UUID         | PK                      | 主键                                    |
-| kb_id            | UUID         | FK → knowledge_bases.id | 所属知识库                              |
-| name             | VARCHAR(256) | NOT NULL                | 文件名 / 标识                           |
-| file_type        | VARCHAR(16)  | NOT NULL                | 格式: csv / xlsx / pdf / word           |
-| file_size        | BIGINT       |                         | 文件大小 (bytes)                        |
-| file_path        | VARCHAR(512) |                         | 存储路径                                |
-| process_strategy | VARCHAR(64)  |                         | 处理策略: basic / mineru / mineru-agent |
-| status           | VARCHAR(32)  | DEFAULT 'pending'       | pending / processing / success / failed |
-| chunk_count      | INT          | DEFAULT 0               | 切片数量                                |
-| import_method    | VARCHAR(16)  | DEFAULT 'upload'        | 上传方式: upload / url                  |
-| progress         | INT          | DEFAULT 0               | 处理进度（0-100）                       |
+| 字段             | 类型         | 约束                    | 说明                                                             |
+| ---------------- | ------------ | ----------------------- | ---------------------------------------------------------------- |
+| id               | UUID         | PK                      | 主键                                                             |
+| kb_id            | UUID         | FK → knowledge_bases.id | 所属知识库                                                       |
+| name             | VARCHAR(256) | NOT NULL                | 文件名 / 标识                                                    |
+| file_type        | VARCHAR(16)  | NOT NULL                | 格式: csv / xlsx / pdf / word                                    |
+| file_size        | BIGINT       |                         | 文件大小 (bytes)                                                 |
+| file_path        | VARCHAR(512) |                         | 存储路径                                                         |
+| process_strategy | VARCHAR(64)  |                         | 处理策略: basic / mineru / mineru-agent                          |
+| status           | VARCHAR(32)  | DEFAULT 'pending'       | pending / processing / success / failed                          |
+| chunk_count      | INT          | DEFAULT 0               | 切片数量                                                         |
+| import_method    | VARCHAR(16)  | DEFAULT 'upload'        | 上传方式: upload / url                                           |
+| progress         | INT          | DEFAULT 0               | 处理进度（0-100）                                                |
 | processing_stage | VARCHAR(32)  |                         | 当前阶段: queued/parsing/chunking/embedding/persisting/completed |
-| error_message    | TEXT         |                         | 错误信息                                |
-| job_id           | VARCHAR(128) |                         | BullMQ Job ID（用于取消/追踪）          |
-| created_at       | TIMESTAMP    | DEFAULT NOW()           | 创建时间                                |
-| updated_at       | TIMESTAMP    |                         | 更新时间                                |
+| error_message    | TEXT         |                         | 错误信息                                                         |
+| job_id           | VARCHAR(128) |                         | BullMQ Job ID（用于取消/追踪）                                   |
+| created_at       | TIMESTAMP    | DEFAULT NOW()           | 创建时间                                                         |
+| updated_at       | TIMESTAMP    |                         | 更新时间                                                         |
 
 ### 3.3 chunks（切片表）
 
 > 注：实际向量存储在 PGVector 的 `langchainjs` 表中，此表为关系型元数据。
 
-| 字段        | 类型         | 约束                    | 说明                                    |
-| ----------- | ------------ | ----------------------- | --------------------------------------- |
-| id          | UUID         | PK                      | 主键                                    |
-| kb_id       | UUID         | FK → knowledge_bases.id | 所属知识库                              |
-| doc_id      | UUID         | FK → documents.id       | 所属文档                                |
-| chunk_index | INT          | NOT NULL                | 切片序号                                |
-| content     | TEXT         | NOT NULL                | 切片文本内容                            |
-| title       | VARCHAR(256) |                         | 切片标题                                |
-| token_count | INT          |                         | Token 数量                              |
-| vector_id   | VARCHAR(64)  |                         | PGVector 表中的 ID                      |
-| chunk_id    | TEXT         | INDEX                   | 跨 dense/sparse 两路关联的唯一 ID       |
+| 字段        | 类型         | 约束                    | 说明                                        |
+| ----------- | ------------ | ----------------------- | ------------------------------------------- |
+| id          | UUID         | PK                      | 主键                                        |
+| kb_id       | UUID         | FK → knowledge_bases.id | 所属知识库                                  |
+| doc_id      | UUID         | FK → documents.id       | 所属文档                                    |
+| chunk_index | INT          | NOT NULL                | 切片序号                                    |
+| content     | TEXT         | NOT NULL                | 切片文本内容                                |
+| title       | VARCHAR(256) |                         | 切片标题                                    |
+| token_count | INT          |                         | Token 数量                                  |
+| vector_id   | VARCHAR(64)  |                         | PGVector 表中的 ID                          |
+| chunk_id    | TEXT         | INDEX                   | 跨 dense/sparse 两路关联的唯一 ID           |
 | tsv         | TSVECTOR     | GIN INDEX               | 稀疏检索全文索引（`to_tsvector('simple')`） |
-| metadata    | JSONB        |                         | 扩展元数据                              |
-| created_at  | TIMESTAMP    | DEFAULT NOW()           | 创建时间                                |
+| metadata    | JSONB        |                         | 扩展元数据                                  |
+| created_at  | TIMESTAMP    | DEFAULT NOW()           | 创建时间                                    |
 
 ### 3.4 conversation_sessions（会话表）
 
-| 字段       | 类型    | 约束         | 说明           |
-| ---------- | ------- | ------------ | -------------- |
-| id         | UUID    | PK           | 主键           |
-| kb_id      | UUID    | FK → KB      | 所属知识库     |
-| title      | VARCHAR(256) |          | 会话标题       |
-| created_at | TIMESTAMP | DEFAULT NOW() | 创建时间      |
-| updated_at | TIMESTAMP |             | 更新时间       |
+| 字段       | 类型         | 约束          | 说明       |
+| ---------- | ------------ | ------------- | ---------- |
+| id         | UUID         | PK            | 主键       |
+| kb_id      | UUID         | FK → KB       | 所属知识库 |
+| title      | VARCHAR(256) |               | 会话标题   |
+| created_at | TIMESTAMP    | DEFAULT NOW() | 创建时间   |
+| updated_at | TIMESTAMP    |               | 更新时间   |
 
 ### 3.5 session_messages（消息表）
 
-| 字段       | 类型     | 约束                  | 说明                        |
-| ---------- | -------- | --------------------- | --------------------------- |
-| id         | UUID     | PK                    | 主键                        |
-| session_id | UUID     | FK → conversation_sessions | 所属会话               |
-| role       | VARCHAR(16) | CHECK ('user'/'assistant') | 消息角色            |
-| content    | TEXT     | NOT NULL              | 消息内容                    |
-| sources    | JSONB    | nullable              | 引用来源（SourceRef[]）      |
-| created_at | TIMESTAMP | DEFAULT NOW()        | 创建时间                    |
+| 字段       | 类型        | 约束                       | 说明                    |
+| ---------- | ----------- | -------------------------- | ----------------------- |
+| id         | UUID        | PK                         | 主键                    |
+| session_id | UUID        | FK → conversation_sessions | 所属会话                |
+| role       | VARCHAR(16) | CHECK ('user'/'assistant') | 消息角色                |
+| content    | TEXT        | NOT NULL                   | 消息内容                |
+| sources    | JSONB       | nullable                   | 引用来源（SourceRef[]） |
+| created_at | TIMESTAMP   | DEFAULT NOW()              | 创建时间                |
 
 ### 3.6 api_keys（API 密钥表）
 
@@ -244,20 +244,20 @@ apps/server/src/
 
 ### 3.7 usage_logs（调用日志表）
 
-| 字段                         | 类型         | 说明                                          |
-|------------------------------|--------------|-----------------------------------------------|
-| id                           | UUID         | 主键                                          |
-| type                         | VARCHAR(16)  | chat / retrieval / api / agent                |
-| kb_id                        | UUID         | 所属知识库                                    |
-| api_key_id                   | UUID         | 关联 API Key（外部调用时）                    |
-| trace_id                     | VARCHAR(64)  | 全链路追踪 ID                                 |
-| duration                     | INT          | 耗时（ms）                                    |
-| status                       | VARCHAR(16)  | success / error                               |
-| triggered_llm_arbitration    | BOOLEAN      | Agent 编排是否触发了 LLM 仲裁                 |
-| rag_included_by              | VARCHAR(32)  | RAGFlow 被包含的原因                          |
-| compose_used_rag_priority    | BOOLEAN      | 是否使用 rag-priority 合成策略                |
-| llm_arbitration_agent        | VARCHAR(32)  | 仲裁选定的 Agent                              |
-| created_at                   | TIMESTAMP    | 创建时间                                      |
+| 字段                      | 类型        | 说明                           |
+| ------------------------- | ----------- | ------------------------------ |
+| id                        | UUID        | 主键                           |
+| type                      | VARCHAR(16) | chat / retrieval / api / agent |
+| kb_id                     | UUID        | 所属知识库                     |
+| api_key_id                | UUID        | 关联 API Key（外部调用时）     |
+| trace_id                  | VARCHAR(64) | 全链路追踪 ID                  |
+| duration                  | INT         | 耗时（ms）                     |
+| status                    | VARCHAR(16) | success / error                |
+| triggered_llm_arbitration | BOOLEAN     | Agent 编排是否触发了 LLM 仲裁  |
+| rag_included_by           | VARCHAR(32) | RAGFlow 被包含的原因           |
+| compose_used_rag_priority | BOOLEAN     | 是否使用 rag-priority 合成策略 |
+| llm_arbitration_agent     | VARCHAR(32) | 仲裁选定的 Agent               |
+| created_at                | TIMESTAMP   | 创建时间                       |
 
 ## 四、API 接口定义
 
@@ -281,6 +281,7 @@ GET    /api/knowledge-bases/:kbId/documents/:docId/chunks  # 文档切片列表
 ```
 
 **上传参数：**
+
 - `file`: 文件 (multipart)
 - `processStrategy`: 处理策略名 (`basic` / `mineru` / `mineru-agent`)
 
@@ -343,6 +344,7 @@ POST  /api/retrieval/search    # 知识检索
 ```
 
 **请求头覆盖：**
+
 - `X-Debug: true` — 无需修改 body 即可开启调试模式
 
 **响应：**
@@ -409,14 +411,15 @@ POST  /api/service-calls/:svcId/chat/stream  # 外部服务 SSE 调用
 
 **SSE 事件类型：**
 
-| type      | 说明                                                         |
-| --------- | ------------------------------------------------------------ |
-| sources   | 引用来源列表（含文件名和相似度分数）                         |
-| token     | 流式输出的文本片段                                           |
-| done      | 回答完成                                                     |
-| error     | 错误信息                                                     |
+| type    | 说明                                 |
+| ------- | ------------------------------------ |
+| sources | 引用来源列表（含文件名和相似度分数） |
+| token   | 流式输出的文本片段                   |
+| done    | 回答完成                             |
+| error   | 错误信息                             |
 
 > 当 `AGENTS_ENABLED=true` 时，通过 `/api/agents/routeStream` 路由，额外包含：
+>
 > - `trace` — 全链路 trace ID
 > - `agent_start` — Agent 开始执行 `{ agent: string }`
 > - `agent_done` — Agent 完成执行 `{ agent: string, duration: number }`
@@ -433,6 +436,7 @@ POST  /api/agents/rules/reload  # 热重载路由规则（YAML 文件）
 **路由规则文件：** `config/agent-rules.yml`（支持热重载）
 
 **Web Search Provider：**
+
 - `TavilySearchProvider` — Tavily API
 - `SerperSearchProvider` — Google Serper API
 - 缓存：`RedisCacheProvider`（TTL 由 `WEB_SEARCH_CACHE_TTL_SECONDS` 控制）
@@ -514,6 +518,7 @@ GET  http://localhost:3001/health   # Worker 健康检查（docker-compose healt
 ### 5.2 Outbox 一致性校验（启动期）
 
 API 进程启动时运行 `OutboxComplianceService.checkAndReport()`：
+
 1. 查询所有 `status='success'` 且 `chunkCount > 0` 的文档
 2. 检查 `langchainjs` 表中是否存在对应 docId 的向量记录
 3. 检查 `chunks` 表中 `tsv IS NOT NULL AND chunk_id IS NULL` 的记录
@@ -619,32 +624,32 @@ streamChat(@Body() dto: ChatStreamDto): Observable<MessageEvent> {
 
 完整环境变量清单见项目根目录 `.env.example`，关键字段：
 
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `DATABASE_HOST/PORT/USER/PASSWORD/NAME` | — | PostgreSQL 连接 |
-| `DATABASE_SSL` | `false` | 生产环境设为 `true` |
-| `REDIS_HOST/PORT` | — | Redis 连接 |
-| `LLM_API_KEY/BASE_URL/MODEL` | — | LLM 配置 |
-| `EMBEDDING_MODEL/DIMENSIONS` | `text-embedding-v4` / `1024` | 嵌入模型 |
-| `SERVER_PORT` | `3000` | API 端口 |
-| `FRONTEND_DEV_PORT` | `5173` | 前端开发端口 |
-| `DEFAULT_CHUNK_SIZE/OVERLAP` | `1000` / `200` | 切片参数 |
-| `DEFAULT_TOP_K/MIN_SCORE/DENSE_WEIGHT` | `10` / `0.7` / `0.5` | 检索默认值 |
-| `DEFAULT_MIN_DENSE_SCORE` | `0.3` | hybrid 模式 dense 候选过滤阈值 |
-| `DEFAULT_CANDIDATE_MULTIPLIER` | `3` | 每路候选倍数（上限 10） |
-| `RAG_RESULT_CACHE_TTL_MS` | `300000` | 检索结果缓存 TTL（毫秒） |
-| `API_KEY_PREFIX` | `ek_` | API Key 前缀 |
-| `CORS_ALLOWED_ORIGINS` | （空） | 生产环境填写前端域名 |
-| `MAX_UPLOAD_SIZE_MB` | `100` | 上传大小限制 |
-| `DOCUMENT_QUEUE_CONCURRENCY` | `2` | Worker 并发数 |
-| `DOCUMENT_QUEUE_ATTEMPTS` | `3` | 最大重试次数 |
-| `DOCUMENT_QUEUE_BACKOFF_MS` | `2000` | 退避间隔 |
-| `DOCUMENT_QUEUE_REMOVE_ON_COMPLETE` | `1000` | 完成后保留条数 |
-| `DOCUMENT_QUEUE_REMOVE_ON_FAIL` | `100` | 失败后保留条数 |
-| `AGENT_ALWAYS_INCLUDE_AGENTS` | `ragflow` | 强制包含的 Agent（逗号分隔） |
-| `AGENT_ROUTER_CONFIDENCE_THRESHOLD` | `70` | LLM 仲裁触发阈值（百分制） |
-| `AGENT_COMPOSE_STRATEGY` | `rag-priority` | 合成策略 |
-| `AGENT_ROUTER_ALLOW_PARALLEL` | `true` | 允许并行执行 |
-| `AGENTS_ENABLED` | （未设置） | 启用多 Agent 编排 |
-| `WEB_SEARCH_CACHE_TTL_SECONDS` | — | Web Search 结果缓存 TTL |
-| `API_RATE_LIMIT` | `60` | 限流默认 QPM |
+| 变量                                    | 默认值                       | 说明                           |
+| --------------------------------------- | ---------------------------- | ------------------------------ |
+| `DATABASE_HOST/PORT/USER/PASSWORD/NAME` | —                            | PostgreSQL 连接                |
+| `DATABASE_SSL`                          | `false`                      | 生产环境设为 `true`            |
+| `REDIS_HOST/PORT`                       | —                            | Redis 连接                     |
+| `LLM_API_KEY/BASE_URL/MODEL`            | —                            | LLM 配置                       |
+| `EMBEDDING_MODEL/DIMENSIONS`            | `text-embedding-v4` / `1024` | 嵌入模型                       |
+| `SERVER_PORT`                           | `3000`                       | API 端口                       |
+| `FRONTEND_DEV_PORT`                     | `5173`                       | 前端开发端口                   |
+| `DEFAULT_CHUNK_SIZE/OVERLAP`            | `1000` / `200`               | 切片参数                       |
+| `DEFAULT_TOP_K/MIN_SCORE/DENSE_WEIGHT`  | `10` / `0.7` / `0.5`         | 检索默认值                     |
+| `DEFAULT_MIN_DENSE_SCORE`               | `0.3`                        | hybrid 模式 dense 候选过滤阈值 |
+| `DEFAULT_CANDIDATE_MULTIPLIER`          | `3`                          | 每路候选倍数（上限 10）        |
+| `RAG_RESULT_CACHE_TTL_MS`               | `300000`                     | 检索结果缓存 TTL（毫秒）       |
+| `API_KEY_PREFIX`                        | `ek_`                        | API Key 前缀                   |
+| `CORS_ALLOWED_ORIGINS`                  | （空）                       | 生产环境填写前端域名           |
+| `MAX_UPLOAD_SIZE_MB`                    | `100`                        | 上传大小限制                   |
+| `DOCUMENT_QUEUE_CONCURRENCY`            | `2`                          | Worker 并发数                  |
+| `DOCUMENT_QUEUE_ATTEMPTS`               | `3`                          | 最大重试次数                   |
+| `DOCUMENT_QUEUE_BACKOFF_MS`             | `2000`                       | 退避间隔                       |
+| `DOCUMENT_QUEUE_REMOVE_ON_COMPLETE`     | `1000`                       | 完成后保留条数                 |
+| `DOCUMENT_QUEUE_REMOVE_ON_FAIL`         | `100`                        | 失败后保留条数                 |
+| `AGENT_ALWAYS_INCLUDE_AGENTS`           | `ragflow`                    | 强制包含的 Agent（逗号分隔）   |
+| `AGENT_ROUTER_CONFIDENCE_THRESHOLD`     | `70`                         | LLM 仲裁触发阈值（百分制）     |
+| `AGENT_COMPOSE_STRATEGY`                | `rag-priority`               | 合成策略                       |
+| `AGENT_ROUTER_ALLOW_PARALLEL`           | `true`                       | 允许并行执行                   |
+| `AGENTS_ENABLED`                        | （未设置）                   | 启用多 Agent 编排              |
+| `WEB_SEARCH_CACHE_TTL_SECONDS`          | —                            | Web Search 结果缓存 TTL        |
+| `API_RATE_LIMIT`                        | `60`                         | 限流默认 QPM                   |

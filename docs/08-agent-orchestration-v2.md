@@ -95,21 +95,23 @@ kbId 决策、SSE 兼容性与 v2.0 相同。新增事件与 onMeta 保持不变
 
 AgentResult 保持不变。
 API 端点：
+
 - `POST /api/agents/routeStream` — SSE 流式路由（事件：trace / agent_start / agent_done / sources / token / done / error / meta）
 - `POST /api/agents/route` — 同步路由（非流式，返回合成结果）
 - `POST /api/agents/rules/reload` — 热重载路由规则（YAML 文件变更时自动加载，也可手动触发）
 
 SSE 事件说明：
-| 事件类型 | 触发时机 | 数据结构 |
-|---------|---------|---------|
-| `trace` | 请求开始 | `{ traceId: string }` |
-| `agent_start` | Agent 开始执行 | `{ agent: string, traceId?: string }` |
-| `agent_done` | Agent 执行完成 | `{ agent: string, duration: number, traceId?: string }` |
-| `sources` | 检索来源就绪 | `SourceRef[]` |
-| `token` | LLM 流式输出 | `string` |
-| `done` | 回答完成 | `null` |
-| `error` | 发生错误 | `string`（错误信息）|
-| `meta` | 可观测元数据 | `{ type: 'llm_arbitration' | 'rag_included' | 'compose_strategy', ... }` |
+
+| 事件类型      | 触发时机       | 数据结构                                                |
+| ------------- | -------------- | ------------------------------------------------------- |
+| `trace`       | 请求开始       | `{ traceId: string }`                                   |
+| `agent_start` | Agent 开始执行 | `{ agent: string, traceId?: string }`                   |
+| `agent_done`  | Agent 执行完成 | `{ agent: string, duration: number, traceId?: string }` |
+| `sources`     | 检索来源就绪   | `SourceRef[]`                                           |
+| `token`       | LLM 流式输出   | `string`                                                |
+| `done`        | 回答完成       | `null`                                                  |
+| `error`       | 发生错误       | `string`（错误信息）                                    |
+| `meta`        | 可观测元数据   | `{ type: 'llm_arbitration'                              | 'rag_included' | 'compose_strategy', ... }` |
 
 **降级策略：** 当所有 Agent 均无有效结果时，系统自动回退到传统单链路 RAG（直接调用 rag-engine）。
 

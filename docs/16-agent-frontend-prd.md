@@ -36,8 +36,8 @@ export interface AgentActivityEvent {
 
 interface ChatState {
   // 现有字段...
-  agentEvents: AgentActivityEvent[];   // 新增：Agent 执行事件列表
-  showAgentActivity: boolean;          // 新增：是否展开 Activity 面板
+  agentEvents: AgentActivityEvent[]; // 新增：Agent 执行事件列表
+  showAgentActivity: boolean; // 新增：是否展开 Activity 面板
 
   // 新增方法
   appendAgentEvent: (event: AgentActivityEvent) => void;
@@ -155,7 +155,9 @@ function EventItem({ event }: { event: AgentActivityEvent }) {
     return (
       <div className="flex items-center gap-2 text-gray-600">
         <Clock size={12} className="text-blue-500" />
-        <span>调用 <strong>{event.toolName}</strong></span>
+        <span>
+          调用 <strong>{event.toolName}</strong>
+        </span>
         {event.args?.query && (
           <span className="text-gray-400 text-xs">"{truncate(event.args.query, 30)}"</span>
         )}
@@ -163,7 +165,11 @@ function EventItem({ event }: { event: AgentActivityEvent }) {
     );
   }
   if (event.type === 'tool_result') {
-    const icon = event.isError ? <AlertCircle size={12} className="text-red-500" /> : <CheckCircle size={12} className="text-green-500" />;
+    const icon = event.isError ? (
+      <AlertCircle size={12} className="text-red-500" />
+    ) : (
+      <CheckCircle size={12} className="text-green-500" />
+    );
     return (
       <div className="flex items-center gap-2 text-gray-600 pl-4">
         {icon}
@@ -178,11 +184,7 @@ function EventItem({ event }: { event: AgentActivityEvent }) {
     );
   }
   if (event.type === 'reasoning_summary') {
-    return (
-      <div className="pl-4 text-gray-400 text-xs italic">
-        💭 {event.summary}
-      </div>
-    );
+    return <div className="pl-4 text-gray-400 text-xs italic">💭 {event.summary}</div>;
   }
   if (event.type === 'agent_completed') {
     return (
@@ -190,9 +192,7 @@ function EventItem({ event }: { event: AgentActivityEvent }) {
         <CheckCircle size={12} className="text-green-500" />
         <span>Agent 完成</span>
         {event.tokensUsed && (
-          <span className="text-gray-400">
-            · {event.tokensUsed.total} tokens
-          </span>
+          <span className="text-gray-400">· {event.tokensUsed.total} tokens</span>
         )}
       </div>
     );
@@ -217,22 +217,25 @@ function truncate(str: string, max: number): string {
 const { agentEvents, showAgentActivity, appendAgentEvent, toggleAgentActivity } = useChatStore();
 
 // 在 assistant 消息渲染区域：
-{msg.role === 'assistant' && (
-  <>
-    <AssistantMessage content={msg.content} sources={msg.sources} />
-    {/* Agent Activity 面板（仅在 Agent 模式且有事件时显示） */}
-    {agentEvents.length > 0 && (
-      <AgentThoughtPanel
-        events={agentEvents}
-        isOpen={showAgentActivity}
-        onToggle={toggleAgentActivity}
-      />
-    )}
-  </>
-)}
+{
+  msg.role === 'assistant' && (
+    <>
+      <AssistantMessage content={msg.content} sources={msg.sources} />
+      {/* Agent Activity 面板（仅在 Agent 模式且有事件时显示） */}
+      {agentEvents.length > 0 && (
+        <AgentThoughtPanel
+          events={agentEvents}
+          isOpen={showAgentActivity}
+          onToggle={toggleAgentActivity}
+        />
+      )}
+    </>
+  );
+}
 ```
 
 **显示逻辑**：
+
 - `agentEvents.length === 0` 时不渲染面板（纯 RAG 模式无事件）
 - 流式进行中时实时更新（每次 `appendAgentEvent` 触发重渲染）
 - 完成后面板保持展开/折叠状态由 `showAgentActivity` 控制
@@ -241,25 +244,25 @@ const { agentEvents, showAgentActivity, appendAgentEvent, toggleAgentActivity } 
 
 ## 六、边界情况
 
-| 场景 | 处理方式 |
-|------|---------|
-| 旧客户端不识别新事件 | 按 `type` 分支忽略，不报错，不渲染面板 |
-| SSE 断线重连 | 重连后重新获取当前会话消息，agentEvents 从 0 开始累积（不回放历史事件） |
-| 快速连续发送多条消息 | 每次 `send()` 前调用 `clearAgentEvents()`，避免事件混淆 |
-| agent_completed 状态为 `truncated` | 面板中显示"推理步骤已达上限，答案可能不完整"提示 |
-| tool_result 携带 isError=true | 红色图标 + 显示错误信息摘要 |
+| 场景                               | 处理方式                                                                |
+| ---------------------------------- | ----------------------------------------------------------------------- |
+| 旧客户端不识别新事件               | 按 `type` 分支忽略，不报错，不渲染面板                                  |
+| SSE 断线重连                       | 重连后重新获取当前会话消息，agentEvents 从 0 开始累积（不回放历史事件） |
+| 快速连续发送多条消息               | 每次 `send()` 前调用 `clearAgentEvents()`，避免事件混淆                 |
+| agent_completed 状态为 `truncated` | 面板中显示"推理步骤已达上限，答案可能不完整"提示                        |
+| tool_result 携带 isError=true      | 红色图标 + 显示错误信息摘要                                             |
 
 ---
 
 ## 七、测试策略
 
-| 测试场景 | 验证方式 |
-|---------|---------|
-| SSE 收到 `tool_call` 事件 → agentEvents 追加 | 单元测试 chat-store |
-| SSE 收到 `tool_result` 事件 → 显示耗时 + 结果摘要 | 单元测试 chat-store |
-| agentEvents 为空 → 面板不渲染 | 快照测试 AgentThoughtPanel |
-| agentEvents 有数据 → 面板展开/折叠正常 | 交互测试（Playwright） |
-| 旧版 SSE 事件（无新类型）→ 面板不显示 | 回归测试 |
+| 测试场景                                          | 验证方式                   |
+| ------------------------------------------------- | -------------------------- |
+| SSE 收到 `tool_call` 事件 → agentEvents 追加      | 单元测试 chat-store        |
+| SSE 收到 `tool_result` 事件 → 显示耗时 + 结果摘要 | 单元测试 chat-store        |
+| agentEvents 为空 → 面板不渲染                     | 快照测试 AgentThoughtPanel |
+| agentEvents 有数据 → 面板展开/折叠正常            | 交互测试（Playwright）     |
+| 旧版 SSE 事件（无新类型）→ 面板不显示             | 回归测试                   |
 
 ---
 
@@ -275,10 +278,10 @@ const { agentEvents, showAgentActivity, appendAgentEvent, toggleAgentActivity } 
 
 ## 九、文件清单
 
-| 操作 | 文件路径 | 说明 |
-|------|---------|------|
-| 修改 | `apps/frontend/src/types/index.ts` | 新增 `AgentActivityEvent` 类型 |
-| 修改 | `apps/frontend/src/services/sse.ts` | 新增 `onMeta` 事件解析 |
-| 修改 | `apps/frontend/src/stores/chat-store.ts` | 新增 `agentEvents` / `showAgentActivity` state 和方法 |
-| 新建 | `apps/frontend/src/components/AgentThoughtPanel.tsx` | Activity 面板组件 |
-| 修改 | `apps/frontend/src/pages/Chat/ChatPage.tsx` | 集成面板到消息渲染区 |
+| 操作 | 文件路径                                             | 说明                                                  |
+| ---- | ---------------------------------------------------- | ----------------------------------------------------- |
+| 修改 | `apps/frontend/src/types/index.ts`                   | 新增 `AgentActivityEvent` 类型                        |
+| 修改 | `apps/frontend/src/services/sse.ts`                  | 新增 `onMeta` 事件解析                                |
+| 修改 | `apps/frontend/src/stores/chat-store.ts`             | 新增 `agentEvents` / `showAgentActivity` state 和方法 |
+| 新建 | `apps/frontend/src/components/AgentThoughtPanel.tsx` | Activity 面板组件                                     |
+| 修改 | `apps/frontend/src/pages/Chat/ChatPage.tsx`          | 集成面板到消息渲染区                                  |

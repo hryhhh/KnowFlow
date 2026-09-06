@@ -20,15 +20,15 @@ export default function CitationBadge({ index, source }: CitationBadgeProps) {
   const hide = () => {
     timerRef.current = setTimeout(() => setVisible(false), 150);
   };
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    },
+    [],
+  );
 
   return (
-    <div
-      ref={ref}
-      className="citation-badge"
-      onMouseEnter={show}
-      onMouseLeave={hide}
-    >
+    <div ref={ref} className="citation-badge" onMouseEnter={show} onMouseLeave={hide}>
       <sup className="citation-num">{index}</sup>
       {visible && (
         <div className="citation-tooltip" onMouseEnter={show} onMouseLeave={hide}>

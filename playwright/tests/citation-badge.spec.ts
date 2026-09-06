@@ -12,7 +12,7 @@ test.describe('Citation Badge Persistence Across Session Switches', () => {
   test('citation badges should persist after switching sessions', async ({ page }) => {
     // 清空历史会话
     const clearBtn = page.locator('button:has-text("清空")').first();
-    if (await clearBtn.count() > 0) {
+    if ((await clearBtn.count()) > 0) {
       await clearBtn.click();
       await page.waitForTimeout(1000);
     }
@@ -25,11 +25,14 @@ test.describe('Citation Badge Persistence Across Session Switches', () => {
     await input.press('Enter');
 
     // 等待答案出现
-    await page.waitForFunction(() => {
-      const msgs = document.querySelectorAll('.msg.assistant');
-      const last = msgs[msgs.length - 1];
-      return last && !last.textContent?.includes('思考') && !last.textContent?.includes('⏳');
-    }, { timeout: 30000 });
+    await page.waitForFunction(
+      () => {
+        const msgs = document.querySelectorAll('.msg.assistant');
+        const last = msgs[msgs.length - 1];
+        return last && !last.textContent?.includes('思考') && !last.textContent?.includes('⏳');
+      },
+      { timeout: 30000 },
+    );
 
     await page.waitForTimeout(2000);
 
@@ -39,10 +42,13 @@ test.describe('Citation Badge Persistence Across Session Switches', () => {
     expect(badges).toBeGreaterThan(0);
 
     // 记录第一条消息的 badge 状态
-    const firstBadgeHoverable = await page.locator('.citation-badge').first().evaluate(el => {
-      const rect = el.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0;
-    });
+    const firstBadgeHoverable = await page
+      .locator('.citation-badge')
+      .first()
+      .evaluate((el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
     expect(firstBadgeHoverable).toBe(true);
 
     // 截图保存
@@ -97,7 +103,7 @@ test.describe('Citation Badge Persistence Across Session Switches', () => {
   test('citation badges should have correct source data on hover', async ({ page }) => {
     // 清空历史会话
     const clearBtn = page.locator('button:has-text("清空")').first();
-    if (await clearBtn.count() > 0) {
+    if ((await clearBtn.count()) > 0) {
       await clearBtn.click();
       await page.waitForTimeout(1000);
     }
@@ -110,11 +116,14 @@ test.describe('Citation Badge Persistence Across Session Switches', () => {
     await input.press('Enter');
 
     // 等待答案出现
-    await page.waitForFunction(() => {
-      const msgs = document.querySelectorAll('.msg.assistant');
-      const last = msgs[msgs.length - 1];
-      return last && !last.textContent?.includes('思考') && !last.textContent?.includes('⏳');
-    }, { timeout: 30000 });
+    await page.waitForFunction(
+      () => {
+        const msgs = document.querySelectorAll('.msg.assistant');
+        const last = msgs[msgs.length - 1];
+        return last && !last.textContent?.includes('思考') && !last.textContent?.includes('⏳');
+      },
+      { timeout: 30000 },
+    );
 
     await page.waitForTimeout(2000);
 
@@ -142,7 +151,7 @@ test.describe('Citation Badge Persistence Across Session Switches', () => {
   test('citation badges should persist after page reload', async ({ page }) => {
     // 清空历史会话
     const clearBtn = page.locator('button:has-text("清空")').first();
-    if (await clearBtn.count() > 0) {
+    if ((await clearBtn.count()) > 0) {
       await clearBtn.click();
       await page.waitForTimeout(1000);
     }
@@ -155,11 +164,14 @@ test.describe('Citation Badge Persistence Across Session Switches', () => {
     await input.press('Enter');
 
     // 等待答案出现
-    await page.waitForFunction(() => {
-      const msgs = document.querySelectorAll('.msg.assistant');
-      const last = msgs[msgs.length - 1];
-      return last && !last.textContent?.includes('思考') && !last.textContent?.includes('⏳');
-    }, { timeout: 30000 });
+    await page.waitForFunction(
+      () => {
+        const msgs = document.querySelectorAll('.msg.assistant');
+        const last = msgs[msgs.length - 1];
+        return last && !last.textContent?.includes('思考') && !last.textContent?.includes('⏳');
+      },
+      { timeout: 30000 },
+    );
 
     await page.waitForTimeout(2000);
 
@@ -207,7 +219,7 @@ test.describe('Citation Badge Persistence Across Session Switches', () => {
   test('citation badges should work after navigating back to session', async ({ page }) => {
     // 清空历史会话
     const clearBtn = page.locator('button:has-text("清空")').first();
-    if (await clearBtn.count() > 0) {
+    if ((await clearBtn.count()) > 0) {
       await clearBtn.click();
       await page.waitForTimeout(1000);
     }
@@ -220,11 +232,14 @@ test.describe('Citation Badge Persistence Across Session Switches', () => {
     await input.press('Enter');
 
     // 等待答案出现
-    await page.waitForFunction(() => {
-      const msgs = document.querySelectorAll('.msg.assistant');
-      const last = msgs[msgs.length - 1];
-      return last && !last.textContent?.includes('思考') && !last.textContent?.includes('⏳');
-    }, { timeout: 30000 });
+    await page.waitForFunction(
+      () => {
+        const msgs = document.querySelectorAll('.msg.assistant');
+        const last = msgs[msgs.length - 1];
+        return last && !last.textContent?.includes('思考') && !last.textContent?.includes('⏳');
+      },
+      { timeout: 30000 },
+    );
 
     await page.waitForTimeout(2000);
 
@@ -238,11 +253,14 @@ test.describe('Citation Badge Persistence Across Session Switches', () => {
     await input.press('Enter');
 
     // 等待答案出现
-    await page.waitForFunction(() => {
-      const msgs = document.querySelectorAll('.msg.assistant');
-      const last = msgs[msgs.length - 1];
-      return last && !last.textContent?.includes('思考') && !last.textContent?.includes('⏳');
-    }, { timeout: 30000 });
+    await page.waitForFunction(
+      () => {
+        const msgs = document.querySelectorAll('.msg.assistant');
+        const last = msgs[msgs.length - 1];
+        return last && !last.textContent?.includes('思考') && !last.textContent?.includes('⏳');
+      },
+      { timeout: 30000 },
+    );
 
     await page.waitForTimeout(2000);
 

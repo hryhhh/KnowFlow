@@ -126,7 +126,12 @@ export class ReactLoop {
 
       // 2. 调用 LLM（带工具绑定）
       const llmResponse = await this.callLLM(messages, context);
-      context.trace.recordLLMCall(llmResponse.model, llmResponse.inputTokens, llmResponse.outputTokens, llmResponse.latencyMs);
+      context.trace.recordLLMCall(
+        llmResponse.model,
+        llmResponse.inputTokens,
+        llmResponse.outputTokens,
+        llmResponse.latencyMs,
+      );
 
       // 3. 检查是否有 tool_call
       const toolCalls = this.extractToolCalls(llmResponse);
@@ -146,14 +151,33 @@ export class ReactLoop {
         context.state.toolCallCount++;
 
         // 推送 tool_call 事件
-        context.emitEvent({ type: 'tool_call', timestamp: Date.now(), data: { toolName: toolCall.toolName, args: toolCall.arguments } });
+        context.emitEvent({
+          type: 'tool_call',
+          timestamp: Date.now(),
+          data: { toolName: toolCall.toolName, args: toolCall.arguments },
+        });
         context.trace.recordToolCall(toolCall.toolName, toolCall.arguments, null, 0, false);
 
         const result = await this.executeTool(tool, toolCall, context);
-        context.trace.recordToolCall(toolCall.toolName, toolCall.arguments, result.content, result.durationMs ?? 0, result.isError);
+        context.trace.recordToolCall(
+          toolCall.toolName,
+          toolCall.arguments,
+          result.content,
+          result.durationMs ?? 0,
+          result.isError,
+        );
 
         // 推送 tool_result 事件
-        context.emitEvent({ type: 'tool_result', timestamp: Date.now(), data: { toolName: toolCall.toolName, result: result.content.slice(0, 200), durationMs: result.durationMs, isError: result.isError } });
+        context.emitEvent({
+          type: 'tool_result',
+          timestamp: Date.now(),
+          data: {
+            toolName: toolCall.toolName,
+            result: result.content.slice(0, 200),
+            durationMs: result.durationMs,
+            isError: result.isError,
+          },
+        });
       }
 
       // 5. 将 tool_use 和 tool_result 加入消息历史
@@ -199,7 +223,11 @@ export class ReactLoop {
     return response.toolCalls ?? [];
   }
 
-  private async executeTool(tool: Tool, toolCall: ToolCall, context: AgentContext): Promise<ToolResult> {
+  private async executeTool(
+    tool: Tool,
+    toolCall: ToolCall,
+    context: AgentContext,
+  ): Promise<ToolResult> {
     const executor = new ToolExecutor();
     return executor.execute(tool, toolCall.arguments, {
       runId: context.runId,
@@ -210,10 +238,19 @@ export class ReactLoop {
     });
   }
 
-  private appendToolRound(messages: AIMessage[], toolCalls: ToolCall[], context: AgentContext): AIMessage[] {
+  private appendToolRound(
+    messages: AIMessage[],
+    toolCalls: ToolCall[],
+    context: AgentContext,
+  ): AIMessage[] {
     const newMessages = [...messages];
     // 将 LLM 的 tool_use 消息加入历史
-    newMessages.push(new AIMessage({ content: '', tool_calls: toolCalls.map((tc) => ({ id: tc.id, name: tc.toolName, args: tc.arguments })) }));
+    newMessages.push(
+      new AIMessage({
+        content: '',
+        tool_calls: toolCalls.map((tc) => ({ id: tc.id, name: tc.toolName, args: tc.arguments })),
+      }),
+    );
     // 每个 tool_call 对应一个 tool_result 消息
     // （实际执行结果在 executeTool 后加入，此处简化为占位）
     return newMessages;
@@ -276,7 +313,10 @@ export class ConversationMemory {
    * @param sessionId 会话 ID
    * @param maxMessages 最大消息数（默认 6，即最近 3 轮 user/assistant）
    */
-  async load(sessionId: string | null, maxMessages: number = 6): Promise<Array<{ role: string; content: string }>> {
+  async load(
+    sessionId: string | null,
+    maxMessages: number = 6,
+  ): Promise<Array<{ role: string; content: string }>> {
     if (!sessionId) return [];
     try {
       const messages = await this.sessionService.getRecentMessages(sessionId, maxMessages);
@@ -311,6 +351,7 @@ async getRecentMessages(sessionId: string, take: number = 6): Promise<SessionMes
 ```
 
 **设计说明**：
+
 - 不实现记忆摘要（Phase 3+），首期只保留最近 6 条消息
 - 若 `AGENT_MEMORY_MAX_MESSAGES` 配置更大值，可按需调整
 - 异常时返回空数组，不阻塞主流程
@@ -407,18 +448,36 @@ export class TraceCollector {
   ) {}
 
   recordLLMCall(model: string, inputTokens: number, outputTokens: number, latencyMs: number): void {
-    this.steps.push({ type: 'llm_call', timestamp: Date.now(), data: { model, inputTokens, outputTokens, latencyMs } });
+    this.steps.push({
+      type: 'llm_call',
+      timestamp: Date.now(),
+      data: { model, inputTokens, outputTokens, latencyMs },
+    });
     this.tokensUsed.prompt += inputTokens;
     this.tokensUsed.completion += outputTokens;
     this.tokensUsed.total += inputTokens + outputTokens;
   }
 
-  recordToolCall(toolName: string, input: any, output: string | null, durationMs: number, isError: boolean): void {
-    this.steps.push({ type: 'tool_call', timestamp: Date.now(), data: { toolName, input, durationMs, isError, outputLength: output?.length ?? 0 } });
+  recordToolCall(
+    toolName: string,
+    input: any,
+    output: string | null,
+    durationMs: number,
+    isError: boolean,
+  ): void {
+    this.steps.push({
+      type: 'tool_call',
+      timestamp: Date.now(),
+      data: { toolName, input, durationMs, isError, outputLength: output?.length ?? 0 },
+    });
   }
 
   recordFinalAnswer(answer: string): void {
-    this.steps.push({ type: 'final_answer', timestamp: Date.now(), data: { answerLength: answer.length } });
+    this.steps.push({
+      type: 'final_answer',
+      timestamp: Date.now(),
+      data: { answerLength: answer.length },
+    });
   }
 
   finalize(status: 'completed' | 'failed' | 'truncated', errorMsg?: string): AgentTrace {
@@ -433,8 +492,8 @@ export class TraceCollector {
       steps: this.steps,
       summary: {
         totalDurationMs: Date.now() - this.steps[0]?.timestamp ?? 0,
-        llmCalls: this.steps.filter(s => s.type === 'llm_call').length,
-        toolCalls: this.steps.filter(s => s.type === 'tool_call').length,
+        llmCalls: this.steps.filter((s) => s.type === 'llm_call').length,
+        toolCalls: this.steps.filter((s) => s.type === 'tool_call').length,
         tokensUsed: this.tokensUsed,
       },
       tokensUsed: this.tokensUsed,
@@ -538,13 +597,13 @@ async stream(
 
 ## 八、测试策略
 
-| 测试文件 | 测试内容 | 预期 |
-|---------|---------|------|
-| `runtime/agent-context.test.ts` | create() 构造、system prompt 构建、AbortSignal 超时 | 通过 |
-| `runtime/react-loop.test.ts` | 无 tool call→直接返回；有 tool call→执行工具；超轮数→truncated | 通过 |
-| `runtime/agent-runtime.test.ts` | 端到端 run() 流程，mock LLM 返回 | 通过 |
-| `memory/conversation-memory.test.ts` | sessionId 为空返回空；正常加载历史消息 | 通过 |
-| `observability/trace-collector.test.ts` | recordLLMCall/recordToolCall 后 finalize 的数据完整性 | 通过 |
+| 测试文件                                | 测试内容                                                       | 预期 |
+| --------------------------------------- | -------------------------------------------------------------- | ---- |
+| `runtime/agent-context.test.ts`         | create() 构造、system prompt 构建、AbortSignal 超时            | 通过 |
+| `runtime/react-loop.test.ts`            | 无 tool call→直接返回；有 tool call→执行工具；超轮数→truncated | 通过 |
+| `runtime/agent-runtime.test.ts`         | 端到端 run() 流程，mock LLM 返回                               | 通过 |
+| `memory/conversation-memory.test.ts`    | sessionId 为空返回空；正常加载历史消息                         | 通过 |
+| `observability/trace-collector.test.ts` | recordLLMCall/recordToolCall 后 finalize 的数据完整性          | 通过 |
 
 **回归要求**：所有现有测试必须通过，`AGENT_RUNTIME_ENABLED=false` 时行为不变。
 
@@ -564,19 +623,19 @@ async stream(
 
 ## 十、文件清单
 
-| 操作 | 文件路径 |
-|------|---------|
-| 新建 | `packages/agents/src/runtime/agent-context.ts` |
-| 新建 | `packages/agents/src/runtime/react-loop.ts` |
-| 新建 | `packages/agents/src/runtime/agent-runtime.ts` |
-| 新建 | `packages/agents/src/memory/conversation-memory.ts` |
-| 新建 | `packages/agents/src/observability/trace-collector.ts` |
+| 操作 | 文件路径                                                              |
+| ---- | --------------------------------------------------------------------- |
+| 新建 | `packages/agents/src/runtime/agent-context.ts`                        |
+| 新建 | `packages/agents/src/runtime/react-loop.ts`                           |
+| 新建 | `packages/agents/src/runtime/agent-runtime.ts`                        |
+| 新建 | `packages/agents/src/memory/conversation-memory.ts`                   |
+| 新建 | `packages/agents/src/observability/trace-collector.ts`                |
 | 新建 | `apps/server/src/modules/agents/trace/entities/agent-trace.entity.ts` |
-| 新建 | `apps/server/src/modules/agents/trace/trace.service.ts` |
-| 新建 | `apps/server/src/modules/agents/trace/trace.controller.ts` |
-| 新建 | `apps/server/src/database/migrations/XXXX-agent-traces.ts` |
-| 修改 | `apps/server/src/modules/session/session.service.ts` | 新增 `getRecentMessages()` |
-| 修改 | `apps/server/src/modules/agents/agent-chat.service.ts` | 集成 AgentRuntime |
-| 修改 | `apps/server/src/modules/agents/agent.module.ts` | 注册 TraceService |
-| 修改 | `packages/agents/src/types.ts` | 新增 AgentRunResult / AgentEvent 类型 |
-| 修改 | `packages/agents/src/index.ts` | 导出 runtime/memory/observability |
+| 新建 | `apps/server/src/modules/agents/trace/trace.service.ts`               |
+| 新建 | `apps/server/src/modules/agents/trace/trace.controller.ts`            |
+| 新建 | `apps/server/src/database/migrations/XXXX-agent-traces.ts`            |
+| 修改 | `apps/server/src/modules/session/session.service.ts`                  | 新增 `getRecentMessages()`            |
+| 修改 | `apps/server/src/modules/agents/agent-chat.service.ts`                | 集成 AgentRuntime                     |
+| 修改 | `apps/server/src/modules/agents/agent.module.ts`                      | 注册 TraceService                     |
+| 修改 | `packages/agents/src/types.ts`                                        | 新增 AgentRunResult / AgentEvent 类型 |
+| 修改 | `packages/agents/src/index.ts`                                        | 导出 runtime/memory/observability     |

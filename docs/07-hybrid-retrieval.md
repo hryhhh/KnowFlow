@@ -1,7 +1,6 @@
 # 混合检索升级设计文档（BM25 + Vector + RRF）
 
 > **状态：✅ 已完成**（2026-08-27）
->
 
 ---
 
@@ -29,23 +28,23 @@
 
 ### 1.3 成功指标
 
-| 指标 | 目标 |
-|------|------|
-| 专有名词 recall@10 提升 | +15% vs 纯向量 |
-| hybrid P95 延迟增量 | < 50ms（不含 embedding） |
-| 候选倍数硬上限 | 10 |
+| 指标                    | 目标                     |
+| ----------------------- | ------------------------ |
+| 专有名词 recall@10 提升 | +15% vs 纯向量           |
+| hybrid P95 延迟增量     | < 50ms（不含 embedding） |
+| 候选倍数硬上限          | 10                       |
 
 ---
 
 ## 二、拍板决策
 
-| 编号 | 问题 | 结论 |
-|------|------|------|
-| **Q1** | 稀疏索引挂哪张表 | 挂 `chunks` 表（不在 `langchainjs` 上加列） |
-| **Q2** | `langchainjs.id` vs `chunks.id` | 不是同一 UUID，sparse-store 用 `docId` 反向关联；通过 `chunk_id` 列直接关联两路 |
-| **Q3** | 中文分词策略 | 应用层 N-gram（unigram+bigram）fallback，jieba 可选优化，不依赖 zhparser/pg_jieba |
-| **Q4** | hybrid+RRF 是否引入 `minDenseScore` | 要，只过滤 dense 候选阶段，默认 `null`，env `DEFAULT_MIN_DENSE_SCORE=0.3` |
-| **Q5** | 评测集维护与 CI | 仓库内 golden set（`fixtures/eval-queries.json`）+ CI 冒烟 |
+| 编号   | 问题                                | 结论                                                                              |
+| ------ | ----------------------------------- | --------------------------------------------------------------------------------- |
+| **Q1** | 稀疏索引挂哪张表                    | 挂 `chunks` 表（不在 `langchainjs` 上加列）                                       |
+| **Q2** | `langchainjs.id` vs `chunks.id`     | 不是同一 UUID，sparse-store 用 `docId` 反向关联；通过 `chunk_id` 列直接关联两路   |
+| **Q3** | 中文分词策略                        | 应用层 N-gram（unigram+bigram）fallback，jieba 可选优化，不依赖 zhparser/pg_jieba |
+| **Q4** | hybrid+RRF 是否引入 `minDenseScore` | 要，只过滤 dense 候选阶段，默认 `null`，env `DEFAULT_MIN_DENSE_SCORE=0.3`         |
+| **Q5** | 评测集维护与 CI                     | 仓库内 golden set（`fixtures/eval-queries.json`）+ CI 冒烟                        |
 
 ---
 
@@ -69,25 +68,25 @@ packages/rag-engine/
 
 ### 新增文件
 
-| 文件 | 职责 |
-|------|------|
-| `sparse-retriever.ts` | 对 query 分词/规范化 → 查询 tsvector → 返回带排名的切片 |
-| `fusion/rrf.ts` | 接收 dense/sparse 两路有序列表，输出 RRF 加权排序结果 |
-| `fusion/linear.ts` | 接收两路结果，归一化后线性加权合并 |
+| 文件                     | 职责                                                     |
+| ------------------------ | -------------------------------------------------------- |
+| `sparse-retriever.ts`    | 对 query 分词/规范化 → 查询 tsvector → 返回带排名的切片  |
+| `fusion/rrf.ts`          | 接收 dense/sparse 两路有序列表，输出 RRF 加权排序结果    |
+| `fusion/linear.ts`       | 接收两路结果，归一化后线性加权合并                       |
 | `stores/sparse-store.ts` | 封装 tsvector 列的读写、GIN 索引、按 kbId/docId 批量删除 |
 
 ### 修改文件
 
-| 文件 | 改动点 |
-|------|--------|
-| `types.ts` | `SearchParams` 增加 `retrievalMode`、`fusionMethod`、`rrfK`、`candidateMultiplier`、`minDenseScore`、`debug` |
-| `pipeline.ts` | `performSearch` 按模式分支；`retrievalMode=vector` 时保持原逻辑不变 |
-| `retrievers/hybrid-retriever.ts` | 重写：并行双路 + fusion，替换原 keyword-boost 逻辑 |
-| `stores/pgvector-store.ts` | 补充 `deleteByKbId` / `deleteByDocId`；摄入时同步写 sparse-store |
-| `cache/search-cache.ts` | 缓存 key 包含 `retrievalMode`、`fusionMethod`、`rrfK`、`minDenseScore` |
-| Server `dto/search.dto.ts` | 新增字段 + class-validator 装饰器 |
-| Server `retrieval.service.ts` | 透传新参数 |
-| Server `chat.service.ts` / `agent-chat.service.ts` | 透传新参数到 rag-engine |
+| 文件                                               | 改动点                                                                                                       |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `types.ts`                                         | `SearchParams` 增加 `retrievalMode`、`fusionMethod`、`rrfK`、`candidateMultiplier`、`minDenseScore`、`debug` |
+| `pipeline.ts`                                      | `performSearch` 按模式分支；`retrievalMode=vector` 时保持原逻辑不变                                          |
+| `retrievers/hybrid-retriever.ts`                   | 重写：并行双路 + fusion，替换原 keyword-boost 逻辑                                                           |
+| `stores/pgvector-store.ts`                         | 补充 `deleteByKbId` / `deleteByDocId`；摄入时同步写 sparse-store                                             |
+| `cache/search-cache.ts`                            | 缓存 key 包含 `retrievalMode`、`fusionMethod`、`rrfK`、`minDenseScore`                                       |
+| Server `dto/search.dto.ts`                         | 新增字段 + class-validator 装饰器                                                                            |
+| Server `retrieval.service.ts`                      | 透传新参数                                                                                                   |
+| Server `chat.service.ts` / `agent-chat.service.ts` | 透传新参数到 rag-engine                                                                                      |
 
 ---
 
@@ -139,6 +138,7 @@ CREATE INDEX IF NOT EXISTS idx_chunks_chunk_id ON chunks (chunk_id);
 ```
 
 **为什么选 `chunks` 而非 `langchainjs`：**
+
 - `langchainjs` 由 LangChain 内部管理，加列有被覆盖的风险
 - `chunks` 有 `kbId`、`docId` 等直接字段，查询和删除更直观
 
@@ -180,16 +180,19 @@ deleteByKbId(kbId)
 
 ```typescript
 import { tokenize, tokensToTsvString } from './tokenizer';
-const tokens = tokenize(content);       // ['如何', '重置', '密码']
-const tsvString = tokensToTsvString(tokens);  // "如何 重置 密码"
-await db.query("UPDATE chunks SET tsv = to_tsvector('simple', $1) WHERE id = $2", [tsvString, chunk.id]);
+const tokens = tokenize(content); // ['如何', '重置', '密码']
+const tsvString = tokensToTsvString(tokens); // "如何 重置 密码"
+await db.query("UPDATE chunks SET tsv = to_tsvector('simple', $1) WHERE id = $2", [
+  tsvString,
+  chunk.id,
+]);
 ```
 
 **查询侧：**
 
 ```typescript
 import { tokenize, tokensToTsQuery } from './tokenizer';
-const tokens = tokenize(query);         // '怎么重置密码' → ['怎么', '重置', '密码']
+const tokens = tokenize(query); // '怎么重置密码' → ['怎么', '重置', '密码']
 const tsquery = tokensToTsQuery(tokens); // "'怎么':* & '重置':* & '密码':*"
 // prefix operator（:*）支持部分匹配中文
 ```
@@ -211,7 +214,8 @@ async function sparseSearch(
     [tsqueryStr, filter.kbId, topK * CANDIDATE_MULTIPLIER],
   );
   return results.map((row) => ({
-    content: row.content, score: row.rank,
+    content: row.content,
+    score: row.rank,
     sourceFile: 'unknown',
     metadata: { chunkId: row.id, kbId: filter.kbId },
   }));
@@ -274,8 +278,16 @@ async function performSearch(query, filter, params, config): Promise<RetrievalRe
   const candidatesPerRoute = Math.ceil(rest.topK * Math.min(candidateMultiplier ?? 3, 10));
 
   // 缓存 key 包含 retrievalMode / fusionMethod / rrfK / minDenseScore
-  const cached = await getCachedResults(query, filter.kbId, rest.topK, rest.minScore,
-    retrievalMode, fusionMethod, rrfK, params.minDenseScore);
+  const cached = await getCachedResults(
+    query,
+    filter.kbId,
+    rest.topK,
+    rest.minScore,
+    retrievalMode,
+    fusionMethod,
+    rrfK,
+    params.minDenseScore,
+  );
   if (cached !== null) return cached;
 
   let results: RetrievalResult[];
@@ -288,12 +300,19 @@ async function performSearch(query, filter, params, config): Promise<RetrievalRe
       break;
     case 'hybrid': {
       const [dense, sparse] = await Promise.all([
-        similaritySearch({ ...rest, query, filter, topK: candidatesPerRoute }, store, embeddingConfig),
+        similaritySearch(
+          { ...rest, query, filter, topK: candidatesPerRoute },
+          store,
+          embeddingConfig,
+        ),
         sparseSearch({ query, filter, topK: candidatesPerRoute }, sparseStore),
       ]);
       const fuseFn = fusionMethod === 'linear' ? linearFuse : rrfFuse;
-      results = fuseFn(dense, sparse,
-        fusionMethod === 'linear' ? (params.denseWeight ?? 0.5) : (rrfK ?? 60));
+      results = fuseFn(
+        dense,
+        sparse,
+        fusionMethod === 'linear' ? (params.denseWeight ?? 0.5) : (rrfK ?? 60),
+      );
       break;
     }
   }
@@ -302,19 +321,28 @@ async function performSearch(query, filter, params, config): Promise<RetrievalRe
   if (useReranker && results.length > 0) {
     results = await rerank(query, results, config.embedding, { topK: rest.topK });
   }
-  setCachedResults(query, filter.kbId, rest.topK, rest.minScore,
-    retrievalMode, fusionMethod, rrfK, params.minDenseScore, results);
+  setCachedResults(
+    query,
+    filter.kbId,
+    rest.topK,
+    rest.minScore,
+    retrievalMode,
+    fusionMethod,
+    rrfK,
+    params.minDenseScore,
+    results,
+  );
   return results;
 }
 ```
 
 ### 7.2 失败处理
 
-| 失败点 | 处理 |
-|--------|------|
-| `addDocumentsToPG` 失败 | chunks 行已写入，启动期校验发现缺失时触发补写 |
-| `writeSparseToChunks` 失败 | langchainjs 已写入，chunks 补写由同一 worker 重试 |
-| Worker 重试 | 按 docId 幂等：先清理本次 docId 的两路数据，再重跑 |
+| 失败点                     | 处理                                               |
+| -------------------------- | -------------------------------------------------- |
+| `addDocumentsToPG` 失败    | chunks 行已写入，启动期校验发现缺失时触发补写      |
+| `writeSparseToChunks` 失败 | langchainjs 已写入，chunks 补写由同一 worker 重试  |
+| Worker 重试                | 按 docId 幂等：先清理本次 docId 的两路数据，再重跑 |
 
 ---
 
@@ -322,29 +350,29 @@ async function performSearch(query, filter, params, config): Promise<RetrievalRe
 
 ### 8.1 HTTP 参数（SearchDto）
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-|------|------|------|--------|------|
-| `retrievalMode` | `'vector'\|'keyword'\|'hybrid'` | 否 | `vector` | 检索模式 |
-| `fusionMethod` | `'rrf'\|'linear'` | 否 | `rrf` | 融合方式 |
-| `rrfK` | `number` | 否 | `60` | RRF 常数 |
-| `candidateMultiplier` | `number` | 否 | `3` | 每路候选倍数（硬上限 10） |
-| `denseWeight` | `number` | 否 | `0.5` | linear 权重，0~1 |
-| `topK` | `number` | 否 | `10` | 返回条数 |
-| `minScore` | `number` | 否 | 见 §8.2 | 模式化阈值 |
-| `minDenseScore` | `number` | 否 | `null` | 仅 hybrid 模式，过滤 dense 候选 |
-| `useReranker` | `boolean` | 否 | `false` | 是否重排（当前为 stub） |
-| `debug` | `boolean` | 否 | `false` | 是否返回详细调试信息 |
+| 参数                  | 类型                            | 必填 | 默认值   | 说明                            |
+| --------------------- | ------------------------------- | ---- | -------- | ------------------------------- |
+| `retrievalMode`       | `'vector'\|'keyword'\|'hybrid'` | 否   | `vector` | 检索模式                        |
+| `fusionMethod`        | `'rrf'\|'linear'`               | 否   | `rrf`    | 融合方式                        |
+| `rrfK`                | `number`                        | 否   | `60`     | RRF 常数                        |
+| `candidateMultiplier` | `number`                        | 否   | `3`      | 每路候选倍数（硬上限 10）       |
+| `denseWeight`         | `number`                        | 否   | `0.5`    | linear 权重，0~1                |
+| `topK`                | `number`                        | 否   | `10`     | 返回条数                        |
+| `minScore`            | `number`                        | 否   | 见 §8.2  | 模式化阈值                      |
+| `minDenseScore`       | `number`                        | 否   | `null`   | 仅 hybrid 模式，过滤 dense 候选 |
+| `useReranker`         | `boolean`                       | 否   | `false`  | 是否重排（当前为 stub）         |
+| `debug`               | `boolean`                       | 否   | `false`  | 是否返回详细调试信息            |
 
 **请求头覆盖：** `X-Debug: true` — 无需修改 body 即可开启调试模式。
 
 ### 8.2 `minScore` / `minDenseScore` 语义分化
 
-| 参数 | 适用模式 | 行为 |
-|------|----------|------|
-| `minScore` | `vector` | 过滤最终结果，默认 0.7 |
-| `minScore` | `keyword` | **默认不启用**（稀疏分无固定上限） |
-| `minScore` | `hybrid + rrf` | **默认不启用**（RRF 分无固定范围） |
-| `minScore` | `hybrid + linear` | 过滤融合后最终结果（归一化后 0~1） |
+| 参数            | 适用模式               | 行为                                           |
+| --------------- | ---------------------- | ---------------------------------------------- |
+| `minScore`      | `vector`               | 过滤最终结果，默认 0.7                         |
+| `minScore`      | `keyword`              | **默认不启用**（稀疏分无固定上限）             |
+| `minScore`      | `hybrid + rrf`         | **默认不启用**（RRF 分无固定范围）             |
+| `minScore`      | `hybrid + linear`      | 过滤融合后最终结果（归一化后 0~1）             |
 | `minDenseScore` | `hybrid`（rrf/linear） | **可选**，只在 dense 候选阶段过滤，默认 `null` |
 
 ### 8.3 环境变量
@@ -391,13 +419,13 @@ RAG_RESULT_CACHE_TTL_MS=300000       # 检索结果缓存 TTL（毫秒）
 
 ## 九、性能约束
 
-| 项 | 目标 |
-|----|------|
-| 索引 | 稀疏列 GIN；向量侧维持现有 IVF/flat 策略 |
-| 延迟 | hybrid P95 相对纯向量增幅 **< 50ms** |
-| 查询 | 两路并行 `Promise.all` |
+| 项   | 目标                                                    |
+| ---- | ------------------------------------------------------- |
+| 索引 | 稀疏列 GIN；向量侧维持现有 IVF/flat 策略                |
+| 延迟 | hybrid P95 相对纯向量增幅 **< 50ms**                    |
+| 查询 | 两路并行 `Promise.all`                                  |
 | 缓存 | 进程内 Map，TTL 5min；mode/fusion/rrfK 变化时需独立 key |
-| 上限 | `candidateMultiplier` 硬上限 **10** |
+| 上限 | `candidateMultiplier` 硬上限 **10**                     |
 
 ---
 
@@ -405,13 +433,13 @@ RAG_RESULT_CACHE_TTL_MS=300000       # 检索结果缓存 TTL（毫秒）
 
 ### 单测
 
-| 测试文件 | 覆盖点 |
-|----------|--------|
-| `fusion/rrf.test.ts` | 单路/双路/并列/空列表/大 k 值边界 |
-| `fusion/linear.test.ts` | 归一化一致性/单路文档/权重边界 0/1 |
-| `retrievers/sparse-retriever.test.ts` | 中文分词、英文、数字错误码命中 |
-| `retrievers/hybrid-retriever.test.ts` | hybrid 模式双路并行、融合正确性、mode 分支 |
-| `pipeline.test.ts` | `retrievalMode=vector` 结果与旧版等价；缓存 key 含 mode |
+| 测试文件                              | 覆盖点                                                  |
+| ------------------------------------- | ------------------------------------------------------- |
+| `fusion/rrf.test.ts`                  | 单路/双路/并列/空列表/大 k 值边界                       |
+| `fusion/linear.test.ts`               | 归一化一致性/单路文档/权重边界 0/1                      |
+| `retrievers/sparse-retriever.test.ts` | 中文分词、英文、数字错误码命中                          |
+| `retrievers/hybrid-retriever.test.ts` | hybrid 模式双路并行、融合正确性、mode 分支              |
+| `pipeline.test.ts`                    | `retrievalMode=vector` 结果与旧版等价；缓存 key 含 mode |
 
 ### 集成测
 
@@ -422,6 +450,7 @@ RAG_RESULT_CACHE_TTL_MS=300000       # 检索结果缓存 TTL（毫秒）
 ### Eval Fixture
 
 `packages/rag-engine/__tests__/fixtures/eval-queries.json`（~25 条），覆盖：
+
 - 中文无空格（5）：向量数据库对比分析、模型推理延迟优化方案
 - 英文技术术语（4）：cosine similarity calculation、BM25 ranking algorithm
 - 中英混合（5）：PGVector 向量检索性能调优、Embedding model dimensions
@@ -433,12 +462,12 @@ RAG_RESULT_CACHE_TTL_MS=300000       # 检索结果缓存 TTL（毫秒）
 
 ## 十一、迁移历史
 
-| 阶段 | 内容 | 状态 |
-|------|------|------|
-| M1 | 稀疏索引模型 + 摄入/删除同步 | ✅ |
-| M2 | 重写 hybridSearch：并行双路 + RRF + linear | ✅ |
-| M3 | pipeline / Server DTO / 默认配置 / 兼容层 | ✅ |
-| M4 | 前端调试参数页 | ✅ |
-| M5 | 可观测字段 + 旧 boost 下线 | ✅ |
+| 阶段 | 内容                                       | 状态 |
+| ---- | ------------------------------------------ | ---- |
+| M1   | 稀疏索引模型 + 摄入/删除同步               | ✅   |
+| M2   | 重写 hybridSearch：并行双路 + RRF + linear | ✅   |
+| M3   | pipeline / Server DTO / 默认配置 / 兼容层  | ✅   |
+| M4   | 前端调试参数页                             | ✅   |
+| M5   | 可观测字段 + 旧 boost 下线                 | ✅   |
 
 S1–S13 全部完成，legacyKeywordBoost 已下线，无遗留任务。

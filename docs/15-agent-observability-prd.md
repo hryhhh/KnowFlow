@@ -19,22 +19,22 @@
 
 ### 2.1 事件类型完整清单
 
-| 事件名 | 触发时机 | 数据结构 | 兼容旧客户端 |
-|--------|---------|---------|------------|
-| `trace` | 请求开始 | `{ traceId: string }` | ✅ 已有 |
-| `session_id` | 会话创建/确认 | `{ sessionId: string }` | ✅ 已有 |
-| `agent_start` | Agent 开始执行 | `{ agent: string, traceId: string }` | ✅ 已有 |
-| `tool_call` | **新增** LLM 决定调用工具 | `{ toolName: string, args: Record<string,any>, traceId: string }` | 忽略未知 type |
-| `tool_result` | **新增** 工具执行完成 | `{ toolName: string, result: string, durationMs: number, isError: boolean, traceId: string }` | 忽略未知 type |
-| `reasoning_summary` | **新增** LLM 思考摘要 | `{ summary: string, traceId: string }` | 忽略未知 type |
-| `sources` | 检索来源就绪 | `SourceRef[]` | ✅ 已有 |
-| `token` | LLM 流式输出片段 | `string` | ✅ 已有 |
-| `message_delta` | **新增** 最终答案流式片段（语义同 token，可选） | `string` | 忽略未知 type |
-| `agent_done` | Agent 执行完成 | `{ agent: string, duration: number, traceId: string }` | ✅ 已有 |
-| `agent_completed` | **新增** 整个 AgentRun 完成（替代 agent_done，语义更明确） | `{ status: 'completed'\|'failed'\|'truncated', durationMs: number, traceId: string, tokensUsed?: {prompt,completion,total} }` | 忽略未知 type |
-| `done` | 回答完成 | `null` | ✅ 已有 |
-| `error` | 发生错误 | `{ message: string, traceId: string }` | ✅ 已有 |
-| `meta` | 可观测元数据 | `{ type: string, value: any, agent?: string, traceId?: string }` | ✅ 已有 |
+| 事件名              | 触发时机                                                   | 数据结构                                                                                                                      | 兼容旧客户端  |
+| ------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `trace`             | 请求开始                                                   | `{ traceId: string }`                                                                                                         | ✅ 已有       |
+| `session_id`        | 会话创建/确认                                              | `{ sessionId: string }`                                                                                                       | ✅ 已有       |
+| `agent_start`       | Agent 开始执行                                             | `{ agent: string, traceId: string }`                                                                                          | ✅ 已有       |
+| `tool_call`         | **新增** LLM 决定调用工具                                  | `{ toolName: string, args: Record<string,any>, traceId: string }`                                                             | 忽略未知 type |
+| `tool_result`       | **新增** 工具执行完成                                      | `{ toolName: string, result: string, durationMs: number, isError: boolean, traceId: string }`                                 | 忽略未知 type |
+| `reasoning_summary` | **新增** LLM 思考摘要                                      | `{ summary: string, traceId: string }`                                                                                        | 忽略未知 type |
+| `sources`           | 检索来源就绪                                               | `SourceRef[]`                                                                                                                 | ✅ 已有       |
+| `token`             | LLM 流式输出片段                                           | `string`                                                                                                                      | ✅ 已有       |
+| `message_delta`     | **新增** 最终答案流式片段（语义同 token，可选）            | `string`                                                                                                                      | 忽略未知 type |
+| `agent_done`        | Agent 执行完成                                             | `{ agent: string, duration: number, traceId: string }`                                                                        | ✅ 已有       |
+| `agent_completed`   | **新增** 整个 AgentRun 完成（替代 agent_done，语义更明确） | `{ status: 'completed'\|'failed'\|'truncated', durationMs: number, traceId: string, tokensUsed?: {prompt,completion,total} }` | 忽略未知 type |
+| `done`              | 回答完成                                                   | `null`                                                                                                                        | ✅ 已有       |
+| `error`             | 发生错误                                                   | `{ message: string, traceId: string }`                                                                                        | ✅ 已有       |
+| `meta`              | 可观测元数据                                               | `{ type: string, value: any, agent?: string, traceId?: string }`                                                              | ✅ 已有       |
 
 ### 2.2 事件推送时机（完整流程）
 
@@ -124,10 +124,46 @@ export class TraceController {
     "startedAt": "2026-08-31T10:00:00.000Z",
     "completedAt": "2026-08-31T10:00:03.500Z",
     "steps": [
-      { "type": "llm_call", "timestamp": 1725100800000, "data": { "model": "qwen3.7-plus", "inputTokens": 1200, "outputTokens": 80, "latencyMs": 500 } },
-      { "type": "tool_call", "timestamp": 1725100800500, "data": { "toolName": "rag_search", "input": {"query":"公司报销制度"}, "durationMs": 1200, "isError": false } },
-      { "type": "llm_call", "timestamp": 1725100801700, "data": { "model": "qwen3.7-plus", "inputTokens": 2100, "outputTokens": 60, "latencyMs": 400 } },
-      { "type": "tool_call", "timestamp": 1725100802100, "data": { "toolName": "web_search", "input": {"query":"2024税务规定"}, "durationMs": 800, "isError": false } },
+      {
+        "type": "llm_call",
+        "timestamp": 1725100800000,
+        "data": {
+          "model": "qwen3.7-plus",
+          "inputTokens": 1200,
+          "outputTokens": 80,
+          "latencyMs": 500
+        }
+      },
+      {
+        "type": "tool_call",
+        "timestamp": 1725100800500,
+        "data": {
+          "toolName": "rag_search",
+          "input": { "query": "公司报销制度" },
+          "durationMs": 1200,
+          "isError": false
+        }
+      },
+      {
+        "type": "llm_call",
+        "timestamp": 1725100801700,
+        "data": {
+          "model": "qwen3.7-plus",
+          "inputTokens": 2100,
+          "outputTokens": 60,
+          "latencyMs": 400
+        }
+      },
+      {
+        "type": "tool_call",
+        "timestamp": 1725100802100,
+        "data": {
+          "toolName": "web_search",
+          "input": { "query": "2024税务规定" },
+          "durationMs": 800,
+          "isError": false
+        }
+      },
       { "type": "final_answer", "timestamp": 1725100803500, "data": { "answerLength": 350 } }
     ],
     "summary": {
@@ -167,6 +203,7 @@ export class TraceModule {}
 Trace 事件通过现有的 `onMeta` 回调推送，**不需要修改 `chat.service.ts`**。
 
 `AgentChatService` 新增以下依赖：
+
 - `TraceService` — 保存 trace
 - `ConversationMemory` — 加载对话历史
 
@@ -174,23 +211,23 @@ Trace 事件通过现有的 `onMeta` 回调推送，**不需要修改 `chat.serv
 
 ## 五、边界情况处理
 
-| 场景 | 处理方式 |
-|------|---------|
-| LLM 返回非法 tool_call 格式 | `extractToolCalls()` 返回空数组，当作 final_answer 处理 |
-| 工具执行超时 | `ToolExecutor` 捕获超时异常，返回 `isError=true`，ReAct 循环继续下一轮 |
-| 所有工具调用均失败 | ReAct 循环继续（LLM 可自行调整策略），最多到 `maxRounds` |
-| Trace 写入失败 | `TraceService.save()` 加 try-catch，失败只打 warn 日志，不影响主流程 |
-| `AGENT_TRACE_ENABLED=false` | `TraceCollector` 不持久化，但仍在内存中收集（供调试） |
-| sessionId 为 null（未登录） | `ConversationMemory.load()` 返回空数组，不影响执行 |
+| 场景                        | 处理方式                                                               |
+| --------------------------- | ---------------------------------------------------------------------- |
+| LLM 返回非法 tool_call 格式 | `extractToolCalls()` 返回空数组，当作 final_answer 处理                |
+| 工具执行超时                | `ToolExecutor` 捕获超时异常，返回 `isError=true`，ReAct 循环继续下一轮 |
+| 所有工具调用均失败          | ReAct 循环继续（LLM 可自行调整策略），最多到 `maxRounds`               |
+| Trace 写入失败              | `TraceService.save()` 加 try-catch，失败只打 warn 日志，不影响主流程   |
+| `AGENT_TRACE_ENABLED=false` | `TraceCollector` 不持久化，但仍在内存中收集（供调试）                  |
+| sessionId 为 null（未登录） | `ConversationMemory.load()` 返回空数组，不影响执行                     |
 
 ---
 
 ## 六、测试策略
 
-| 测试文件 | 测试内容 |
-|---------|---------|
-| `trace/trace.service.test.ts` | save/get/list 正常流程；kbId 过滤 |
-| `trace/trace.controller.test.ts` | GET /:id 返回完整 trace；404 处理 |
+| 测试文件                             | 测试内容                                                                                                                          |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `trace/trace.service.test.ts`        | save/get/list 正常流程；kbId 过滤                                                                                                 |
+| `trace/trace.controller.test.ts`     | GET /:id 返回完整 trace；404 处理                                                                                                 |
 | `agent-chat.service.test.ts`（新增） | `AGENT_RUNTIME_ENABLED=true` 时，SSE 事件顺序正确：trace → agent_start → tool_call → tool_result → token → agent_completed → done |
 
 ---
@@ -207,10 +244,10 @@ Trace 事件通过现有的 `onMeta` 回调推送，**不需要修改 `chat.serv
 
 ## 八、文件清单
 
-| 操作 | 文件路径 |
-|------|---------|
-| 新建 | `apps/server/src/modules/agents/trace/trace.module.ts` |
+| 操作 | 文件路径                                                   |
+| ---- | ---------------------------------------------------------- |
+| 新建 | `apps/server/src/modules/agents/trace/trace.module.ts`     |
 | 新建 | `apps/server/src/modules/agents/trace/trace.controller.ts` |
-| 修改 | `apps/server/src/modules/agents/trace/trace.service.ts` | 已有，确认导出 |
-| 修改 | `apps/server/src/modules/agents/agent.module.ts` | 引入 TraceModule |
-| 修改 | `apps/server/src/modules/agents/agent-chat.service.ts` | 新增 emitToolCall/emitToolResult/emitReasoningSummary 方法 |
+| 修改 | `apps/server/src/modules/agents/trace/trace.service.ts`    | 已有，确认导出                                             |
+| 修改 | `apps/server/src/modules/agents/agent.module.ts`           | 引入 TraceModule                                           |
+| 修改 | `apps/server/src/modules/agents/agent-chat.service.ts`     | 新增 emitToolCall/emitToolResult/emitReasoningSummary 方法 |
