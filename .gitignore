@@ -32,13 +32,13 @@ coverage/
 
 # Uploads
 apps/server/uploads/
+uploads/
 
 # Playwright MCP
 .playwright-mcp/
 
 # Screenshots
 *.png
-uploads/
 *.traineddata
 .last-run.json
 
