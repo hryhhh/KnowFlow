@@ -1,42 +1,38 @@
 import type { RAGPipelineConfig } from '@knowbase-x/rag-engine';
+import { env } from './env';
 
 export const RAG_CONFIG = 'RAG_CONFIG';
 
-function env(key: string, fallback: string): string {
-  return process.env[key] ?? fallback;
-}
-
-function num(key: string, fallback: number): number {
-  const v = process.env[key];
-  return v !== undefined ? Number(v) : fallback;
-}
+/** 切片默认参数（业务决策值，不随部署环境变化，按 12-Factor 收编为代码常量） */
+const DEFAULT_CHUNK_SIZE = 1000;
+const DEFAULT_CHUNK_OVERLAP = 200;
 
 /**
- * 从环境变量构建 RAG Pipeline 配置。
+ * 从集中配置构建 RAG Pipeline 配置。
  */
 export function createRagConfig(): RAGPipelineConfig {
   return {
     pg: {
-      host: env('DATABASE_HOST', 'localhost'),
-      port: num('DATABASE_PORT', 5432),
-      user: env('DATABASE_USER', 'postgres'),
-      password: env('DATABASE_PASSWORD', '123456'),
-      database: env('DATABASE_NAME', 'knowledge_rag'),
+      host: env.database.host,
+      port: env.database.port,
+      user: env.database.user,
+      password: env.database.password,
+      database: env.database.name,
     },
     llm: {
-      apiKey: env('LLM_API_KEY', ''),
-      model: env('LLM_MODEL', 'qwen3.7-plus'),
-      baseURL: env('LLM_BASE_URL', ''),
+      apiKey: env.llm.apiKey,
+      model: env.llm.model,
+      baseURL: env.llm.baseURL,
     },
     embedding: {
-      apiKey: env('LLM_API_KEY', ''),
-      model: env('EMBEDDING_MODEL', 'text-embedding-v4'),
-      baseURL: env('LLM_BASE_URL', ''),
-      dimensions: num('EMBEDDING_DIMENSIONS', 1024),
+      apiKey: env.llm.apiKey,
+      model: env.embedding.model,
+      baseURL: env.llm.baseURL,
+      dimensions: env.embedding.dimensions,
     },
-    chunkSize: num('DEFAULT_CHUNK_SIZE', 1000),
-    chunkOverlap: num('DEFAULT_CHUNK_OVERLAP', 200),
-    embeddingDimensions: num('EMBEDDING_DIMENSIONS', 1024),
+    chunkSize: DEFAULT_CHUNK_SIZE,
+    chunkOverlap: DEFAULT_CHUNK_OVERLAP,
+    embeddingDimensions: env.embedding.dimensions,
     pgTableName: 'langchainjs',
   };
 }

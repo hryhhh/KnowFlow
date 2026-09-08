@@ -377,15 +377,13 @@ async function performSearch(query, filter, params, config): Promise<RetrievalRe
 
 ### 8.3 环境变量
 
+> 仅以下变量真实存在（`.env.example` / `config/env.ts`）；`rrfK`、`fusionMethod`、`denseWeight` 为请求级参数与代码内默认值，无对应环境变量。
+
 ```bash
-DEFAULT_RETRIEVAL_MODE=vector
-DEFAULT_FUSION_METHOD=rrf
-DEFAULT_RRF_K=60
-DEFAULT_CANDIDATE_MULTIPLIER=3
-DEFAULT_DENSE_WEIGHT=0.5
-DEFAULT_MIN_SCORE=0.7                # 仅对 vector 模式生效
-DEFAULT_MIN_DENSE_SCORE=0.3          # 仅对 hybrid 模式的 dense 候选生效
-RAG_RESULT_CACHE_TTL_MS=300000       # 检索结果缓存 TTL（毫秒）
+DEFAULT_MIN_SCORE=0.70                # 仅对 vector 与 hybrid+linear 模式生效
+DEFAULT_MIN_DENSE_SCORE=0.3           # 仅对 hybrid 模式的 dense 候选生效，留空不施加
+DEFAULT_CANDIDATE_MULTIPLIER=3        # 每路候选倍数（硬上限 10）
+RAG_RESULT_CACHE_TTL_MS=300000        # 检索结果缓存 TTL（毫秒），0 表示禁用
 ```
 
 ### 8.4 Debug 输出格式

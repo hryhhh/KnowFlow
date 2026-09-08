@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import * as yaml from 'js-yaml';
 import { Client } from 'pg';
 import type { DbQueryTemplate, DbQueryExecuteFn } from '@knowbase-x/agents';
+import { env } from '../../config/env';
 
 /**
  * DbQueryService — 数据库查询服务
@@ -23,8 +24,8 @@ export class DbQueryService implements OnModuleDestroy {
 
   private async init(): Promise<void> {
     const connectionString =
-      process.env.DB_READONLY_URL ??
-      `postgresql://${process.env.DATABASE_USER}:${process.env.DATABASE_PASSWORD}@${process.env.DATABASE_HOST}:${process.env.DATABASE_PORT}/${process.env.DATABASE_NAME}`;
+      env.dbQuery.readonlyUrl ||
+      `postgresql://${env.database.user}:${env.database.password}@${env.database.host}:${env.database.port}/${env.database.name}`;
 
     this.client = new Client({
       connectionString,

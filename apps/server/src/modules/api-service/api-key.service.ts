@@ -7,6 +7,9 @@ import { CreateApiServiceDto } from './dto/create-api-service.dto';
 import type { ApiKeyClaim } from '../../common/decorators/current-api-key.decorator';
 import { UsageLogService } from '../usage/usage-log.service';
 
+/** API Key 前缀（格式约定，改动会使存量 key 语义漂移，按 12-Factor 收编为代码常量） */
+const API_KEY_PREFIX = 'ek_';
+
 export interface ApiServiceListItem {
   id: string;
   serviceName: string;
@@ -42,7 +45,7 @@ export class ApiKeyService {
   }
 
   async create(dto: CreateApiServiceDto): Promise<CreateResult> {
-    const plain = this.genKey(process.env.API_KEY_PREFIX ?? 'ek_');
+    const plain = this.genKey(API_KEY_PREFIX);
     const apiKey = this.repo.create({
       serviceName: dto.serviceName,
       description: dto.description,

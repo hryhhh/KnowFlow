@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
-import { dashboardApi, apiServiceApi } from '../../services/api';
+import { dashboardApi, apiServiceApi, traceApi } from '../../services/api';
 import { useKbStore } from '../../stores/kb-store';
-import type { DashboardSummary, TrendPoint, ActivityItem, ApiServiceItem } from '../../types';
+import type {
+  DashboardSummary,
+  TrendPoint,
+  ActivityItem,
+  ApiServiceItem,
+  AgentTrace,
+} from '../../types';
 import { Area, Pie } from '@ant-design/charts';
+import { Badge, Card, Empty, List, Spin, Statistic } from 'antd';
 import {
   Database,
   FileText,
@@ -15,6 +22,7 @@ import {
   AlertCircle,
   PieChart,
   Upload,
+  Bot,
 } from 'lucide-react';
 
 const CHART_COLORS = ['#1677ff', '#52c41a', '#faad14', '#722ed1'];
@@ -27,6 +35,7 @@ export default function DashboardPage() {
   const [trends, setTrends] = useState<TrendPoint[]>([]);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [services, setServices] = useState<ApiServiceItem[]>([]);
+  const [traces, setTraces] = useState<AgentTrace[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,12 +44,15 @@ export default function DashboardPage() {
       dashboardApi.trends(),
       dashboardApi.activities(),
       apiServiceApi.list(),
+      // 按当前知识库过滤 trace，避免越权展示其他知识库数据
+      traceApi.list(current?.id ?? undefined, 10),
     ])
-      .then(([sumRes, trendRes, actRes, svcRes]) => {
+      .then(([sumRes, trendRes, actRes, svcRes, traceRes]) => {
         setSummary(sumRes.data.data);
         setTrends(trendRes.data?.data ?? []);
         setActivities(actRes.data.data?.items ?? []);
         setServices(svcRes.data.data ?? []);
+        setTraces(traceRes.data.data ?? []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -138,6 +150,14 @@ export default function DashboardPage() {
     pending: '#86909c',
   };
 
+  // Agent trace 状态 → 展示色/文案
+  const traceStatusMeta: Record<string, { color: string; label: string }> = {
+    completed: { color: '#52c41a', label: '完成' },
+    failed: { color: '#ff4d4f', label: '失败' },
+    truncated: { color: '#faad14', label: '截断' },
+    running: { color: '#1677ff', label: '执行中' },
+  };
+
   const cardStyle: React.CSSProperties = {
     background: 'var(--panel)',
     border: '1px solid var(--border)',
@@ -150,8 +170,8 @@ export default function DashboardPage() {
     return (
       <div className="content">
         <PageHeader title="工作台" />
-        <div className="empty">
-          <p>加载中…</p>
+        <div style={{ padding: '80px 0', textAlign: 'center' }}>
+          <Spin size="large" />
         </div>
       </div>
     );
@@ -171,22 +191,22 @@ export default function DashboardPage() {
         }}
       >
         {KPI.map((k) => (
-          <div key={k.title} style={cardStyle}>
+          <Card key={k.title} size="small" style={{ borderRadius: 'var(--radius-lg)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <k.icon size={16} style={{ color: k.color, flexShrink: 0 }} />
               <span style={{ fontSize: 12, color: 'var(--text-sub)', flex: 1 }}>{k.title}</span>
             </div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: k.color, lineHeight: 1 }}>
-              {k.value}
-              {k.sub && (
-                <span
-                  style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-sub)', marginLeft: 4 }}
-                >
-                  {k.sub}
-                </span>
-              )}
-            </div>
-          </div>
+            <Statistic
+              value={k.value}
+              suffix={k.sub || undefined}
+              valueStyle={{
+                color: k.color,
+                fontSize: 24,
+                fontWeight: 700,
+                lineHeight: 1,
+              }}
+            />
+          </Card>
         ))}
       </div>
 
@@ -243,9 +263,7 @@ export default function DashboardPage() {
             <Database size={16} /> 最近知识库
           </h3>
           {kbList.length === 0 ? (
-            <div className="empty" style={{ padding: '30px 0' }}>
-              <p>暂无知识库</p>
-            </div>
+            <Empty description="暂无知识库" style={{ padding: '30px 0' }} />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {kbList.slice(0, 5).map((kb) => (
@@ -322,9 +340,7 @@ export default function DashboardPage() {
             <Plug size={16} /> API 服务调用
           </h3>
           {services.length === 0 ? (
-            <div className="empty" style={{ padding: '30px 0' }}>
-              <p>暂无 API 服务</p>
-            </div>
+            <Empty description="暂无 API 服务" style={{ padding: '30px 0' }} />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {services.map((svc) => (
@@ -370,6 +386,71 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* ── 最近 Agent 执行 ── */}
+      <div style={{ ...cardStyle, marginBottom: 24 }}>
+        <h3
+          style={{
+            margin: '0 0 16px',
+            fontSize: 15,
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <Bot size={16} /> 最近 Agent 执行
+        </h3>
+        {traces.length === 0 ? (
+          <Empty description="暂无 Agent 执行记录" style={{ padding: '30px 0' }} />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {traces.map((t) => {
+              const meta = traceStatusMeta[t.status] ?? {
+                color: '#86909c',
+                label: t.status,
+              };
+              return (
+                <div
+                  key={t.id}
+                  onClick={() => navigate(`/traces/${t.id}`)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '10px 12px',
+                    background: 'var(--bg)',
+                    borderRadius: 'var(--radius)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span
+                    style={{
+                      flex: 1,
+                      fontSize: 13,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {t.query}
+                  </span>
+                  <Badge color={meta.color} text={meta.label} style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, color: 'var(--text-subtle)', flexShrink: 0 }}>
+                    工具 {t.summary?.toolCalls ?? 0} 次 ·{' '}
+                    {(t.summary?.totalDurationMs ?? 0) >= 1000
+                      ? `${((t.summary?.totalDurationMs ?? 0) / 1000).toFixed(1)}s`
+                      : `${t.summary?.totalDurationMs ?? 0}ms`}
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--text-subtle)', flexShrink: 0 }}>
+                    {new Date(t.startedAt).toLocaleString('zh-CN')}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* ── 最近活动 ── */}
       <div style={cardStyle}>
         <h3
@@ -385,40 +466,31 @@ export default function DashboardPage() {
           <Activity size={16} /> 最近活动
         </h3>
         {activities.length === 0 ? (
-          <div className="empty">
-            <p>暂无活动记录</p>
-          </div>
+          <Empty description="暂无活动记录" style={{ padding: '30px 0' }} />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {activities.map((a) => (
-              <div
-                key={a.id}
+          <List
+            size="small"
+            split={false}
+            dataSource={activities}
+            renderItem={(a) => (
+              <List.Item
                 style={{
                   display: 'flex',
-                  alignItems: 'center',
                   gap: 12,
                   padding: '10px 12px',
                   background: 'var(--bg)',
                   borderRadius: 'var(--radius)',
                 }}
               >
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: statusColor[a.status] ?? '#86909c',
-                    flexShrink: 0,
-                  }}
-                />
+                <Badge color={statusColor[a.status] ?? '#86909c'} />
                 <span style={{ flex: 1, fontSize: 13 }}>{a.title}</span>
                 <span style={{ fontSize: 11, color: 'var(--text-subtle)' }}>{a.agent}</span>
                 <span style={{ fontSize: 11, color: 'var(--text-subtle)' }}>
                   {new Date(a.createdAt).toLocaleString('zh-CN')}
                 </span>
-              </div>
-            ))}
-          </div>
+              </List.Item>
+            )}
+          />
         )}
       </div>
     </div>

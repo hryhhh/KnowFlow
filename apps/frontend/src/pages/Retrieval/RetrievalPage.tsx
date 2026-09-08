@@ -5,7 +5,8 @@ import TopStepsBar from '../../components/TopStepsBar';
 import { retrievalApi } from '../../services/api';
 import { useKbStore } from '../../stores/kb-store';
 import type { SearchResultItem, SearchDebugInfo, SearchParams } from '../../types';
-import { Search, Settings2, ChevronDown, ChevronUp } from 'lucide-react';
+import { InputNumber, Input, Select, Slider, Switch } from 'antd';
+import { Settings2, ChevronDown, ChevronUp } from 'lucide-react';
 
 type RetrievalMode = 'vector' | 'keyword' | 'hybrid';
 type FusionMethod = 'rrf' | 'linear';
@@ -93,16 +94,16 @@ export default function RetrievalPage() {
           {/* 检索模式 */}
           <div className="param-row">
             <label htmlFor="retrievalMode">检索模式</label>
-            <select
-              id="retrievalMode"
-              className="input"
+            <Select
+              style={{ width: '100%' }}
               value={params.retrievalMode}
-              onChange={(e) => updateParam('retrievalMode', e.target.value as RetrievalMode)}
-            >
-              <option value="vector">仅向量（Dense）</option>
-              <option value="keyword">仅关键词（Sparse）</option>
-              <option value="hybrid">混合检索（Dense + Sparse）</option>
-            </select>
+              onChange={(v) => updateParam('retrievalMode', v as RetrievalMode)}
+              options={[
+                { value: 'vector', label: '仅向量（Dense）' },
+                { value: 'keyword', label: '仅关键词（Sparse）' },
+                { value: 'hybrid', label: '混合检索（Dense + Sparse）' },
+              ]}
+            />
           </div>
 
           {/* hybrid 专属参数 */}
@@ -110,42 +111,38 @@ export default function RetrievalPage() {
             <>
               <div className="param-row">
                 <label htmlFor="fusionMethod">融合方式</label>
-                <select
-                  id="fusionMethod"
-                  className="input"
+                <Select
+                  style={{ width: '100%' }}
                   value={params.fusionMethod}
-                  onChange={(e) => updateParam('fusionMethod', e.target.value as FusionMethod)}
-                >
-                  <option value="rrf">RRF（默认）</option>
-                  <option value="linear">Linear 加权</option>
-                </select>
+                  onChange={(v) => updateParam('fusionMethod', v as FusionMethod)}
+                  options={[
+                    { value: 'rrf', label: 'RRF（默认）' },
+                    { value: 'linear', label: 'Linear 加权' },
+                  ]}
+                />
               </div>
 
               {params.fusionMethod === 'rrf' && (
                 <div className="param-row">
                   <label htmlFor="rrfK">RRF K 值</label>
-                  <input
-                    id="rrfK"
-                    className="input"
-                    type="number"
+                  <InputNumber
+                    style={{ width: '100%' }}
                     min={1}
                     max={200}
                     value={params.rrfK}
-                    onChange={(e) => updateParam('rrfK', Number(e.target.value))}
+                    onChange={(v) => updateParam('rrfK', Number(v ?? 60))}
                   />
                 </div>
               )}
 
               <div className="param-row">
                 <label htmlFor="candidateMultiplier">候选倍数（per route）</label>
-                <input
-                  id="candidateMultiplier"
-                  className="input"
-                  type="number"
+                <InputNumber
+                  style={{ width: '100%' }}
                   min={1}
                   max={10}
                   value={params.candidateMultiplier}
-                  onChange={(e) => updateParam('candidateMultiplier', Number(e.target.value))}
+                  onChange={(v) => updateParam('candidateMultiplier', Number(v ?? 1))}
                 />
                 <span style={{ fontSize: 11, color: 'var(--text-sub)' }}>
                   每路候选 = topK × {params.candidateMultiplier}（上限 10）
@@ -154,18 +151,14 @@ export default function RetrievalPage() {
 
               <div className="param-row">
                 <label htmlFor="minDenseScore">Dense 最低分（过滤候选）</label>
-                <input
-                  id="minDenseScore"
-                  className="input"
-                  type="number"
-                  step="0.05"
+                <InputNumber
+                  style={{ width: '100%' }}
+                  step={0.05}
                   min={0}
                   max={1}
                   placeholder="不限制"
-                  value={params.minDenseScore ?? ''}
-                  onChange={(e) =>
-                    updateParam('minDenseScore', e.target.value ? Number(e.target.value) : null)
-                  }
+                  value={params.minDenseScore ?? undefined}
+                  onChange={(v) => updateParam('minDenseScore', v ?? null)}
                 />
                 <span style={{ fontSize: 11, color: 'var(--text-sub)' }}>
                   仅 hybrid 模式生效，默认 null
@@ -175,15 +168,12 @@ export default function RetrievalPage() {
               {params.fusionMethod === 'linear' && (
                 <div className="param-row">
                   <label htmlFor="denseWeight">Dense 权重（0~1）</label>
-                  <input
-                    id="denseWeight"
-                    className="input"
-                    type="number"
-                    step="0.1"
+                  <Slider
                     min={0}
                     max={1}
+                    step={0.1}
                     value={params.denseWeight}
-                    onChange={(e) => updateParam('denseWeight', Number(e.target.value))}
+                    onChange={(v) => updateParam('denseWeight', v)}
                   />
                 </div>
               )}
@@ -193,14 +183,12 @@ export default function RetrievalPage() {
           {/* 公共参数 */}
           <div className="param-row">
             <label htmlFor="topK">结果返回数量（TopK）</label>
-            <input
-              id="topK"
-              className="input"
-              type="number"
+            <InputNumber
+              style={{ width: '100%' }}
               min={1}
               max={50}
               value={params.topK}
-              onChange={(e) => updateParam('topK', Number(e.target.value))}
+              onChange={(v) => updateParam('topK', Number(v ?? 10))}
             />
           </div>
 
@@ -208,33 +196,29 @@ export default function RetrievalPage() {
           {params.retrievalMode !== 'hybrid' && (
             <div className="param-row">
               <label htmlFor="minScore">最低相似度阈值</label>
-              <input
-                id="minScore"
-                className="input"
-                type="number"
-                step="0.01"
+              <InputNumber
+                style={{ width: '100%' }}
+                step={0.01}
                 min={0}
                 max={1}
                 value={params.minScore}
-                onChange={(e) => updateParam('minScore', Number(e.target.value))}
+                onChange={(v) => updateParam('minScore', Number(v ?? 0.5))}
               />
             </div>
           )}
 
           <div className="param-row">
             <label>重排模型（Reranker）</label>
-            <span
-              className={'toggle' + (params.useReranker ? ' on' : '')}
-              onClick={() => updateParam('useReranker', !params.useReranker)}
+            <Switch
+              size="small"
+              checked={params.useReranker}
+              onChange={(v) => updateParam('useReranker', v)}
             />
           </div>
 
           <div className="param-row">
             <label>调试模式（Debug）</label>
-            <span
-              className={'toggle' + (params.debug ? ' on' : '')}
-              onClick={() => updateParam('debug', !params.debug)}
-            />
+            <Switch size="small" checked={params.debug} onChange={(v) => updateParam('debug', v)} />
             <span style={{ fontSize: 11, color: 'var(--text-sub)' }}>
               返回各通路命中明细，仅调试用
             </span>
@@ -243,45 +227,15 @@ export default function RetrievalPage() {
 
         <div className="results">
           <div className="toolbar">
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                border: '1px solid var(--border-strong)',
-                borderRadius: 'var(--radius)',
-                background: 'var(--panel)',
-                overflow: 'hidden',
-                flex: 1,
-              }}
-            >
-              <Search
-                size={16}
-                style={{
-                  padding: '0 8px',
-                  color: 'var(--text-subtle)',
-                  borderRight: '1px solid var(--border)',
-                  flexShrink: 0,
-                }}
-              />
-              <input
-                className="search-input"
-                style={{
-                  flex: 1,
-                  border: 'none',
-                  borderRadius: 0,
-                  boxShadow: 'none',
-                  width: 'auto',
-                  minWidth: 0,
-                }}
-                placeholder="输入查询词，回车检索"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && search()}
-              />
-            </div>
-            <button className="btn primary" onClick={search} disabled={loading}>
-              {loading ? '检索中…' : '检索'}
-            </button>
+            <Input.Search
+              placeholder="输入查询词，回车检索"
+              style={{ flex: 1, minWidth: 0 }}
+              allowClear
+              enterButton="检索"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onSearch={() => search()}
+            />
           </div>
 
           {/* Debug 信息面板 */}

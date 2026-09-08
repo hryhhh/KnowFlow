@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import TopStepsBar from '../../components/TopStepsBar';
 import { traceApi } from '../../services/api';
+import { Card, Spin, Tag } from 'antd';
 import { ChevronRight, Clock, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 import type { AgentTrace } from '../../types';
 
@@ -38,8 +39,8 @@ export default function TracePage() {
       <div className="content">
         <PageHeader title="Trace 详情" breadcrumb="" />
         <TopStepsBar active={2} />
-        <div className="empty" style={{ marginTop: 40 }}>
-          <p>加载中…</p>
+        <div style={{ padding: '80px 0', textAlign: 'center' }}>
+          <Spin size="large" />
         </div>
       </div>
     );
@@ -67,8 +68,25 @@ export default function TracePage() {
       <TopStepsBar active={2} />
 
       <div className="trace-detail" style={{ maxWidth: 900, margin: '24px auto' }}>
+        {/* 顶部导航：返回对话页（定位到产生本次 trace 的会话），kbId 缺失时降级首页 */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 12, fontSize: 13 }}>
+          <Link
+            to={
+              trace.kbId
+                ? `/knowledge-bases/${trace.kbId}/chat?sessionId=${trace.sessionId}`
+                : '/dashboard'
+            }
+            className="text-blue-500 hover:underline"
+          >
+            ← 返回对话
+          </Link>
+          <Link to="/dashboard" className="text-blue-500 hover:underline">
+            返回 Dashboard
+          </Link>
+        </div>
+
         {/* 头部概览 */}
-        <div className="trace-header" style={cardStyle}>
+        <Card className="trace-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             {statusIcon(trace.status)}
             <h2 style={{ margin: 0, fontSize: 18 }}>{trace.query}</h2>
@@ -102,15 +120,15 @@ export default function TracePage() {
           {trace.errorMsg && (
             <div style={{ color: 'red', fontSize: 13, marginTop: 8 }}>❌ {trace.errorMsg}</div>
           )}
-        </div>
+        </Card>
 
         {/* 执行步骤 */}
         <div style={{ marginTop: 16 }}>
           <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>执行步骤</h3>
           {trace.steps.length === 0 ? (
-            <div style={cardStyle}>
+            <Card>
               <p style={{ color: 'var(--text-sub)', margin: 0 }}>暂无步骤记录</p>
-            </div>
+            </Card>
           ) : (
             trace.steps.map((step, idx) => <StepCard key={idx} step={step} />)
           )}
@@ -132,22 +150,22 @@ function StepCard({ step }: { step: TraceStep }) {
   switch (step.type) {
     case 'llm_call':
       return (
-        <div style={stepCardStyle}>
+        <Card size="small" style={{ marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={stepTypeBadge('llm_call')}>LLM</span>
+            {stepTypeBadge('llm_call')}
             <span style={{ fontSize: 13, color: 'var(--text-sub)' }}>
               {step.data.model} · {step.data.latencyMs}ms · prompt {step.data.inputTokens} /
               completion {step.data.outputTokens} tokens
             </span>
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-subtle)', marginTop: 4 }}>{time}</div>
-        </div>
+        </Card>
       );
     case 'tool_call':
       return (
-        <div style={stepCardStyle}>
+        <Card size="small" style={{ marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={stepTypeBadge('tool_call')}>Tool</span>
+            {stepTypeBadge('tool_call')}
             <strong style={{ fontSize: 13 }}>{step.data.toolName}</strong>
             {step.data.durationMs !== undefined && (
               <span style={{ fontSize: 12, color: 'var(--text-sub)' }}>
@@ -165,31 +183,31 @@ function StepCard({ step }: { step: TraceStep }) {
             </div>
           )}
           <div style={{ fontSize: 12, color: 'var(--text-subtle)', marginTop: 4 }}>{time}</div>
-        </div>
+        </Card>
       );
     case 'final_answer':
       return (
-        <div style={stepCardStyle}>
+        <Card size="small" style={{ marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={stepTypeBadge('final_answer')}>答案</span>
+            {stepTypeBadge('final_answer')}
             <span style={{ fontSize: 13, color: 'var(--text-sub)' }}>
               回答长度 {step.data.answerLength} 字符
             </span>
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-subtle)', marginTop: 4 }}>{time}</div>
-        </div>
+        </Card>
       );
     case 'memory_load':
       return (
-        <div style={stepCardStyle}>
+        <Card size="small" style={{ marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={stepTypeBadge('memory_load')}>记忆</span>
+            {stepTypeBadge('memory_load')}
             <span style={{ fontSize: 13, color: 'var(--text-sub)' }}>
               加载了 {step.data.messageCount} 条历史消息
             </span>
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-subtle)', marginTop: 4 }}>{time}</div>
-        </div>
+        </Card>
       );
     default:
       return null;
@@ -209,39 +227,21 @@ function statusIcon(status: string) {
   }
 }
 
-function stepTypeBadge(type: string): React.CSSProperties {
+function stepTypeBadge(type: string) {
   const colors: Record<string, string> = {
     llm_call: '#3b82f6',
     tool_call: '#8b5cf6',
     final_answer: '#10b981',
     memory_load: '#f59e0b',
   };
-  return {
-    display: 'inline-block',
-    padding: '2px 8px',
-    borderRadius: 4,
-    fontSize: 11,
-    fontWeight: 600,
-    color: 'white',
-    background: colors[type] ?? '#6b7280',
+  const labels: Record<string, string> = {
+    llm_call: 'LLM',
+    tool_call: 'Tool',
+    final_answer: '答案',
+    memory_load: '记忆',
   };
+  return <Tag color={colors[type] ?? '#6b7280'}>{labels[type] ?? type}</Tag>;
 }
-
-const cardStyle: React.CSSProperties = {
-  background: 'var(--panel)',
-  border: '1px solid var(--border)',
-  borderRadius: 'var(--radius-lg)',
-  padding: 20,
-  boxShadow: 'var(--shadow-sm)',
-};
-
-const stepCardStyle: React.CSSProperties = {
-  background: 'var(--panel)',
-  border: '1px solid var(--border)',
-  borderRadius: 8,
-  padding: '12px 16px',
-  marginBottom: 8,
-};
 
 const codeBlockStyle: React.CSSProperties = {
   background: '#f3f4f6',

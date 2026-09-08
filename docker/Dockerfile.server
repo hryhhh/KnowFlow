@@ -22,7 +22,7 @@ RUN pnpm --filter @knowbase-x/agents build
 RUN pnpm --filter @knowbase-x/server build
 
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV SERVER_PORT=3000
 EXPOSE 3000
 
 CMD ["node", "apps/server/dist/main.js"]

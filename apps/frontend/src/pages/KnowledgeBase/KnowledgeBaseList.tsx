@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Col, Input, Popconfirm, Row, Space, Steps, Tag } from 'antd';
+import { Button, Card, Col, Input, Popconfirm, Row, Space, Steps, Table, Tag, Spin } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import {
   DatabaseOutlined,
   FileTextOutlined,
@@ -211,6 +212,77 @@ export default function KnowledgeBaseList() {
     setShowEditModal(true);
   };
 
+  const columns: ColumnsType<KbListItem> = [
+    {
+      title: '知识库名称',
+      dataIndex: 'name',
+      ellipsis: true,
+      render: (name: string, kb) => (
+        <strong style={{ color: '#1677ff' }}>
+          {name}
+          {defaultKbId === kb.id && (
+            <span style={{ marginLeft: 6, fontSize: 11, color: '#faad14', fontWeight: 500 }}>
+              ★ 默认
+            </span>
+          )}
+        </strong>
+      ),
+    },
+    {
+      title: '描述',
+      dataIndex: 'description',
+      ellipsis: true,
+      render: (v: string) => v || '—',
+    },
+    {
+      title: '类型',
+      dataIndex: 'type',
+      width: 100,
+      render: (t: string) => (
+        <Tag color="green" style={{ borderRadius: 12, fontSize: 12 }}>
+          {t === 'free' ? '免费版' : t}
+        </Tag>
+      ),
+    },
+    { title: '文档数', dataIndex: 'documentCount', width: 90 },
+    { title: '切片数', dataIndex: 'chunkCount', width: 90 },
+    {
+      title: '更新时间',
+      dataIndex: 'createdAt',
+      width: 120,
+      render: (v: string) => (
+        <span style={{ color: '#86909c', fontSize: 12 }}>{v?.slice(0, 10) || '—'}</span>
+      ),
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 220,
+      render: (_, kb) => (
+        <Space size={6}>
+          <Button size="small" type="primary" onClick={() => handleView(kb)}>
+            进入
+          </Button>
+          <Button size="small" onClick={() => openEdit(kb)}>
+            编辑
+          </Button>
+          <Popconfirm
+            title="确定要删除这个知识库吗？"
+            description="删除后将不可恢复"
+            okText="删除"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
+            onConfirm={() => handleDelete(kb.id)}
+          >
+            <Button size="small" danger>
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
   return (
     <div className="content">
       {/* Steps */}
@@ -260,7 +332,9 @@ export default function KnowledgeBaseList() {
 
       {/* Content */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: '#86909c' }}>加载中…</div>
+        <div style={{ padding: '80px 0', textAlign: 'center' }}>
+          <Spin size="large" />
+        </div>
       ) : list.length === 0 ? (
         <div
           style={{
@@ -294,124 +368,7 @@ export default function KnowledgeBaseList() {
         </Row>
       ) : (
         <Card bordered={false} style={{ borderRadius: 12 }}>
-          <table
-            style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              fontSize: 14,
-            }}
-          >
-            <thead>
-              <tr
-                style={{
-                  background: '#fafafa',
-                  borderBottom: '1px solid #f0f0f0',
-                }}
-              >
-                {['知识库名称', '描述', '类型', '文档数', '切片数', '更新时间', '操作'].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      padding: '12px 16px',
-                      textAlign: 'left',
-                      fontWeight: 600,
-                      fontSize: 13,
-                      color: '#4e5969',
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((kb) => (
-                <tr
-                  key={kb.id}
-                  style={{ borderBottom: '1px solid #f0f0f0', transition: 'background 0.15s' }}
-                  onMouseEnter={(e) =>
-                    ((e.currentTarget as HTMLTableRowElement).style.background = '#fafafa')
-                  }
-                  onMouseLeave={(e) =>
-                    ((e.currentTarget as HTMLTableRowElement).style.background = '')
-                  }
-                >
-                  <td style={{ padding: '12px 16px' }}>
-                    <strong style={{ color: '#1677ff' }}>
-                      {kb.name}
-                      {defaultKbId === kb.id && (
-                        <span
-                          style={{
-                            marginLeft: 6,
-                            fontSize: 11,
-                            color: '#faad14',
-                            fontWeight: 500,
-                          }}
-                        >
-                          ★ 默认
-                        </span>
-                      )}
-                    </strong>
-                  </td>
-                  <td
-                    style={{
-                      padding: '12px 16px',
-                      color: '#4e5969',
-                      maxWidth: 200,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {kb.description || '—'}
-                  </td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <Tag color="green" style={{ borderRadius: 12, fontSize: 12 }}>
-                      {kb.type === 'free' ? '免费版' : kb.type}
-                    </Tag>
-                  </td>
-                  <td style={{ padding: '12px 16px' }}>{kb.documentCount}</td>
-                  <td style={{ padding: '12px 16px' }}>{kb.chunkCount}</td>
-                  <td
-                    style={{
-                      padding: '12px 16px',
-                      color: '#86909c',
-                      fontSize: 12,
-                    }}
-                  >
-                    {kb.createdAt?.slice(0, 10) || '—'}
-                  </td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <Space size={6}>
-                      <Button
-                        size="small"
-                        type="primary"
-                        style={{ background: '#1677ff', borderRadius: 6 }}
-                        onClick={() => handleView(kb)}
-                      >
-                        进入
-                      </Button>
-                      <Button size="small" style={{ borderRadius: 6 }} onClick={() => openEdit(kb)}>
-                        编辑
-                      </Button>
-                      <Popconfirm
-                        title="确定要删除这个知识库吗？"
-                        description="删除后将不可恢复"
-                        okText="删除"
-                        cancelText="取消"
-                        okButtonProps={{ danger: true }}
-                        onConfirm={() => handleDelete(kb.id)}
-                      >
-                        <Button size="small" danger style={{ borderRadius: 6 }}>
-                          删除
-                        </Button>
-                      </Popconfirm>
-                    </Space>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <Table rowKey="id" size="middle" columns={columns} dataSource={list} pagination={false} />
         </Card>
       )}
 

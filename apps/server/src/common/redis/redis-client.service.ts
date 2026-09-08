@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import Redis from 'ioredis';
+import { env } from '../../config/env';
 
 /**
  * 共享 Redis 客户端单例
@@ -31,8 +32,8 @@ export class RedisClientService implements OnModuleInit, OnModuleDestroy {
   private async connect(): Promise<void> {
     try {
       this._client = new Redis({
-        host: process.env.REDIS_HOST ?? 'localhost',
-        port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
+        host: env.redis.host,
+        port: env.redis.port,
         maxRetriesPerRequest: null,
         retryStrategy: (times) => {
           if (times > 3) {

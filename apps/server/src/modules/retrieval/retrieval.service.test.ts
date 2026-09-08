@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RetrievalService } from './retrieval.service.js';
+import { RETRIEVAL_DEFAULTS } from '../../config/defaults';
 
 vi.mock('@knowbase-x/rag-engine', () => ({
   retrieve: vi.fn(),
@@ -30,7 +31,6 @@ describe('RetrievalService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv('DEFAULT_MIN_SCORE', '');
     usageLog = makeMockUsageLog();
     cache = makeMockCache();
     service = Object.create(RetrievalService.prototype);
@@ -99,8 +99,7 @@ describe('RetrievalService', () => {
     );
   });
 
-  it('falls back to DEFAULT_MIN_SCORE env var when dto.minScore is missing', async () => {
-    vi.stubEnv('DEFAULT_MIN_SCORE', '0.6');
+  it('falls back to RETRIEVAL_DEFAULTS.minScore when dto.minScore is missing', async () => {
     vi.mocked(retrieve).mockResolvedValue({ results: [] });
 
     const dto = { query: 'test', kbId: 'kb-1' };
@@ -109,7 +108,7 @@ describe('RetrievalService', () => {
     expect(retrieve).toHaveBeenCalledWith(
       'test',
       'kb-1',
-      expect.objectContaining({ minScore: 0.6 }),
+      expect.objectContaining({ minScore: RETRIEVAL_DEFAULTS.minScore }),
       service.ragConfig,
     );
   });
@@ -216,8 +215,7 @@ describe('RetrievalService', () => {
     );
   });
 
-  it('uses DEFAULT_CANDIDATE_MULTIPLIER env when dto.candidateMultiplier is missing', async () => {
-    vi.stubEnv('DEFAULT_CANDIDATE_MULTIPLIER', '5');
+  it('uses RETRIEVAL_DEFAULTS.candidateMultiplier when dto.candidateMultiplier is missing', async () => {
     vi.mocked(retrieve).mockResolvedValue({ results: [] });
 
     const dto = { query: 'test', kbId: 'kb-1' };
@@ -226,7 +224,7 @@ describe('RetrievalService', () => {
     expect(retrieve).toHaveBeenCalledWith(
       'test',
       'kb-1',
-      expect.objectContaining({ candidateMultiplier: 5 }),
+      expect.objectContaining({ candidateMultiplier: RETRIEVAL_DEFAULTS.candidateMultiplier }),
       service.ragConfig,
     );
   });

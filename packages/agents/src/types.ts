@@ -147,7 +147,17 @@ export interface AgentRunResult {
   error?: string;
 }
 
-/** SSE 事件类型 */
+/**
+ * SSE 事件类型
+ *
+ * 已知 type：
+ * - agent_start / agent_completed：runtime 生命周期
+ * - reasoning_summary：工具轮次中 LLM 附带的推理文本（截断至 200 字符）
+ * - tool_call / tool_result：工具执行前后
+ * - answer_delta / answer_reset：答案流式分片 / 通知前端清空答案区（工具轮次回收已流出的文本）
+ * - sources：检索来源列表
+ * - trace：链路标识
+ */
 export interface AgentEvent {
   type: string;
   timestamp: number;
@@ -163,6 +173,8 @@ export interface LLMResponse {
   inputTokens: number;
   outputTokens: number;
   latencyMs: number;
+  /** 本轮 content 是否已通过 answer_delta 流式推出（工具轮次据此决定是否补发 answer_reset） */
+  streamedContent?: boolean;
 }
 
 /** Agent 运行参数（传入 AgentRuntime.run()） */
@@ -176,4 +188,6 @@ export interface AgentRunParams {
   llmConfig: LLMConfig;
   tools: any; // ToolRegistry, 避免循环依赖
   emitEvent: (event: AgentEvent) => void;
+  /** 整体超时（毫秒），缺省取 RUNTIME_DEFAULTS.timeoutMs */
+  timeoutMs?: number;
 }

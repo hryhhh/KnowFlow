@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-09-06T17:34:14.464Z",
+  "durationMs": 12903,
+  "routing": {
+    "total": 0,
+    "passed": 0,
+    "passRate": 0,
+    "errors": 0
+  },
+  "tool_trajectory": {
+    "total": 1,
+    "passed": 0,
+    "passRate": 0,
+    "errors": 0
+  },
+  "answer_quality": {
+    "total": 0,
+    "passed": 0,
+    "passRate": 0,
+    "errors": 0
+  },
+  "cases": [
+    {
+      "id": "traj-001",
+      "category": "tool_trajectory",
+      "query": "员工手册里的报销流程是什么",
+      "passed": false,
+      "detail": {
+        "toolNames": [
+          "rag_search",
+          "rag_search",
+          "rag_search",
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "status": "completed"
+      }
+    }
+  ]
+}

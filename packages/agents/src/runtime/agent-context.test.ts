@@ -11,22 +11,28 @@ function makeTool(name: string) {
   };
 }
 
-function makeCtx(overrides: Partial<Parameters<typeof AgentContext.create>[0]> = {}) {
+function makeCtx(
+  overrides: Partial<Parameters<typeof AgentContext.create>[0]> = {},
+  options?: Parameters<typeof AgentContext.create>[1],
+) {
   const registry = new ToolRegistry();
   registry.register(makeTool('test_tool'));
 
-  return AgentContext.create({
-    query: 'hello',
-    kbId: 'kb-1',
-    sessionId: 'sess-1',
-    traceId: 'trace-1',
-    messages: [],
-    searchParams: {},
-    llmConfig: { apiKey: 'key', model: 'gpt-4', baseURL: '' },
-    tools: registry,
-    emitEvent: vi.fn(),
-    ...overrides,
-  });
+  return AgentContext.create(
+    {
+      query: 'hello',
+      kbId: 'kb-1',
+      sessionId: 'sess-1',
+      traceId: 'trace-1',
+      messages: [],
+      searchParams: {},
+      llmConfig: { apiKey: 'key', model: 'gpt-4', baseURL: '' },
+      tools: registry,
+      emitEvent: vi.fn(),
+      ...overrides,
+    },
+    options,
+  );
 }
 
 describe('AgentContext', () => {
@@ -81,16 +87,9 @@ describe('AgentContext', () => {
   });
 
   it('timeout 超时后 signal.aborted = true', async () => {
-    // 设置极短超时验证
-    const orig = process.env.AGENT_RUNTIME_TIMEOUT_MS;
-    process.env.AGENT_RUNTIME_TIMEOUT_MS = '1';
-    try {
-      const ctx = makeCtx();
-      await new Promise((r) => setTimeout(r, 50));
-      expect(ctx.signal.aborted).toBe(true);
-    } finally {
-      if (orig === undefined) delete process.env.AGENT_RUNTIME_TIMEOUT_MS;
-      else process.env.AGENT_RUNTIME_TIMEOUT_MS = orig;
-    }
+    // 注入极短超时验证中止路径（整体超时已收编为 RUNTIME_DEFAULTS.timeoutMs，经 create options 覆盖）
+    const ctx = makeCtx({}, { timeoutMs: 1 });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(ctx.signal.aborted).toBe(true);
   });
 });

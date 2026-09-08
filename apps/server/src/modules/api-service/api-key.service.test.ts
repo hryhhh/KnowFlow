@@ -41,15 +41,14 @@ describe('ApiKeyService', () => {
     vi.clearAllMocks();
     mockRepo = makeMockRepo();
     mockUsageLog = makeUsageLogService();
-    // Mock process.env
-    vi.stubEnv('API_KEY_PREFIX', 'ek_test');
     service = new ApiKeyService(mockRepo, mockUsageLog);
   });
 
   it('creates an API key with expected format', async () => {
     const dto = { serviceName: 'My Service', kbId: 'kb-1', description: 'Test' };
     const result = await service.create(dto);
-    expect(result.apiKey).toMatch(/^ek_test/);
+    // API_KEY_PREFIX 已收编为代码常量（不随部署变化）
+    expect(result.apiKey).toMatch(/^ek_/);
     expect(result.serviceName).toBe('My Service');
     expect(result.endpoint).toContain('/api/service-calls/');
     expect(mockUsageLog.record).not.toHaveBeenCalled();

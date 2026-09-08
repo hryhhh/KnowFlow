@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import * as path from 'node:path';
 import { RagConfigModule } from './config/rag-config.module';
+import { env, validateEnv } from './config/env';
 import { KnowledgeBaseModule } from './modules/knowledge-base/knowledge-base.module';
 import { DocumentModule } from './modules/document/document.module';
 import { ChunkModule } from './modules/chunk/chunk.module';
@@ -27,18 +28,20 @@ import { OutboxCheckModule } from './common/outbox-check/outbox-check.module';
         path.resolve(process.cwd(), '../../.env'),
         '.env',
       ],
+      // 启动时 fail-fast 校验：必填缺失 / 数值或枚举非法直接终止启动
+      validate: validateEnv,
     }),
     RagConfigModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: process.env.DATABASE_HOST ?? 'localhost',
-      port: parseInt(process.env.DATABASE_PORT ?? '5432', 10),
-      username: process.env.DATABASE_USER ?? 'postgres',
-      password: process.env.DATABASE_PASSWORD ?? '123456',
-      database: process.env.DATABASE_NAME ?? 'knowledge_rag',
+      host: env.database.host,
+      port: env.database.port,
+      username: env.database.user,
+      password: env.database.password,
+      database: env.database.name,
       autoLoadEntities: true,
-      synchronize: process.env.NODE_ENV !== 'production',
-      ssl: process.env.DATABASE_SSL === 'true',
+      synchronize: !env.isProduction,
+      ssl: env.database.ssl,
     }),
     KnowledgeBaseModule,
     DocumentModule,

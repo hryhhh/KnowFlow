@@ -5,7 +5,8 @@ import TopStepsBar from '../../components/TopStepsBar';
 import { useKbStore } from '../../stores/kb-store';
 import { apiServiceApi } from '../../services/api';
 import type { ApiServiceItem } from '../../types';
-import { Play, Loader2, Copy, CheckCircle, ServerCrash } from 'lucide-react';
+import { Spin } from 'antd';
+import { Play, Copy, CheckCircle, ServerCrash } from 'lucide-react';
 
 interface LogEntry {
   id: number;
@@ -152,8 +153,8 @@ export default function ApiTestPage() {
         <div className="params" style={{ flex: '0 0 340px' }}>
           <h3 style={{ marginTop: 0, fontSize: 15, fontWeight: 600 }}>已发布的 API 服务</h3>
           {loading ? (
-            <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-sub)' }}>
-              <Loader2 size={16} className="thinking-icon" />
+            <div style={{ padding: 20, textAlign: 'center' }}>
+              <Spin size="small" />
             </div>
           ) : services.length === 0 ? (
             <div
@@ -288,7 +289,7 @@ export default function ApiTestPage() {
               disabled={isTesting || !apiKeyInput.trim() || !queryInput.trim()}
               style={{ display: 'flex', alignItems: 'center', gap: 6 }}
             >
-              {isTesting ? <Loader2 size={14} className="thinking-icon" /> : <Play size={14} />}
+              {isTesting ? <Spin size="small" /> : <Play size={14} />}
               发送测试
             </button>
           </div>

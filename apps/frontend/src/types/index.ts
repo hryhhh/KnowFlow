@@ -117,6 +117,8 @@ export interface ChatMessage {
   sources?: SourceRef[];
   /** 从 LLM 回复中解析出的引用上标 { index, source } */
   citations?: Citation[];
+  /** 本条回答对应的 Agent 执行事件（完成后挂载，供历史消息回看；服务端不持久化） */
+  agentEvents?: AgentActivityEvent[];
   createdAt?: string;
 }
 

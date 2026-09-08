@@ -1,6 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext, Logger } from '@nestjs/common';
 import { RedisClientService } from '../../common/redis/redis-client.service';
 import { RateLimiterService } from '../../common/rate-limiter/rate-limiter.service';
+import { env } from '../../config/env';
 
 /**
  * API 请求限流守卫
@@ -25,7 +26,7 @@ export class RateLimitGuard implements CanActivate {
     kind: 'apikey' | 'ip' | 'user' = 'apikey',
     options?: { limit?: number; windowMs?: number },
   ) {
-    this.limit = options?.limit ?? parseInt(process.env.API_RATE_LIMIT ?? '60', 10);
+    this.limit = options?.limit ?? env.apiService.rateLimit;
     this.windowMs = options?.windowMs ?? 60_000; // 默认 1 分钟
 
     switch (kind) {

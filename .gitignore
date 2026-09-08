@@ -32,13 +32,13 @@ coverage/
 
 # Uploads
 apps/server/uploads/
+uploads/
 
 # Playwright MCP
 .playwright-mcp/
 
 # Screenshots
 *.png
-uploads/
 *.traineddata
 .last-run.json
 
@@ -51,3 +51,6 @@ test-worktree/
 
 # Claude Code settings (local preferences)
 .claude/
+
+# ZCode session artifacts (local plans)
+.zcode/

@@ -1,20 +1,23 @@
 import { useEffect, useState, useRef } from 'react';
 import type { CSSProperties } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { App, Button, InputNumber, Slider, Switch } from 'antd';
+import { Bubble, Conversations, Sender, Welcome } from '@ant-design/x';
 import PageHeader from '../../components/PageHeader';
 import TopStepsBar from '../../components/TopStepsBar';
-import CitationBadge from '../../components/CitationBadge';
+import MarkdownAnswer from '../../components/MarkdownAnswer';
 import { useKbStore } from '../../stores/kb-store';
-import { useChatStore, cleanContent } from '../../stores/chat-store';
+import { useChatStore } from '../../stores/chat-store';
 import { apiServiceApi } from '../../services/api';
 import type { ApiServiceItem, ProcessIndicator } from '../../types';
 import CreateServiceModal from './CreateServiceModal';
 import ApiUsagePanel from './ApiUsagePanel';
 import AgentThoughtPanel from '../../components/AgentThoughtPanel';
-import { Send, Bot, Loader2, MessageSquare, Trash2, Trash, Plus } from 'lucide-react';
+import { Bot, Loader2, MessageSquare, Trash2, Trash, Plus } from 'lucide-react';
 
 export default function ChatPage() {
   const { kbId } = useParams();
+  const [urlSearchParams, setSearchParams] = useSearchParams();
   const current = useKbStore((s) => s.current);
   // 使用 selector 订阅每个状态，确保变化时触发重渲染
   const messages = useChatStore((s) => s.messages);
@@ -41,7 +44,6 @@ export default function ChatPage() {
   const visibleSessions = sessions.filter((s) => s.messageCount > 0);
   const [showCreate, setShowCreate] = useState(false);
   const [selectedService, setSelectedService] = useState<ApiServiceItem | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const loadServices = async () => {
     const res = await apiServiceApi.list();
@@ -64,6 +66,19 @@ export default function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kbId]);
 
+  // 会话深链：/chat?sessionId=xxx（Trace 详情页「返回对话」入口）
+  // 挂载时恢复指定会话；会话可能已被删除，失败时静默降级为普通聊天页
+  useEffect(() => {
+    const sid = urlSearchParams.get('sessionId');
+    if (sid) {
+      if (sid !== currentSessionId) {
+        switchSession(sid).catch(() => {});
+      }
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // 新消息或处理中指示器出现时自动滚动到底部
   useEffect(() => {
     const el = messagesEndRef.current;
@@ -78,10 +93,18 @@ export default function ChatPage() {
     setInput('');
   };
 
-  const handleClearAll = async () => {
+  const { modal } = App.useApp();
+
+  const handleClearAll = () => {
     if (!kbId) return;
-    if (!confirm('确认删除全部会话记录？此操作不可恢复。')) return;
-    await clearAllSessions(kbId);
+    modal.confirm({
+      title: '清空全部会话记录？',
+      content: '此操作不可恢复。',
+      okText: '清空',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: () => clearAllSessions(kbId),
+    });
   };
 
   const handleCreateSession = async () => {
@@ -93,15 +116,8 @@ export default function ChatPage() {
     await createSession(kbId, '');
   };
 
-  const handleDeleteSession = async (e: React.MouseEvent, sessionId: string) => {
-    e.stopPropagation();
-    if (confirmDeleteId === sessionId) {
-      await deleteSession(sessionId);
-      setConfirmDeleteId(null);
-    } else {
-      setConfirmDeleteId(sessionId);
-      setTimeout(() => setConfirmDeleteId(null), 3000);
-    }
+  const handleDeleteSession = async (sessionId: string) => {
+    await deleteSession(sessionId);
   };
 
   const formatTime = (dateStr: string) => {
@@ -165,33 +181,20 @@ export default function ChatPage() {
                 </button>
               </div>
             </div>
-            <div className="session-list">
-              {visibleSessions.length === 0 ? (
-                <p style={{ fontSize: 12, color: 'var(--text-sub)', margin: 0 }}>暂无历史会话</p>
-              ) : (
-                visibleSessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className={`session-item ${session.id === currentSessionId ? 'active' : ''}`}
-                    onClick={() => switchSession(session.id)}
-                  >
-                    <div className="session-item-content">
-                      <div className="session-item-title">{session.title}</div>
-                      <div className="session-item-time">
-                        {formatTime(session.createdAt)} · {session.messageCount} 条消息
-                      </div>
-                    </div>
-                    <button
-                      className="session-item-delete"
-                      onClick={(e) => handleDeleteSession(e, session.id)}
-                      title={confirmDeleteId === session.id ? '确认删除' : '删除会话'}
-                    >
-                      {confirmDeleteId === session.id ? '确认?' : <Trash2 size={14} />}
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
+            <Conversations
+              items={visibleSessions.map((s) => ({ key: s.id, label: s.title }))}
+              activeKey={currentSessionId ?? undefined}
+              onActiveChange={(id) => switchSession(String(id))}
+              menu={(session) => ({
+                items: [{ key: 'delete', danger: true, label: '删除', icon: <Trash2 size={12} /> }],
+                onClick: ({ key }) => {
+                  if (key === 'delete') handleDeleteSession(String(session.key));
+                },
+              })}
+            />
+            {visibleSessions.length === 0 && (
+              <p style={{ fontSize: 12, color: 'var(--text-sub)', margin: 0 }}>暂无历史会话</p>
+            )}
           </div>
 
           {/* 下：引用来源 */}
@@ -219,31 +222,34 @@ export default function ChatPage() {
         <div className="conversation">
           <div className="messages">
             {messages.length === 0 ? (
-              <div className="empty">
-                <Bot
-                  size={40}
-                  strokeWidth={1.5}
-                  style={{ color: 'var(--text-subtle)', marginBottom: 12 }}
-                />
-                <p style={{ fontWeight: 500, fontSize: 15 }}>知识库助手</p>
-                <p>我可以阅读知识库的资料并使用自然语言回答你的问题</p>
-                <p style={{ fontSize: 12, color: 'var(--text-subtle)', marginTop: 8 }}>
-                  开始对话后将自动创建新会话
-                </p>
-              </div>
+              <Welcome
+                variant="borderless"
+                icon={<Bot size={28} strokeWidth={1.5} />}
+                title="知识库助手"
+                description="我可以阅读知识库的资料并使用自然语言回答你的问题"
+                extra={
+                  <span style={{ fontSize: 12, color: 'var(--text-subtle)' }}>
+                    开始对话后将自动创建新会话
+                  </span>
+                }
+              />
             ) : (
               <>
                 {messages.map((m, i) => (
                   <div key={i} className={'msg ' + m.role}>
-                    {m.role === 'assistant'
-                      ? renderCitedContent(m.content, m.citations)
-                      : m.content}
-                    {/* Agent Activity 面板（仅在最新消息下方显示，避免重复） */}
+                    {m.role === 'assistant' ? (
+                      <MarkdownAnswer content={m.content} citations={m.citations} />
+                    ) : (
+                      m.content
+                    )}
+                    {/* Agent Activity 面板：历史回答展示各自挂载的事件；
+                        流式中的最新回答实时展示全局事件流 */}
                     {m.role === 'assistant' &&
-                      agentEvents.length > 0 &&
-                      i === messages.length - 1 && (
+                      ((m.agentEvents?.length ?? 0) > 0 ||
+                        (isStreaming && i === messages.length - 1 && agentEvents.length > 0)) && (
                         <AgentThoughtPanel
-                          events={agentEvents}
+                          events={(m.agentEvents?.length ?? 0) > 0 ? m.agentEvents! : agentEvents}
+                          isStreaming={isStreaming && i === messages.length - 1}
                           isOpen={showAgentActivity}
                           onToggle={toggleAgentActivity}
                         />
@@ -264,19 +270,14 @@ export default function ChatPage() {
             )}
             <div ref={messagesEndRef} />
           </div>
-          <div className="chat-input">
-            <input
-              className="input"
-              placeholder="我可以阅读知识库的资料并使用自然语言回答你的问题"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
-            />
-            <button className="btn primary" onClick={onSubmit} disabled={isStreaming}>
-              <Send size={16} />
-              {isStreaming ? '回答中…' : '发送'}
-            </button>
-          </div>
+          <Sender
+            placeholder="我可以阅读知识库的资料并使用自然语言回答你的问题"
+            value={input}
+            onChange={(v) => setInput(v)}
+            onSubmit={() => onSubmit()}
+            onCancel={() => {}}
+            loading={isStreaming}
+          />
         </div>
 
         {/* 右：参数设置 */}
@@ -286,35 +287,38 @@ export default function ChatPage() {
             调整检索参数，预览知识库命中效果
           </p>
           <ParamRow label="结果返回数量">
-            <input
-              className="input"
-              type="number"
+            <InputNumber
+              style={{ width: '100%' }}
+              min={1}
+              max={50}
               value={searchParams.topK}
-              onChange={(e) => setParams({ topK: Number(e.target.value) })}
+              onChange={(v) => setParams({ topK: Number(v ?? 10) })}
             />
           </ParamRow>
           <ParamRow label="最低相似度">
-            <input
-              className="input"
-              type="number"
-              step="0.01"
+            <InputNumber
+              style={{ width: '100%' }}
+              step={0.01}
+              min={0}
+              max={1}
               value={searchParams.minScore}
-              onChange={(e) => setParams({ minScore: Number(e.target.value) })}
+              onChange={(v) => setParams({ minScore: Number(v ?? 0.7) })}
             />
           </ParamRow>
           <ParamRow label="重排模型">
-            <span
-              className={'toggle' + (searchParams.useReranker ? ' on' : '')}
-              onClick={() => setParams({ useReranker: !searchParams.useReranker })}
+            <Switch
+              size="small"
+              checked={searchParams.useReranker}
+              onChange={(v) => setParams({ useReranker: v })}
             />
           </ParamRow>
           <ParamRow label="Dense Weight">
-            <input
-              className="input"
-              type="number"
-              step="0.1"
+            <Slider
+              min={0}
+              max={1}
+              step={0.1}
               value={searchParams.denseWeight}
-              onChange={(e) => setParams({ denseWeight: Number(e.target.value) })}
+              onChange={(v) => setParams({ denseWeight: v })}
             />
           </ParamRow>
 
@@ -362,61 +366,4 @@ function ParamRow({ label, children }: { label: string; children: React.ReactNod
       {children}
     </div>
   );
-}
-
-/** 将存储格式 (资料1) 转为标准格式 ([1])，并清理系统前缀 */
-function normalizeContent(content: string): string {
-  // 先清理前缀
-  let normalized = cleanContent(content);
-  // 将 "资料N" 转为 "[N]" - 匹配"资料"+1-2位数字，后面跟中文标点或行尾
-  normalized = normalized.replace(/资料(\d{1,2})(?=[，。！？、\]））]|$)/g, (_, num) => `[${num}]`);
-  return normalized;
-}
-
-/** 将 [n] 引用标记渲染为行内上标徽章（优先使用 citations，持久化后仍有效） */
-function renderCitedContent(
-  content: string,
-  citations: import('../../types').Citation[] | undefined,
-): React.ReactNode[] {
-  // 标准化内容：清理前缀并转换引用格式
-  const normalizedContent = normalizeContent(content);
-
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-  // 同时匹配 [N] 和 资料N 两种格式（在标准化后的内容上匹配）
-  const re = /\[(\d+)\]/g;
-  let m: RegExpExecArray | null;
-
-  while ((m = re.exec(normalizedContent)) !== null) {
-    const idx = parseInt(m[1], 10);
-    // 从 citations 中查找对应的引用
-    const citation = citations?.find((c) => c.index === idx);
-    const source = citation?.source;
-
-    // 匹配前的普通文本（需要从原始内容中计算偏移）
-    // 由于 normalizeContent 可能改变了长度，使用 normalizedContent 的索引
-    if (m.index > lastIndex) {
-      parts.push(normalizedContent.slice(lastIndex, m.index));
-    }
-
-    // 上标徽章
-    if (source) {
-      parts.push(<CitationBadge key={`c-${m.index}`} index={idx} source={source} />);
-    } else {
-      parts.push(
-        <sup key={`c-${m.index}`} className="citation-orphan">
-          {idx}
-        </sup>,
-      );
-    }
-
-    lastIndex = m.index + m[0].length;
-  }
-
-  // 剩余文本
-  if (lastIndex < normalizedContent.length) {
-    parts.push(normalizedContent.slice(lastIndex));
-  }
-
-  return parts;
 }

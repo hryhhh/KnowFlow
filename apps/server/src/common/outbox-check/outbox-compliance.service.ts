@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Pool } from 'pg';
 import { Document } from '../../modules/document/entities/document.entity';
 import { Chunk } from '../../modules/chunk/entities/chunk.entity';
+import { env } from '../../config/env';
 
 /**
  * 启动期 Outbox 一致性校验服务
@@ -49,11 +50,11 @@ export class OutboxComplianceService implements OnApplicationBootstrap {
     }
 
     const pool = new Pool({
-      host: process.env.DATABASE_HOST ?? 'localhost',
-      port: parseInt(process.env.DATABASE_PORT ?? '5432', 10),
-      user: process.env.DATABASE_USER ?? 'postgres',
-      password: process.env.DATABASE_PASSWORD ?? '123456',
-      database: process.env.DATABASE_NAME ?? 'knowledge_rag',
+      host: env.database.host,
+      port: env.database.port,
+      user: env.database.user,
+      password: env.database.password,
+      database: env.database.name,
     });
 
     try {
@@ -130,7 +131,7 @@ export class OutboxComplianceService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap(): Promise<void> {
     // 仅在 API 进程（非 Worker）中执行，Worker 进程无 HTTP 监听
-    if (process.env.NODE_ENV === 'production' && process.env.WORKER_MODE === 'true') {
+    if (env.isProduction && env.workerMode) {
       return;
     }
     await this.checkAndReport();

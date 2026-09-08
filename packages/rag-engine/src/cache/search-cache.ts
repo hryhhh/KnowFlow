@@ -17,7 +17,8 @@ interface CacheEntry {
 
 const resultCache = new Map<string, CacheEntry>();
 
-const DEFAULT_TTL_MS = parseInt(process.env.RAG_RESULT_CACHE_TTL_MS ?? '300000', 10); // 默认 5 分钟
+/** 检索结果缓存 TTL（毫秒），0 表示禁用（机制默认值，收编为常量） */
+const DEFAULT_TTL_MS = 300000;
 
 /**
  * 生成缓存 key

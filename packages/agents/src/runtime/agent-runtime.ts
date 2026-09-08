@@ -13,7 +13,9 @@ export class AgentRuntime {
    * 执行一次完整的 Agent 推理
    */
   async run(params: AgentRunParams): Promise<AgentRunResult> {
-    const context = AgentContext.create(params);
+    const context = AgentContext.create(params, {
+      timeoutMs: params.timeoutMs,
+    });
 
     try {
       const loop = new ReactLoop();

@@ -32,9 +32,20 @@ export class IntentRouter {
     this.rulesPath =
       rulesPath ??
       process.env.ROUTER_RULES_PATH ??
-      path.resolve(process.cwd(), 'config/router.rules.yml');
+      this.resolveRulesPath();
     this.rules = this.loadRules();
     this.startHotReload();
+  }
+
+  /** 解析路由规则文件路径：优先 cwd，其次尝试项目根目录 */
+  private resolveRulesPath(): string {
+    const cwdPath = path.resolve(process.cwd(), 'config/router.rules.yml');
+    const rootPath = path.resolve(process.cwd(), '../config/router.rules.yml');
+    // 检查是否为实际文件（非目录、非软链指向目录）
+    if (fs.existsSync(cwdPath) && fs.statSync(cwdPath).isFile()) return cwdPath;
+    if (fs.existsSync(rootPath) && fs.statSync(rootPath).isFile()) return rootPath;
+    // fallback：使用 cwdPath（报错时给出明确路径提示）
+    return cwdPath;
   }
 
   private loadRules(): RouterRules {

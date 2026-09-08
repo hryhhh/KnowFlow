@@ -15,15 +15,17 @@ import type { Tool, ToolContext, ToolResult } from '../base-tool';
  */
 export class RagSearchTool implements Tool {
   readonly name = 'rag_search';
-  readonly description = '在知识库中搜索与查询相关的文档片段。适用于需要内部文档信息回答问题时。';
+  readonly description =
+    '在知识库中搜索与查询相关的文档片段。适用于需要内部文档信息回答问题时。' +
+    '若结果与问题不匹配，请更换关键词（如改用文档中的术语、去掉限定词）或降低 minScore（如 0.3）后重试。';
   readonly parameters = {
     type: 'object',
     properties: {
       query: { type: 'string', description: '搜索查询词' },
       topK: {
         type: 'integer',
-        description: '返回结果数量，默认 5，最大 20',
-        default: 5,
+        description: '返回结果数量，默认 8，最大 20',
+        default: 8,
       },
       minScore: {
         type: 'number',
@@ -43,7 +45,7 @@ export class RagSearchTool implements Tool {
   ) {}
 
   async execute(args: Record<string, any>, ctx: ToolContext): Promise<ToolResult> {
-    const topK = Math.max(1, Math.min(args.topK ?? 5, 20));
+    const topK = Math.max(1, Math.min(args.topK ?? 8, 20));
     const minScore = args.minScore ?? 0.5;
 
     const results = await this.retrieveFn(args.query, ctx.kbId, {

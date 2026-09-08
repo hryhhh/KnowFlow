@@ -62,7 +62,8 @@ button {
 /* ===== Layout ===== */
 .layout {
   display: flex;
-  height: 100%;
+  height: 100vh; /* 使用 viewport height 确保完整高度 */
+  overflow: hidden; /* 防止子元素撑开布局 */
 }
 
 .sidebar {
@@ -143,6 +144,7 @@ button {
   flex-direction: column;
   min-width: 0;
   height: 100%;
+  overflow: hidden; /* 防止内容撑开主区域 */
   background: var(--bg);
 }
 
@@ -184,39 +186,10 @@ button {
   flex: 1;
   min-height: 0;
   height: 0;
+  overflow: hidden; /* 防止左侧面板（会话历史/引用来源）撑开整体高度 */
 }
 
 /* ===== Steps bar ===== */
-.steps {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.step {
-  flex: 1;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 14px 16px;
-  font-size: 12px;
-  color: var(--text-sub);
-  transition: all 0.2s;
-}
-
-.step.active {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: linear-gradient(135deg, #e6f4ff 0%, #f0f5ff 100%);
-  box-shadow: var(--shadow-sm);
-}
-
-.step b {
-  display: block;
-  font-size: 13px;
-  margin-bottom: 4px;
-  font-weight: 600;
-}
 
 /* ===== Toolbar ===== */
 .toolbar {
@@ -281,82 +254,11 @@ button {
 
 /* ===== Inputs ===== */
 .input,
-.search-input {
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  padding: 6px 12px;
-  font-size: 14px;
-  background: var(--panel);
-  color: var(--text);
-  transition: all 0.2s;
-  outline: none;
-}
 
 .input:focus,
-.search-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
-}
 
-.search-input {
-  width: 240px;
-}
-
-/* ===== Table ===== */
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--panel);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border);
-}
-
-.table th,
-.table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-}
-
-.table th {
-  background: #fafafa;
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--text-sub);
-}
-
-.table tr:last-child td {
-  border-bottom: none;
-}
-
-.table tr:hover td {
-  background: #fafafa;
-}
 
 /* ===== Cards ===== */
-.kb-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
-}
-
-.kb-card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: var(--shadow-sm);
-}
-
-.kb-card:hover {
-  border-color: var(--primary);
-  box-shadow: var(--shadow);
-  transform: translateY(-2px);
-}
 
 .kb-card-header {
   display: flex;
@@ -365,202 +267,9 @@ button {
   margin-bottom: 12px;
 }
 
-.kb-icon {
-  font-size: 28px;
-}
-
-.kb-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.action-btn {
-  background: none;
-  border: none;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--text-sub);
-  transition: all 0.2s;
-}
-
-.action-btn:hover {
-  background: var(--bg);
-  color: var(--text);
-}
-
-.kb-card h3 {
-  margin: 0 0 8px;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.kb-card p {
-  margin: 0 0 12px;
-  color: var(--text-sub);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.meta {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: var(--text-subtle);
-}
-
 /* ===== Badge / Status ===== */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.badge.pending {
-  background: #fafafa;
-  color: var(--text-sub);
-  border: 1px solid var(--border-strong);
-}
-
-.badge.processing {
-  background: #e6f4ff;
-  color: var(--primary);
-  border: 1px solid #91caff;
-}
-
-.badge.success {
-  background: var(--success-bg);
-  color: var(--success);
-  border: 1px solid #b7eb8f;
-}
-
-.badge.failed {
-  background: var(--error-bg);
-  color: var(--error);
-  border: 1px solid #ffa39e;
-}
 
 /* ===== Modal ===== */
-.modal-mask {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal {
-  background: var(--panel);
-  border-radius: var(--radius-lg);
-  width: 480px;
-  max-width: 92vw;
-  padding: 24px;
-  box-shadow: var(--shadow-lg);
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  color: var(--text-subtle);
-  padding: 4px;
-  line-height: 1;
-  border-radius: var(--radius-sm);
-}
-
-.modal-close:hover {
-  background: var(--bg);
-  color: var(--text);
-}
-
-.modal .field {
-  margin-bottom: 16px;
-}
-
-.modal .field label {
-  display: block;
-  font-size: 14px;
-  margin-bottom: 6px;
-  font-weight: 500;
-  color: var(--text);
-}
-
-.modal .field .input,
-.modal .field textarea {
-  width: 100%;
-}
-
-.modal textarea {
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  padding: 8px 12px;
-  font-family: inherit;
-  font-size: 14px;
-  resize: vertical;
-  min-height: 80px;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-/* ===== Table action buttons ===== */
-.act-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 3px 10px;
-  font-size: 13px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-strong);
-  background: var(--panel);
-  color: var(--text-sub);
-  cursor: pointer;
-  transition: all 0.15s;
-  line-height: 1.5;
-  height: 26px;
-}
-
-.act-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.act-btn.danger {
-  color: var(--error);
-  border-color: #ffa39e;
-}
-
-.act-btn.danger:hover {
-  background: var(--error-bg);
-  border-color: var(--error);
-  color: var(--error);
-}
 
 /* ===== Empty State ===== */
 .empty {
@@ -578,37 +287,6 @@ button {
 }
 
 /* ===== Toggle ===== */
-.toggle {
-  position: relative;
-  width: 40px;
-  height: 22px;
-  background: var(--border-strong);
-  border-radius: 11px;
-  cursor: pointer;
-  display: inline-block;
-  transition: background 0.2s;
-}
-
-.toggle.on {
-  background: var(--primary);
-}
-
-.toggle::after {
-  content: '';
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #fff;
-  top: 2px;
-  left: 2px;
-  transition: left 0.2s;
-  box-shadow: var(--shadow-sm);
-}
-
-.toggle.on::after {
-  left: 20px;
-}
 
 /* ===== Retrieval layout ===== */
 .retrieval {
@@ -912,72 +590,12 @@ button {
 }
 
 /* ===== Chunk grid ===== */
-.chunk-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: 16px;
-}
-
-.chunk-card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.2s;
-}
-
-.chunk-card:hover {
-  border-color: var(--primary);
-  box-shadow: var(--shadow);
-}
 
 .chunk-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 10px;
-}
-
-.chunk-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.chunk-idx {
-  font-size: 12px;
-  color: var(--text-subtle);
-  font-weight: 500;
-}
-
-.chunk-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chunk-content {
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: inherit;
-  font-size: 13px;
-  color: var(--text-sub);
-  line-height: 1.6;
-  margin: 0 0 10px;
-  max-height: 120px;
-  overflow: hidden;
-}
-
-.chunk-meta {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: var(--text-subtle);
 }
 
 /* ===== Code block ===== */
@@ -1087,35 +705,6 @@ button {
   line-height: 1;
 }
 
-.citation-tooltip {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  min-width: 280px;
-  max-width: 400px;
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  background: var(--panel);
-  border: 1px solid var(--border-strong);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  font-size: 12px;
-  color: var(--text);
-  white-space: normal;
-  pointer-events: none;
-}
-
-.citation-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: var(--border-strong);
-}
-
 .citation-tooltip-file {
   font-weight: 600;
   color: var(--text);
@@ -1134,4 +723,90 @@ button {
   max-height: 80px;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ── 答案气泡 markdown 渲染（MarkdownAnswer） ── */
+.md-answer > :first-child {
+  margin-top: 0;
+}
+.md-answer > :last-child {
+  margin-bottom: 0;
+}
+.md-answer p {
+  margin: 0 0 8px;
+}
+.md-answer ul,
+.md-answer ol {
+  margin: 0 0 8px;
+  padding-left: 22px;
+}
+.md-answer li {
+  margin: 2px 0;
+}
+.md-answer h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.md-answer table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 13px;
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.md-answer th,
+.md-answer td {
+  border: 1px solid var(--border);
+  padding: 5px 10px;
+  text-align: left;
+}
+.md-answer th {
+  background: var(--bg);
+  font-weight: 600;
+}
+.md-answer code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12px;
+  font-family: monospace;
+}
+.md-answer pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+.md-answer pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+.md-answer blockquote {
+  border-left: 3px solid var(--border);
+  margin: 8px 0;
+  padding: 2px 12px;
+  color: var(--text-sub);
+}
+.md-answer hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 12px 0;
+}
+.md-answer a {
+  color: var(--primary);
+}
+
+/* ===== 页面顶部引导步骤条（antd Steps 容器） ===== */
+.top-steps {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px 6px;
+  margin-bottom: 18px;
 }

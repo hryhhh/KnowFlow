@@ -1,0 +1,369 @@
+{
+  "version": 1,
+  "description": "Agent 评测 golden set。路由用例期望与 config/router.rules.yml 的正则行为一致；轨迹/答案用例指向评测知识库 eval-kb（tests/eval/setup.ts 创建，语料见 tests/eval/corpus/）。",
+  "cases": [
+    {
+      "id": "route-001",
+      "category": "routing",
+      "query": "知识库里的报销政策是怎么说的",
+      "expected": { "agents": ["ragflow"] }
+    },
+    {
+      "id": "route-002",
+      "category": "routing",
+      "query": "文档内容里有没有提到年假天数",
+      "expected": { "agents": ["ragflow"] }
+    },
+    {
+      "id": "route-003",
+      "category": "routing",
+      "query": "手册内容里怎么描述报销流程",
+      "expected": { "agents": ["ragflow"] }
+    },
+    {
+      "id": "route-004",
+      "category": "routing",
+      "query": "知识库中的项目进度怎么查询",
+      "expected": { "agents": ["ragflow"] }
+    },
+    {
+      "id": "route-005",
+      "category": "routing",
+      "query": "有关于新人入职的资料吗",
+      "expected": { "agents": ["ragflow"] }
+    },
+    {
+      "id": "route-006",
+      "category": "routing",
+      "query": "本月一共新增了多少客户",
+      "expected": { "agents": ["db-query"] }
+    },
+    {
+      "id": "route-007",
+      "category": "routing",
+      "query": "统计一下订单数量",
+      "expected": { "agents": ["db-query"] }
+    },
+    {
+      "id": "route-008",
+      "category": "routing",
+      "query": "知识库总共有多少个文档",
+      "expected": { "agents": ["db-query"] }
+    },
+    {
+      "id": "route-009",
+      "category": "routing",
+      "query": "列出全部在职员工",
+      "expected": { "agents": ["db-query"] }
+    },
+    {
+      "id": "route-010",
+      "category": "routing",
+      "query": "销售额最高的产品是什么",
+      "expected": { "agents": ["db-query"] }
+    },
+    {
+      "id": "route-011",
+      "category": "routing",
+      "query": "查一下学号 2023001 的学生信息",
+      "expected": { "agents": ["db-query"] }
+    },
+    {
+      "id": "route-012",
+      "category": "routing",
+      "query": "公司有多少员工",
+      "expected": { "agents": ["db-query"] }
+    },
+    {
+      "id": "route-013",
+      "category": "routing",
+      "query": "目前有多少合同在履约中",
+      "expected": { "agents": ["db-query"] }
+    },
+    {
+      "id": "route-014",
+      "category": "routing",
+      "query": "统计一下学生人数",
+      "expected": { "agents": ["db-query"] }
+    },
+    {
+      "id": "route-015",
+      "category": "routing",
+      "query": "上个月的销售趋势如何",
+      "expected": { "agents": ["db-query"] }
+    },
+    {
+      "id": "route-016",
+      "category": "routing",
+      "query": "最近的行业新闻有哪些",
+      "expected": { "agents": ["web-search", "ragflow"] },
+      "note": "web-news(80) 与 ragflow-soft(30,『有哪些』) 同时命中，真实行为为双目标"
+    },
+    {
+      "id": "route-017",
+      "category": "routing",
+      "query": "今天北京的天气怎么样",
+      "expected": { "agents": ["web-search"] }
+    },
+    {
+      "id": "route-018",
+      "category": "routing",
+      "query": "上海明天的空气质量",
+      "expected": { "agents": ["web-search"] }
+    },
+    {
+      "id": "route-019",
+      "category": "routing",
+      "query": "什么是检索增强生成",
+      "expected": { "agents": ["web-search"] }
+    },
+    {
+      "id": "route-020",
+      "category": "routing",
+      "query": "机器学习的工作原理是什么",
+      "expected": { "agents": ["web-search"] }
+    },
+    {
+      "id": "route-021",
+      "category": "routing",
+      "query": "能不能找到关于云盾产品的资料",
+      "expected": { "agents": ["ragflow"] },
+      "note": "ragflow-soft 命中（priority 30 < 阈值 70），触发 LLM 仲裁，期望仲裁后仍为 ragflow"
+    },
+    {
+      "id": "route-022",
+      "category": "routing",
+      "query": "帮我把文档里的表格数据整理成清单",
+      "expected": { "agents": ["db-query"] },
+      "note": "干扰用例：『清单』命中 db-list（priority 88），验证优先级不被 soft 规则抢占"
+    },
+
+    {
+      "id": "traj-001",
+      "category": "tool_trajectory",
+      "query": "员工手册里的报销流程是什么",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": { "tools": ["rag_search"] }
+    },
+    {
+      "id": "traj-002",
+      "category": "tool_trajectory",
+      "query": "年假天数是多少",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": { "tools": ["rag_search"] }
+    },
+    {
+      "id": "traj-003",
+      "category": "tool_trajectory",
+      "query": "云盾 Pro 版一个月多少钱",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": { "tools": ["rag_search"] }
+    },
+    {
+      "id": "traj-004",
+      "category": "tool_trajectory",
+      "query": "新人培训要多少天",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": { "tools": ["rag_search"] }
+    },
+    {
+      "id": "traj-005",
+      "category": "tool_trajectory",
+      "query": "公司邮箱的后缀是什么",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": { "tools": ["rag_search"] }
+    },
+    {
+      "id": "traj-006",
+      "category": "tool_trajectory",
+      "query": "差旅住宿费每晚上限是多少",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": { "tools": ["rag_search"] }
+    },
+    {
+      "id": "traj-007",
+      "category": "tool_trajectory",
+      "query": "日志数据保留多久",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": { "tools": ["rag_search"] }
+    },
+    {
+      "id": "traj-008",
+      "category": "tool_trajectory",
+      "query": "IT 设备什么时候发放",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": { "tools": ["rag_search"] }
+    },
+    {
+      "id": "traj-009",
+      "category": "tool_trajectory",
+      "query": "SSO 单点登录哪个版本支持",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": { "tools": ["rag_search"] }
+    },
+    {
+      "id": "traj-010",
+      "category": "tool_trajectory",
+      "query": "结业考试多少分算通过",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": { "tools": ["rag_search"] }
+    },
+    {
+      "id": "traj-011",
+      "category": "tool_trajectory",
+      "query": "云盾企业版一年多少钱",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": { "tools": ["rag_search"] }
+    },
+    {
+      "id": "traj-012",
+      "category": "tool_trajectory",
+      "query": "申请年假需要提前几天",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": { "tools": ["rag_search"] }
+    },
+
+    {
+      "id": "answer-001",
+      "category": "answer_quality",
+      "query": "云盾 Pro 版每月多少钱",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": {
+        "tools": ["rag_search"],
+        "mustContain": ["199"],
+        "referenceAnswer": "云盾 Pro 版定价为每月 199 元。",
+        "refuse": false
+      }
+    },
+    {
+      "id": "answer-002",
+      "category": "answer_quality",
+      "query": "入职满一年的员工有几天年假",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": {
+        "tools": ["rag_search"],
+        "mustContain": ["5", "年假"],
+        "referenceAnswer": "入职满 1 年的员工享有 5 天带薪年假。",
+        "refuse": false
+      }
+    },
+    {
+      "id": "answer-003",
+      "category": "answer_quality",
+      "query": "差旅住宿费报销上限是多少",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": {
+        "tools": ["rag_search"],
+        "mustContain": ["600"],
+        "referenceAnswer": "差旅住宿费报销上限为每晚 600 元，超标部分需自行承担。",
+        "refuse": false
+      }
+    },
+    {
+      "id": "answer-004",
+      "category": "answer_quality",
+      "query": "公司邮箱后缀是什么",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": {
+        "tools": ["rag_search"],
+        "mustContain": ["@example.com"],
+        "referenceAnswer": "公司邮箱后缀为 @example.com。",
+        "refuse": false
+      }
+    },
+    {
+      "id": "answer-005",
+      "category": "answer_quality",
+      "query": "免费试用期多久",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": {
+        "tools": ["rag_search"],
+        "mustContain": ["30"],
+        "referenceAnswer": "新用户可享受 30 天免费试用，试用期内功能与 Pro 版完全一致。",
+        "refuse": false
+      }
+    },
+    {
+      "id": "answer-006",
+      "category": "answer_quality",
+      "query": "新人培训考试多少分通过",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": {
+        "tools": ["rag_search"],
+        "mustContain": ["80"],
+        "referenceAnswer": "结业考试满分 100 分，80 分以上视为通过，未通过者可补考一次。",
+        "refuse": false
+      }
+    },
+    {
+      "id": "answer-007",
+      "category": "answer_quality",
+      "query": "报销到账需要多长时间",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": {
+        "tools": ["rag_search"],
+        "mustContain": ["7", "工作日"],
+        "referenceAnswer": "报销款项在审批通过后 7 个工作日内打入工资卡。",
+        "refuse": false
+      }
+    },
+    {
+      "id": "answer-008",
+      "category": "answer_quality",
+      "query": "IT 设备什么时候发",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": {
+        "tools": ["rag_search"],
+        "mustContain": ["第二个工作日"],
+        "referenceAnswer": "IT 设备在入职第二个工作日由行政部统一发放。",
+        "refuse": false
+      }
+    },
+    {
+      "id": "answer-009",
+      "category": "answer_quality",
+      "query": "公司 2030 年的营收目标是多少",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": {
+        "tools": ["rag_search"],
+        "mustContain": [],
+        "referenceAnswer": "资料中没有公司营收目标的相关信息，无法回答。",
+        "refuse": true
+      }
+    },
+    {
+      "id": "answer-010",
+      "category": "answer_quality",
+      "query": "云盾产品什么时候上市的",
+      "kbId": "eval-kb",
+      "env": { "AGENTS_ENABLED": "true", "AGENT_RUNTIME_ENABLED": "true" },
+      "expected": {
+        "tools": ["rag_search"],
+        "mustContain": [],
+        "referenceAnswer": "资料中没有云盾产品上市时间的相关信息，无法回答。",
+        "refuse": true
+      }
+    }
+  ]
+}

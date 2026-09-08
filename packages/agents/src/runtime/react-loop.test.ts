@@ -54,8 +54,8 @@ class TestableReactLoop extends ReactLoop {
   private readonly fetchFn: () => Promise<Response>;
   private callCount = 0;
 
-  constructor(fetchFn: () => Promise<Response>) {
-    super();
+  constructor(fetchFn: () => Promise<Response>, maxRounds?: number) {
+    super(maxRounds);
     this.fetchFn = fetchFn;
   }
 
@@ -98,20 +98,13 @@ class TestableReactLoop extends ReactLoop {
 // ---- tests ----
 
 describe('ReactLoop', () => {
-  let originalEnv: string | undefined;
-
-  beforeEach(() => {
-    originalEnv = process.env.AGENT_REACT_MAX_ROUNDS;
-    process.env.AGENT_REACT_MAX_ROUNDS = '3';
-  });
-
   afterEach(() => {
-    if (originalEnv === undefined) delete process.env.AGENT_REACT_MAX_ROUNDS;
-    else process.env.AGENT_REACT_MAX_ROUNDS = originalEnv;
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
-  function makeLoop(fetchFn: () => Promise<Response>): TestableReactLoop {
-    return new TestableReactLoop(fetchFn);
+  function makeLoop(fetchFn: () => Promise<Response>, maxRounds?: number): TestableReactLoop {
+    return new TestableReactLoop(fetchFn, maxRounds);
   }
 
   it('LLM 无 tool_call → 返回 completed + finalAnswer', async () => {
@@ -203,14 +196,16 @@ describe('ReactLoop', () => {
       } as Response);
     };
 
-    const loop = makeLoop(fetchFn);
+    const loop = makeLoop(fetchFn, 3);
     const ctx = createContext();
     const result = await loop.execute(ctx);
 
     expect(result.status).toBe('truncated');
     expect(ctx.state.round).toBe(3);
-    // 3 轮 × 2 步（llm_call + tool_call）= 6 条 trace step
-    expect(ctx.trace.steps).toHaveLength(6);
+    // 3 轮 × 2 步（llm_call + tool_call）= 6 条，加收尾调用 llm_call + final_answer = 8 条
+    expect(ctx.trace.steps).toHaveLength(8);
+    // 收尾 mock 仍返回 tool_calls（content 为空）→ finalAnswer 走固定提示而非原始工具输出
+    expect(result.finalAnswer).toContain('已达最大推理轮数');
   });
 
   it('signal.aborted → 立即返回 aborted', async () => {
@@ -439,7 +434,25 @@ describe('ReactLoop', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('LLM 400 协议错误不重试，直接失败（真实 callLLM）', async () => {
+  it('LLM 400 先定向重试一次（去 stream_options），仍 400 则失败（真实 callLLM）', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: () => Promise.resolve('bad request'),
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const loop = new ReactLoop();
+    const ctx = createContext();
+    await expect(loop.execute(ctx)).rejects.toThrow('LLM API error 400');
+    // 第一次含 stream_options 400 后，定向重试一次（去掉 stream_options），仍 400 则放弃
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).stream_options).toBeUndefined();
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).stream).toBe(true);
+  });
+
+  it('AGENT_LLM_STREAMING=false 时 400 不重试，直接失败（真实 callLLM）', async () => {
+    vi.stubEnv('AGENT_LLM_STREAMING', 'false');
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 400,
@@ -451,6 +464,32 @@ describe('ReactLoop', () => {
     const ctx = createContext();
     await expect(loop.execute(ctx)).rejects.toThrow('LLM API error 400');
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).stream).toBeUndefined();
+  });
+
+  it('AGENT_LLM_STREAMING=false 时请求体不含 stream 字段（真实 callLLM）', async () => {
+    vi.stubEnv('AGENT_LLM_STREAMING', 'false');
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve(
+          JSON.parse(
+            buildResponse({ role: 'assistant', content: '非流式答案', tool_calls: undefined }),
+          ),
+        ),
+      text: () => Promise.resolve(''),
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const loop = new ReactLoop();
+    const ctx = createContext();
+    const result = await loop.execute(ctx);
+
+    expect(result.status).toBe('completed');
+    expect(result.finalAnswer).toBe('非流式答案');
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(requestBody.stream).toBeUndefined();
   });
 
   it('tool_calls: [] → 视为无 tool_call，返回 completed', async () => {
@@ -476,5 +515,353 @@ describe('ReactLoop', () => {
 
     expect(result.status).toBe('completed');
     expect(result.finalAnswer).toBe('直接回答');
+  });
+});
+
+// ---- 流式解析（真实 callLLM + SSE mock）----
+
+describe('ReactLoop 流式解析', () => {
+  beforeEach(() => {
+    process.env.AGENT_REACT_MAX_ROUNDS = '3';
+  });
+
+  afterEach(() => {
+    delete process.env.AGENT_REACT_MAX_ROUNDS;
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  /** 构造 OpenAI SSE 响应（content-type: text/event-stream），body 按 chunk 分片送达 */
+  function sseResponse(bodies: string[]): Response {
+    const encoder = new TextEncoder();
+    const queue = bodies.map((b) => encoder.encode(b));
+    const reader = {
+      read: () =>
+        Promise.resolve(
+          queue.length ? { done: false, value: queue.shift() } : { done: true, value: undefined },
+        ),
+      cancel: () => Promise.resolve(),
+      releaseLock: () => {},
+    };
+    return {
+      ok: true,
+      status: 200,
+      headers: {
+        get: (key: string) => (key.toLowerCase() === 'content-type' ? 'text/event-stream' : null),
+      },
+      body: { getReader: () => reader },
+    } as unknown as Response;
+  }
+
+  function jsonStreamingDisabledResponse(body: object): Response {
+    return {
+      ok: true,
+      status: 200,
+      headers: { get: () => 'application/json' },
+      json: () => Promise.resolve(body),
+      text: () => Promise.resolve(''),
+    } as unknown as Response;
+  }
+
+  function sseEvents(events: object[]): string {
+    return events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join('') + 'data: [DONE]\n\n';
+  }
+
+  function delta(content?: string, toolCalls?: any[]) {
+    return {
+      choices: [
+        {
+          delta: {
+            ...(content !== undefined && { content }),
+            ...(toolCalls && { tool_calls: toolCalls }),
+          },
+        },
+      ],
+    };
+  }
+
+  it('纯文本流：answer_delta 逐片发出，无 answer_reset，答案完整', async () => {
+    const body = sseEvents([delta('你'), delta('好'), delta('，世界')]);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(sseResponse([body])));
+
+    const emitSpy = vi.fn();
+    const loop = new ReactLoop();
+    const ctx = createContext({ emitEvent: emitSpy });
+    const result = await loop.execute(ctx);
+
+    expect(result.status).toBe('completed');
+    expect(result.finalAnswer).toBe('你好，世界');
+    const deltas = emitSpy.mock.calls.map((c) => c[0]).filter((e) => e.type === 'answer_delta');
+    expect(deltas.map((e) => e.data.delta)).toEqual(['你', '好', '，世界']);
+    expect(emitSpy.mock.calls.map((c) => c[0]).some((e) => e.type === 'answer_reset')).toBe(false);
+  });
+
+  it('跨 chunk 截断的 SSE 行正确缓冲重组', async () => {
+    const full = sseEvents([delta('片段一'), delta('片段二')]);
+    const mid = Math.floor(full.length / 2);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(sseResponse([full.slice(0, mid), full.slice(mid)])),
+    );
+
+    const loop = new ReactLoop();
+    const ctx = createContext();
+    const result = await loop.execute(ctx);
+
+    expect(result.finalAnswer).toBe('片段一片段二');
+  });
+
+  it('流式 tool_calls 按 index 分片聚合 arguments', async () => {
+    let call = 0;
+    const fetchMock = vi.fn().mockImplementation(() => {
+      call++;
+      if (call === 1) {
+        return Promise.resolve(
+          sseResponse([
+            sseEvents([
+              delta(undefined, [
+                { index: 0, id: 'tc-1', function: { name: 'test_tool', arguments: '' } },
+              ]),
+              delta(undefined, [{ index: 0, function: { arguments: '{"qu' } }]),
+              delta(undefined, [{ index: 0, function: { arguments: 'ery":"x"}' } }]),
+            ]),
+          ]),
+        );
+      }
+      // 第二轮回非流式 JSON（无 content-type）→ 走非流式解析
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve(
+            JSON.parse(
+              buildResponse({ role: 'assistant', content: '答案', tool_calls: undefined }),
+            ),
+          ),
+        text: () => Promise.resolve(''),
+      } as Response);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const emitSpy = vi.fn();
+    const loop = new ReactLoop();
+    const ctx = createContext({ emitEvent: emitSpy });
+    const result = await loop.execute(ctx);
+
+    expect(result.status).toBe('completed');
+    expect(result.finalAnswer).toBe('答案');
+    const toolStep = ctx.trace.steps.find((s: any) => s.type === 'tool_call');
+    expect(toolStep.data.input).toEqual({ query: 'x' });
+    // 无 content 流出 → 不应补发 answer_reset
+    expect(emitSpy.mock.calls.map((c) => c[0]).some((e) => e.type === 'answer_reset')).toBe(false);
+  });
+
+  it('工具轮次流出了 content 时补发 answer_reset，且先于 reasoning_summary', async () => {
+    let call = 0;
+    const fetchMock = vi.fn().mockImplementation(() => {
+      call++;
+      if (call === 1) {
+        return Promise.resolve(
+          sseResponse([
+            sseEvents([
+              delta('我先查一下'),
+              delta(undefined, [
+                { index: 0, id: 'tc-1', function: { name: 'test_tool', arguments: '{}' } },
+              ]),
+            ]),
+          ]),
+        );
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve(
+            JSON.parse(
+              buildResponse({ role: 'assistant', content: '答案', tool_calls: undefined }),
+            ),
+          ),
+        text: () => Promise.resolve(''),
+      } as Response);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const emitSpy = vi.fn();
+    const loop = new ReactLoop();
+    const ctx = createContext({ emitEvent: emitSpy });
+    await loop.execute(ctx);
+
+    const types = emitSpy.mock.calls.map((c) => c[0].type);
+    expect(types).toContain('answer_delta');
+    expect(types).toContain('answer_reset');
+    expect(types.indexOf('answer_reset')).toBeLessThan(types.indexOf('reasoning_summary'));
+    const summary = emitSpy.mock.calls.map((c) => c[0]).find((e) => e.type === 'reasoning_summary');
+    expect(summary.data.summary).toBe('我先查一下');
+  });
+
+  it('末块 usage 单独到达时 tokens 正确记录', async () => {
+    // OpenAI 协议中 usage 汇总块在 [DONE] 之前到达
+    const body = sseEvents([
+      delta('答案'),
+      { choices: [], usage: { prompt_tokens: 123, completion_tokens: 45 } },
+    ]);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(sseResponse([body])));
+
+    const loop = new ReactLoop();
+    const ctx = createContext();
+    await loop.execute(ctx);
+
+    expect(ctx.trace.steps[0].data.inputTokens).toBe(123);
+    expect(ctx.trace.steps[0].data.outputTokens).toBe(45);
+  });
+
+  it('网关对 stream 请求直接回 JSON（content-type: application/json）→ 回退非流式解析', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          jsonStreamingDisabledResponse(
+            JSON.parse(
+              buildResponse({ role: 'assistant', content: '网关回的 JSON', tool_calls: undefined }),
+            ),
+          ),
+        ),
+    );
+
+    const emitSpy = vi.fn();
+    const loop = new ReactLoop();
+    const ctx = createContext({ emitEvent: emitSpy });
+    const result = await loop.execute(ctx);
+
+    expect(result.status).toBe('completed');
+    expect(result.finalAnswer).toBe('网关回的 JSON');
+    expect(emitSpy.mock.calls.map((c) => c[0]).some((e) => e.type === 'answer_delta')).toBe(false);
+  });
+});
+
+// ---- truncated 收尾调用 ----
+
+describe('ReactLoop truncated 收尾', () => {
+  beforeEach(() => {
+    process.env.AGENT_REACT_MAX_ROUNDS = '2';
+  });
+
+  afterEach(() => {
+    delete process.env.AGENT_REACT_MAX_ROUNDS;
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  const toolCallJson = () =>
+    JSON.parse(
+      buildResponse({
+        role: 'assistant',
+        content: null,
+        tool_calls: [
+          { id: 'tc-1', function: { name: 'test_tool', arguments: JSON.stringify({}) } },
+        ],
+      }),
+    );
+
+  it('达到 maxRounds 后发起不带 tools 的收尾调用，finalAnswer 为收尾文本', async () => {
+    let call = 0;
+    const fetchMock = vi.fn().mockImplementation(() => {
+      call++;
+      if (call <= 2) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(toolCallJson()),
+          text: () => Promise.resolve(''),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve(
+            JSON.parse(
+              buildResponse({
+                role: 'assistant',
+                content: '收尾答案，基于资料X',
+                tool_calls: undefined,
+              }),
+            ),
+          ),
+        text: () => Promise.resolve(''),
+      } as Response);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const loop = new ReactLoop();
+    const ctx = createContext();
+    const result = await loop.execute(ctx);
+
+    expect(result.status).toBe('truncated');
+    expect(result.finalAnswer).toBe('收尾答案，基于资料X');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const finalizeBody = JSON.parse(fetchMock.mock.calls[2][1].body);
+    // 收尾请求不携带工具定义，且末条消息为收尾指令
+    expect(finalizeBody.tools).toBeUndefined();
+    const lastMsg = finalizeBody.messages[finalizeBody.messages.length - 1];
+    expect(lastMsg.role).toBe('user');
+    expect(lastMsg.content).toContain('最大工具调用轮数');
+    // trace 记录了收尾 LLM 调用与最终答案
+    expect(ctx.trace.steps.some((s: any) => s.type === 'final_answer')).toBe(true);
+  });
+
+  it('收尾调用失败时返回固定提示，绝不输出原始工具结果', async () => {
+    let call = 0;
+    const fetchMock = vi.fn().mockImplementation(() => {
+      call++;
+      if (call <= 2) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(toolCallJson()),
+          text: () => Promise.resolve(''),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 500,
+        text: () => Promise.resolve('server error'),
+      } as Response);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const loop = new ReactLoop();
+    const ctx = createContext();
+    const result = await loop.execute(ctx);
+
+    expect(result.status).toBe('truncated');
+    expect(result.finalAnswer).toContain('已达最大推理轮数');
+    expect(result.finalAnswer).not.toContain('test_tool result');
+    // 收尾请求 500 触发一次重试后放弃
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it('AGENT_TRUNCATED_FINALIZE=false 时不发收尾请求，直接返回固定提示', async () => {
+    vi.stubEnv('AGENT_TRUNCATED_FINALIZE', 'false');
+    let call = 0;
+    const fetchMock = vi.fn().mockImplementation(() => {
+      call++;
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(toolCallJson()),
+        text: () => Promise.resolve(''),
+      } as Response);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const loop = new ReactLoop();
+    const ctx = createContext();
+    const result = await loop.execute(ctx);
+
+    expect(result.status).toBe('truncated');
+    expect(result.finalAnswer).toContain('已达最大推理轮数');
+    expect(fetchMock).toHaveBeenCalledTimes(2); // 仅两轮工具调用，无收尾请求
   });
 });

@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Delete,
+  Patch,
   Param,
   Query,
   Body,
@@ -36,6 +37,16 @@ export class SessionController {
   @Get(':id/messages')
   async getMessages(@Param('id') id: string): Promise<{ code: 0; data: SessionMessageItem[] }> {
     return { code: 0, data: await this.service.getMessages(id) };
+  }
+
+  /** PATCH /chat/sessions/:id/title — 会话首条消息发出时更新标题 */
+  @Patch(':id/title')
+  async updateTitle(
+    @Param('id') id: string,
+    @Body() body: { title: string },
+  ): Promise<{ code: 0 }> {
+    await this.service.updateTitle(id, body.title);
+    return { code: 0 };
   }
 
   @Delete(':id')

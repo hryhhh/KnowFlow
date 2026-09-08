@@ -37,7 +37,7 @@ export async function sparseSearch(
 
   try {
     const result = await pool.query(
-      `SELECT id, content, "sourceFile", "chunk_id", ts_rank(tsv, q) AS rank
+      `SELECT id, content, "sourceFile", "chunkId", ts_rank(tsv, to_tsquery('simple', $1)) AS rank
        FROM "${tableName}"
        WHERE tsv @@ to_tsquery('simple', $1) AND "kbId" = $2
        ORDER BY rank DESC
@@ -49,7 +49,7 @@ export async function sparseSearch(
       content: row.content,
       score: parseFloat(row.rank),
       sourceFile: row.sourceFile ?? 'unknown',
-      metadata: { chunkId: row.chunk_id, kbId: filter.kbId },
+      metadata: { chunkId: row.chunkId, kbId: filter.kbId },
     }));
   } finally {
     await pool.end();
