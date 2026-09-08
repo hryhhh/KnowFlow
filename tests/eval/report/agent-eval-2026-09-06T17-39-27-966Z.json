@@ -1,0 +1,681 @@
+{
+  "timestamp": "2026-09-06T17:39:27.966Z",
+  "durationMs": 226107,
+  "routing": {
+    "total": 22,
+    "passed": 22,
+    "passRate": 1,
+    "errors": 0
+  },
+  "tool_trajectory": {
+    "total": 12,
+    "passed": 11,
+    "passRate": 0.9166666666666666,
+    "errors": 0
+  },
+  "answer_quality": {
+    "total": 10,
+    "passed": 3,
+    "passRate": 0.3,
+    "errors": 0
+  },
+  "cases": [
+    {
+      "id": "route-001",
+      "category": "routing",
+      "query": "知识库里的报销政策是怎么说的",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "ragflow"
+        ]
+      }
+    },
+    {
+      "id": "route-002",
+      "category": "routing",
+      "query": "文档内容里有没有提到年假天数",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "ragflow"
+        ]
+      }
+    },
+    {
+      "id": "route-003",
+      "category": "routing",
+      "query": "手册内容里怎么描述报销流程",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "ragflow"
+        ]
+      }
+    },
+    {
+      "id": "route-004",
+      "category": "routing",
+      "query": "知识库中的项目进度怎么查询",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "ragflow"
+        ]
+      }
+    },
+    {
+      "id": "route-005",
+      "category": "routing",
+      "query": "有关于新人入职的资料吗",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "ragflow"
+        ]
+      }
+    },
+    {
+      "id": "route-006",
+      "category": "routing",
+      "query": "本月一共新增了多少客户",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "db-query"
+        ]
+      }
+    },
+    {
+      "id": "route-007",
+      "category": "routing",
+      "query": "统计一下订单数量",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "db-query"
+        ]
+      }
+    },
+    {
+      "id": "route-008",
+      "category": "routing",
+      "query": "知识库总共有多少个文档",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "db-query"
+        ]
+      }
+    },
+    {
+      "id": "route-009",
+      "category": "routing",
+      "query": "列出全部在职员工",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "db-query"
+        ]
+      }
+    },
+    {
+      "id": "route-010",
+      "category": "routing",
+      "query": "销售额最高的产品是什么",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "db-query"
+        ]
+      }
+    },
+    {
+      "id": "route-011",
+      "category": "routing",
+      "query": "查一下学号 2023001 的学生信息",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "db-query"
+        ]
+      }
+    },
+    {
+      "id": "route-012",
+      "category": "routing",
+      "query": "公司有多少员工",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "db-query"
+        ]
+      }
+    },
+    {
+      "id": "route-013",
+      "category": "routing",
+      "query": "目前有多少合同在履约中",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "db-query"
+        ]
+      }
+    },
+    {
+      "id": "route-014",
+      "category": "routing",
+      "query": "统计一下学生人数",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "db-query"
+        ]
+      }
+    },
+    {
+      "id": "route-015",
+      "category": "routing",
+      "query": "上个月的销售趋势如何",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "db-query"
+        ]
+      }
+    },
+    {
+      "id": "route-016",
+      "category": "routing",
+      "query": "最近的行业新闻有哪些",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "web-search",
+          "ragflow"
+        ]
+      }
+    },
+    {
+      "id": "route-017",
+      "category": "routing",
+      "query": "今天北京的天气怎么样",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "web-search"
+        ]
+      }
+    },
+    {
+      "id": "route-018",
+      "category": "routing",
+      "query": "上海明天的空气质量",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "web-search"
+        ]
+      }
+    },
+    {
+      "id": "route-019",
+      "category": "routing",
+      "query": "什么是检索增强生成",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "web-search"
+        ]
+      }
+    },
+    {
+      "id": "route-020",
+      "category": "routing",
+      "query": "机器学习的工作原理是什么",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "web-search"
+        ]
+      }
+    },
+    {
+      "id": "route-021",
+      "category": "routing",
+      "query": "能不能找到关于云盾产品的资料",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "ragflow"
+        ]
+      }
+    },
+    {
+      "id": "route-022",
+      "category": "routing",
+      "query": "帮我把文档里的表格数据整理成清单",
+      "passed": true,
+      "detail": {
+        "matchedTargets": [
+          "db-query"
+        ]
+      }
+    },
+    {
+      "id": "traj-001",
+      "category": "tool_trajectory",
+      "query": "员工手册里的报销流程是什么",
+      "passed": false,
+      "detail": {
+        "toolNames": [
+          "rag_search",
+          "rag_search",
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          328,
+          663,
+          439
+        ],
+        "status": "completed"
+      }
+    },
+    {
+      "id": "traj-002",
+      "category": "tool_trajectory",
+      "query": "年假天数是多少",
+      "passed": true,
+      "detail": {
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          416
+        ],
+        "status": "completed"
+      }
+    },
+    {
+      "id": "traj-003",
+      "category": "tool_trajectory",
+      "query": "云盾 Pro 版一个月多少钱",
+      "passed": true,
+      "detail": {
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          345
+        ],
+        "status": "completed"
+      }
+    },
+    {
+      "id": "traj-004",
+      "category": "tool_trajectory",
+      "query": "新人培训要多少天",
+      "passed": true,
+      "detail": {
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          282
+        ],
+        "status": "completed"
+      }
+    },
+    {
+      "id": "traj-005",
+      "category": "tool_trajectory",
+      "query": "公司邮箱的后缀是什么",
+      "passed": true,
+      "detail": {
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          386
+        ],
+        "status": "completed"
+      }
+    },
+    {
+      "id": "traj-006",
+      "category": "tool_trajectory",
+      "query": "差旅住宿费每晚上限是多少",
+      "passed": true,
+      "detail": {
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          346
+        ],
+        "status": "completed"
+      }
+    },
+    {
+      "id": "traj-007",
+      "category": "tool_trajectory",
+      "query": "日志数据保留多久",
+      "passed": true,
+      "detail": {
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          442
+        ],
+        "status": "completed"
+      }
+    },
+    {
+      "id": "traj-008",
+      "category": "tool_trajectory",
+      "query": "IT 设备什么时候发放",
+      "passed": true,
+      "detail": {
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          425
+        ],
+        "status": "completed"
+      }
+    },
+    {
+      "id": "traj-009",
+      "category": "tool_trajectory",
+      "query": "SSO 单点登录哪个版本支持",
+      "passed": true,
+      "detail": {
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          369
+        ],
+        "status": "completed"
+      }
+    },
+    {
+      "id": "traj-010",
+      "category": "tool_trajectory",
+      "query": "结业考试多少分算通过",
+      "passed": true,
+      "detail": {
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          210
+        ],
+        "status": "completed"
+      }
+    },
+    {
+      "id": "traj-011",
+      "category": "tool_trajectory",
+      "query": "云盾企业版一年多少钱",
+      "passed": true,
+      "detail": {
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          324
+        ],
+        "status": "completed"
+      }
+    },
+    {
+      "id": "traj-012",
+      "category": "tool_trajectory",
+      "query": "申请年假需要提前几天",
+      "passed": true,
+      "detail": {
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          388
+        ],
+        "status": "completed"
+      }
+    },
+    {
+      "id": "answer-001",
+      "category": "answer_quality",
+      "query": "云盾 Pro 版每月多少钱",
+      "passed": false,
+      "detail": {
+        "judge": {
+          "faithfulness": 2,
+          "coverage": 5,
+          "refusal": 5,
+          "reason": "准确回答了价格，但额外编造了“支持最多50个子账号”的未证实信息，存在幻觉。",
+          "passed": false
+        },
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          345
+        ],
+        "finalAnswer": "根据知识库中的信息，**云盾 Pro 版定价为每月 199 元**，支持最多 50 个子账号。\n\n如果您还有其他问题，比如企业版定价、免费试用等，欢迎继续咨询！"
+      }
+    },
+    {
+      "id": "answer-002",
+      "category": "answer_quality",
+      "query": "入职满一年的员工有几天年假",
+      "passed": false,
+      "detail": {
+        "judge": {
+          "faithfulness": 2,
+          "coverage": 5,
+          "refusal": 5,
+          "reason": "待评答案准确回答了满一年5天年假的核心事实，但编造了其他年限的年假天数及OA审批流程等参考资料中未提供的信息。",
+          "passed": false
+        },
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          416
+        ],
+        "finalAnswer": "根据公司员工手册的规定，**入职满一年的员工享有5天带薪年假**。\n\n此外，年假天数会随着工作年限增加：\n- 入职满 **1年**：5天年假\n- 入职满 **3年**：10天年假\n- 入职满 **5年**：15天年假\n\n如需申请年假，请至少提前3个工作日在OA系统提交申请，由直属主管审批。"
+      }
+    },
+    {
+      "id": "answer-003",
+      "category": "answer_quality",
+      "query": "差旅住宿费报销上限是多少",
+      "passed": false,
+      "detail": {
+        "judge": {
+          "faithfulness": 2,
+          "coverage": 5,
+          "refusal": 5,
+          "reason": "待评答案准确回答了报销上限，但编造了参考资料中未提及的审批流程和打款时间等额外信息。",
+          "passed": false
+        },
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          328
+        ],
+        "finalAnswer": "根据公司员工手册的规定，**差旅住宿费报销上限为每晚 600 元**，超标部分需自行承担。\n\n另外补充一点：如果单笔报销金额超过 5000 元，还需要总监级以上审批。报销款项会在审批通过后 7 个工作日内打入工资卡。"
+      }
+    },
+    {
+      "id": "answer-004",
+      "category": "answer_quality",
+      "query": "公司邮箱后缀是什么",
+      "passed": false,
+      "detail": {
+        "judge": {
+          "faithfulness": 2,
+          "coverage": 5,
+          "refusal": 5,
+          "reason": "待评答案正确回答了邮箱后缀，但编造了“账号由IT部门在入职当天开通”的无关信息，存在事实幻觉。",
+          "passed": false
+        },
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          356
+        ],
+        "finalAnswer": "根据知识库中的信息，公司邮箱后缀为 **@example.com**。\n\n账号由 IT 部门在入职当天开通。"
+      }
+    },
+    {
+      "id": "answer-005",
+      "category": "answer_quality",
+      "query": "免费试用期多久",
+      "passed": false,
+      "detail": {
+        "judge": {
+          "faithfulness": 3,
+          "coverage": 5,
+          "refusal": 5,
+          "reason": "待评答案准确回答了30天试用期及功能一致性，但凭空编造了“云盾产品”这一具体名称，存在事实幻觉。",
+          "passed": false
+        },
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          438
+        ],
+        "finalAnswer": "根据知识库中的信息，**云盾产品**的免费试用期为 **30 天**。\n\n在试用期内，您可以体验与 Pro 版完全一致的全部功能。"
+      }
+    },
+    {
+      "id": "answer-006",
+      "category": "answer_quality",
+      "query": "新人培训考试多少分通过",
+      "passed": true,
+      "detail": {
+        "judge": {
+          "faithfulness": 5,
+          "coverage": 5,
+          "refusal": 5,
+          "reason": "待评答案准确回答了通过分数（80分），并补充了满分和补考规则，与参考答案完全一致，无编造且覆盖全面。",
+          "passed": true
+        },
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          273
+        ],
+        "finalAnswer": "根据知识库中的信息，**新人培训考试满分 100 分，80 分以上视为通过**。\n\n如果未通过，还可以**补考一次**。"
+      }
+    },
+    {
+      "id": "answer-007",
+      "category": "answer_quality",
+      "query": "报销到账需要多长时间",
+      "passed": false,
+      "detail": {
+        "judge": {
+          "faithfulness": 2,
+          "coverage": 5,
+          "refusal": 5,
+          "reason": "待评答案准确回答了核心问题并包含所有事实点，但编造了单笔超5000元需总监审批的额外信息，违反了无编造原则。",
+          "passed": false
+        },
+        "toolNames": [
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          330
+        ],
+        "finalAnswer": "根据员工手册的规定，**报销款项在审批通过后 7 个工作日内打入工资卡**。\n\n另外需要注意的是，如果单笔报销金额超过 5000 元，还需要总监级以上审批。\n\n如果您还有其他关于报销的问题，欢迎继续咨询！"
+      }
+    },
+    {
+      "id": "answer-008",
+      "category": "answer_quality",
+      "query": "IT 设备什么时候发",
+      "passed": true,
+      "detail": {
+        "judge": {
+          "faithfulness": 5,
+          "coverage": 5,
+          "refusal": 5,
+          "reason": "待评答案准确回答了IT设备的发放时间，完整包含了必须的事实点，无编造或不当拒答。",
+          "passed": true
+        },
+        "toolNames": [
+          "rag_search",
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          400,
+          407
+        ],
+        "finalAnswer": "根据《新人入职指南》，**IT 设备在入职第二个工作日由行政部统一发放**。\n\n也就是说，入职当天不会发放 IT 设备，需要等到第二个工作日才能领取。如果还有其他入职相关的问题，欢迎继续问我！"
+      }
+    },
+    {
+      "id": "answer-009",
+      "category": "answer_quality",
+      "query": "公司 2030 年的营收目标是多少",
+      "passed": false,
+      "detail": {
+        "judge": {
+          "faithfulness": 2,
+          "coverage": 5,
+          "refusal": 5,
+          "reason": "待评答案正确拒答了问题，但编造了知识库的具体文档内容（如云盾产品FAQ等），存在事实幻觉。",
+          "passed": false
+        },
+        "toolNames": [
+          "rag_search",
+          "rag_search",
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          383,
+          402,
+          356
+        ],
+        "finalAnswer": "很抱歉，我在当前知识库中没有找到关于公司 2030 年营收目标的相关信息。\n\n目前知识库中主要包含以下文档内容：\n- **云盾产品 FAQ**：产品定价、功能说明等\n- **员工手册**：报销制度、差旅规定等\n- **新人入职指南**：入职流程、账号开通、培训安排等\n\n建议您通过以下途径获取该信息：\n1. 咨询公司战略发展部门或财务部门\n2. 查阅公司年度战略规划文件或内部公告\n3. 联系您的直属领导或相关负责人\n\n如果您有其他问题，欢迎继续提问！"
+      }
+    },
+    {
+      "id": "answer-010",
+      "category": "answer_quality",
+      "query": "云盾产品什么时候上市的",
+      "passed": true,
+      "detail": {
+        "judge": {
+          "faithfulness": 5,
+          "coverage": 5,
+          "refusal": 5,
+          "reason": "待评答案准确识别了资料中缺乏相关信息，正确进行了拒答，未编造事实，并提供了合理的后续建议。",
+          "passed": true
+        },
+        "toolNames": [
+          "rag_search",
+          "rag_search",
+          "rag_search"
+        ],
+        "toolOutputLengths": [
+          315,
+          339,
+          199
+        ],
+        "finalAnswer": "很抱歉，在当前知识库中没有找到关于云盾产品上市时间的信息。知识库中目前主要包含云盾产品的版本定价、功能介绍和常见问题等内容，暂未收录产品的上市/发布时间相关信息。\n\n建议您通过以下方式获取该信息：\n- 联系产品团队或查阅产品官方公告\n- 访问公司官网的产品历史页面\n\n如果您有其他关于云盾产品的问题（如定价、功能、部署等），我很乐意帮您查询！"
+      }
+    }
+  ]
+}

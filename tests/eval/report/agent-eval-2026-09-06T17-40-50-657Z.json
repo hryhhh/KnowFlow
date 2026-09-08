@@ -1,0 +1,94 @@
+{
+  "timestamp": "2026-09-06T17:40:50.657Z",
+  "durationMs": 2024,
+  "routing": {
+    "total": 0,
+    "passed": 0,
+    "passRate": 0,
+    "errors": 0
+  },
+  "tool_trajectory": {
+    "total": 0,
+    "passed": 0,
+    "passRate": 0,
+    "errors": 0
+  },
+  "answer_quality": {
+    "total": 0,
+    "passed": 0,
+    "passRate": 0,
+    "errors": 10
+  },
+  "cases": [
+    {
+      "id": "answer-001",
+      "category": "answer_quality",
+      "query": "云盾 Pro 版每月多少钱",
+      "passed": null,
+      "error": "403 Free quota exhausted. To continue accessing the model on a paid basis, please add funds or disable the \"use free tier only\" mode in the management console."
+    },
+    {
+      "id": "answer-002",
+      "category": "answer_quality",
+      "query": "入职满一年的员工有几天年假",
+      "passed": null,
+      "error": "403 Free quota exhausted. To continue accessing the model on a paid basis, please add funds or disable the \"use free tier only\" mode in the management console."
+    },
+    {
+      "id": "answer-003",
+      "category": "answer_quality",
+      "query": "差旅住宿费报销上限是多少",
+      "passed": null,
+      "error": "403 Free quota exhausted. To continue accessing the model on a paid basis, please add funds or disable the \"use free tier only\" mode in the management console."
+    },
+    {
+      "id": "answer-004",
+      "category": "answer_quality",
+      "query": "公司邮箱后缀是什么",
+      "passed": null,
+      "error": "403 Free quota exhausted. To continue accessing the model on a paid basis, please add funds or disable the \"use free tier only\" mode in the management console."
+    },
+    {
+      "id": "answer-005",
+      "category": "answer_quality",
+      "query": "免费试用期多久",
+      "passed": null,
+      "error": "403 Free quota exhausted. To continue accessing the model on a paid basis, please add funds or disable the \"use free tier only\" mode in the management console."
+    },
+    {
+      "id": "answer-006",
+      "category": "answer_quality",
+      "query": "新人培训考试多少分通过",
+      "passed": null,
+      "error": "403 Free quota exhausted. To continue accessing the model on a paid basis, please add funds or disable the \"use free tier only\" mode in the management console."
+    },
+    {
+      "id": "answer-007",
+      "category": "answer_quality",
+      "query": "报销到账需要多长时间",
+      "passed": null,
+      "error": "403 Free quota exhausted. To continue accessing the model on a paid basis, please add funds or disable the \"use free tier only\" mode in the management console."
+    },
+    {
+      "id": "answer-008",
+      "category": "answer_quality",
+      "query": "IT 设备什么时候发",
+      "passed": null,
+      "error": "403 Free quota exhausted. To continue accessing the model on a paid basis, please add funds or disable the \"use free tier only\" mode in the management console."
+    },
+    {
+      "id": "answer-009",
+      "category": "answer_quality",
+      "query": "公司 2030 年的营收目标是多少",
+      "passed": null,
+      "error": "403 Free quota exhausted. To continue accessing the model on a paid basis, please add funds or disable the \"use free tier only\" mode in the management console."
+    },
+    {
+      "id": "answer-010",
+      "category": "answer_quality",
+      "query": "云盾产品什么时候上市的",
+      "passed": null,
+      "error": "403 Free quota exhausted. To continue accessing the model on a paid basis, please add funds or disable the \"use free tier only\" mode in the management console."
+    }
+  ]
+}
