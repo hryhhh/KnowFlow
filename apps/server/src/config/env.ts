@@ -103,6 +103,8 @@ export const env = {
       legacyToolsEnabled: boolEnv('AGENT_LEGACY_TOOLS_ENABLED', false),
       traceEnabled: boolEnv('AGENT_TRACE_ENABLED', false),
       fallbackEnabled: boolEnv('AGENT_RUNTIME_FALLBACK', true),
+      /** Agent 整体超时（毫秒），缺省 30s */
+      timeoutMs: intEnv('AGENT_RUNTIME_TIMEOUT_MS', 30000),
     };
   },
   get webSearch() {
@@ -145,6 +147,7 @@ const POSITIVE_INT_VARS = [
   'MAX_UPLOAD_SIZE_MB',
   'API_RATE_LIMIT',
   'DOCUMENT_QUEUE_ATTEMPTS',
+  'AGENT_RUNTIME_TIMEOUT_MS',
 ] as const;
 
 /** 允许为 0 的非负整数变量（0 有"禁用"语义） */

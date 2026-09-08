@@ -44,7 +44,8 @@ export default function DashboardPage() {
       dashboardApi.trends(),
       dashboardApi.activities(),
       apiServiceApi.list(),
-      traceApi.list(undefined, 10),
+      // 按当前知识库过滤 trace，避免越权展示其他知识库数据
+      traceApi.list(current?.id ?? undefined, 10),
     ])
       .then(([sumRes, trendRes, actRes, svcRes, traceRes]) => {
         setSummary(sumRes.data.data);

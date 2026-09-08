@@ -188,4 +188,6 @@ export interface AgentRunParams {
   llmConfig: LLMConfig;
   tools: any; // ToolRegistry, 避免循环依赖
   emitEvent: (event: AgentEvent) => void;
+  /** 整体超时（毫秒），缺省取 RUNTIME_DEFAULTS.timeoutMs */
+  timeoutMs?: number;
 }

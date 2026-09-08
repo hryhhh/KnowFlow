@@ -506,6 +506,7 @@ export class AgentChatService {
         query,
         kbId,
         sessionId: sessionId ?? 'anonymous',
+        timeoutMs: env.agents.timeoutMs,
         traceId,
         messages,
         searchParams: resolvedParams,
