@@ -191,27 +191,29 @@ export default function DocumentList() {
       )}
 
       {/* 拖拽上传区（antd Upload.Dragger，beforeUpload 返回 false 走自定义上传） */}
-      <Upload.Dragger
-        accept=".csv,.xlsx,.xls,.pdf,.docx,.doc"
-        showUploadList={false}
-        multiple={false}
-        disabled={uploading}
-        beforeUpload={(file) => {
-          onUpload(file);
-          return false;
-        }}
-        style={{ marginBottom: 16, background: 'var(--panel)' }}
-      >
-        <p className="ant-upload-drag-icon">
-          <InboxOutlined />
-        </p>
-        <p className="ant-upload-text" style={{ fontSize: 14 }}>
-          {uploading ? '上传中…' : '拖放文件到此处，或点击选择文件'}
-        </p>
-        <p className="ant-upload-hint" style={{ fontSize: 12 }}>
-          支持 CSV / XLSX / PDF / DOCX / DOC 格式
-        </p>
-      </Upload.Dragger>
+      <div style={{ marginBottom: 16, minHeight: 100, maxHeight: 140 }}>
+        <Upload.Dragger
+          accept=".csv,.xlsx,.xls,.pdf,.docx,.doc"
+          showUploadList={false}
+          multiple={false}
+          disabled={uploading}
+          beforeUpload={(file) => {
+            onUpload(file);
+            return false;
+          }}
+          style={{ background: 'var(--panel)', minHeight: 100, maxHeight: 140 }}
+        >
+          <p className="ant-upload-drag-icon">
+            <InboxOutlined />
+          </p>
+          <p className="ant-upload-text" style={{ fontSize: 14 }}>
+            {uploading ? '上传中…' : '拖放文件到此处，或点击选择文件'}
+          </p>
+          <p className="ant-upload-hint" style={{ fontSize: 12 }}>
+            支持 CSV / XLSX / PDF / DOCX / DOC 格式
+          </p>
+        </Upload.Dragger>
+      </div>
 
       <Table
         rowKey="id"
