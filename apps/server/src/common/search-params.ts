@@ -1,5 +1,6 @@
 import type { SearchParams } from '@knowbase-x/rag-engine';
 import { RETRIEVAL_DEFAULTS } from '../config/defaults';
+import { env } from '../config/env';
 
 /**
  * 归一化检索参数，应用默认值
@@ -16,5 +17,6 @@ export function normalizeSearchParams(params: Partial<SearchParams> | undefined)
     rrfK: params?.rrfK,
     candidateMultiplier: params?.candidateMultiplier ?? RETRIEVAL_DEFAULTS.candidateMultiplier,
     minDenseScore: params?.minDenseScore ?? RETRIEVAL_DEFAULTS.minDenseScore,
+    temperature: params?.temperature ?? env.llm.temperature,
   };
 }

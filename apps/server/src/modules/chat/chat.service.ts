@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { Observable, Subscriber } from 'rxjs';
 import { MessageEvent } from 'http';
 import { generateTraceId } from '@knowbase-x/agents';
-import { retrieveAndChat } from '@knowbase-x/rag-engine';
+import { retrieveAndChat, annotateFaithfulness } from '@knowbase-x/rag-engine';
 import type { RAGPipelineConfig, SearchParams, SourceRef } from '@knowbase-x/rag-engine';
 import { RAG_CONFIG } from '../../config/rag-config.provider';
 import { RETRIEVAL_DEFAULTS } from '../../config/defaults';
@@ -25,6 +25,8 @@ export interface ChatStreamBody {
     rrfK?: number;
     candidateMultiplier?: number;
     minDenseScore?: number;
+    /** LLM 生成温度（0~2），缺省用 DEFAULT_LLM_TEMPERATURE */
+    temperature?: number;
   };
 }
 
@@ -84,6 +86,7 @@ export class ChatService {
         rrfK: params.rrfK,
         candidateMultiplier: params.candidateMultiplier ?? RETRIEVAL_DEFAULTS.candidateMultiplier,
         minDenseScore: params.minDenseScore ?? RETRIEVAL_DEFAULTS.minDenseScore,
+        temperature: params.temperature,
       };
 
       // AGENTS_ENABLED=true 时走 Agent 编排链路，否则降级传统 RAG
@@ -168,6 +171,18 @@ export class ChatService {
           onDone: () => {
             emit('done', null);
             record('success');
+            // A2：faithfulness 校验（异步，不阻塞 done 事件）
+            if (env.retrieval.faithfulnessEnabled) {
+              const contexts = sources.map((s) => s.content);
+              annotateFaithfulness(
+                assistantContent,
+                contexts,
+                this.ragConfig.llm,
+                (result) => {
+                  emit('faithfulness', result);
+                },
+              ).catch(() => {});
+            }
             if (reqSessionId) {
               void this.sessionService
                 .addMessage(reqSessionId, 'assistant', assistantContent, sources)

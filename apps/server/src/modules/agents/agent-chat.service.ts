@@ -6,7 +6,7 @@ import type {
   SourceRef,
   StreamCallbacks,
 } from '@knowbase-x/rag-engine';
-import { retrieveAndChat, retrieve } from '@knowbase-x/rag-engine';
+import { retrieveAndChat, retrieve, annotateFaithfulness } from '@knowbase-x/rag-engine';
 import {
   DbQueryAgent,
   WebSearchAgent,
@@ -128,6 +128,27 @@ export class AgentChatService {
         onDone,
         onError: (err) => onError(err),
       };
+      // 收集完整答案文本，供 faithfulness 标注使用
+      let assistantContent = '';
+      const faithfulnessCallbacks: StreamCallbacks = {
+        ...callbacks,
+        onToken: (token) => {
+          assistantContent += token;
+          callbacks.onToken(token);
+        },
+        onDone: () => {
+          callbacks.onDone();
+          // A2：faithfulness 标注（异步，不阻塞 done）
+          if (env.retrieval.faithfulnessEnabled && assistantContent.trim()) {
+            annotateFaithfulness(
+              assistantContent,
+              [], // sources 在 rag_flow 链路中尚未暴露，暂用空数组
+              this.ragConfig.llm,
+              (result) => (callbacks as any).onMeta?.({ type: 'faithfulness', value: result }),
+            ).catch(() => {});
+          }
+        },
+      };
       await retrieveAndChat(
         params.query,
         params.kbId,
@@ -143,7 +164,7 @@ export class AgentChatService {
           minDenseScore: params.minDenseScore ?? RETRIEVAL_DEFAULTS.minDenseScore,
         },
         this.ragConfig,
-        callbacks,
+        faithfulnessCallbacks,
       );
     });
     this.agentInstances.set(ragFlowAgent.id, ragFlowAgent);
@@ -335,7 +356,7 @@ export class AgentChatService {
     if (!this.agentsEnabled || !this.orchestrator) {
       // 最终降级到传统 RAG
       this.logger.debug('AGENTS_ENABLED=false，降级到传统 RAG 链路');
-      retrieveAndChat(query, kbId, resolvedParams, this.ragConfig, callbacks);
+      this._callWithFaithfulnessWrap(query, kbId, resolvedParams, callbacks);
       return;
     }
 
@@ -389,7 +410,7 @@ export class AgentChatService {
           type: 'process',
           value: { stage: 'rag_fallback', label: '正在检索知识库…' },
         });
-        retrieveAndChat(query, kbId, resolvedParams, this.ragConfig, callbacks);
+        this._callWithFaithfulnessWrap(query, kbId, resolvedParams, callbacks);
         return;
       }
       callbacks.onMeta?.({
@@ -502,6 +523,8 @@ export class AgentChatService {
       // 标记本次 run 是否已通过 answer_delta 流式推出答案：
       // true 则跳过结束后的人工分块，仅在流式关闭/降级场景兜底
       let streamedAnswer = false;
+      let faithfulnessContent = '';
+      const faithfulnessSources: SourceRef[] = [];
       const result = await runtime.run({
         query,
         kbId,
@@ -518,6 +541,7 @@ export class AgentChatService {
             const delta = event.data?.delta;
             if (typeof delta === 'string' && delta.length > 0) {
               streamedAnswer = true;
+              faithfulnessContent += delta;
               callbacks.onToken(delta);
             }
             return;
@@ -529,6 +553,7 @@ export class AgentChatService {
               sourceFile: s.sourceFile ?? '',
               score: s.score ?? 0,
             }));
+            faithfulnessSources.push(...sources);
             callbacks.onSources?.(sources);
             return;
           }
@@ -569,7 +594,18 @@ export class AgentChatService {
         const chunkSize = 20;
         for (let i = 0; i < result.finalAnswer.length; i += chunkSize) {
           callbacks.onToken(result.finalAnswer.slice(i, i + chunkSize));
+          faithfulnessContent += result.finalAnswer.slice(i, i + chunkSize);
         }
+      }
+
+      // A2：faithfulness 标注（异步，不阻塞 done）
+      if (env.retrieval.faithfulnessEnabled && faithfulnessContent.trim()) {
+        annotateFaithfulness(
+          faithfulnessContent,
+          faithfulnessSources.map((s) => s.content),
+          this.ragConfig.llm,
+          (result) => callbacks.onMeta?.({ type: 'faithfulness', value: result }),
+        ).catch(() => {});
       }
 
       // 推送 agent_completed 事件
@@ -683,5 +719,42 @@ export class AgentChatService {
       this.router.reload();
       this.logger.log('路由规则已重新加载');
     }
+  }
+
+  /**
+   * 包装 retrieveAndChat：在 onDone 后异步触发 faithfulness 标注（不阻塞）。
+   * 将调用方传入的 onSources/onToken 转为收集器，onDone 时再触发原回调并做 faithfulness 校验。
+   */
+  private async _callWithFaithfulnessWrap(
+    query: string,
+    kbId: string,
+    params: SearchParams,
+    callbacks: StreamCallbacks & { onMeta?: (event: any) => void },
+  ): Promise<void> {
+    const sources: SourceRef[] = [];
+    let assistantContent = '';
+    await retrieveAndChat(query, kbId, params, this.ragConfig, {
+      onSources: (s) => {
+        sources.push(...s);
+        callbacks.onSources(s);
+      },
+      onToken: (token) => {
+        assistantContent += token;
+        callbacks.onToken(token);
+      },
+      onDone: () => {
+        callbacks.onDone();
+        // A2：faithfulness 标注（异步，不阻塞 done）
+        if (env.retrieval.faithfulnessEnabled && assistantContent.trim()) {
+          annotateFaithfulness(
+            assistantContent,
+            sources.map((s) => s.content),
+            this.ragConfig.llm,
+            (result) => callbacks.onMeta?.({ type: 'faithfulness', value: result }),
+          ).catch(() => {});
+        }
+      },
+      onError: (err) => callbacks.onError(err),
+    });
   }
 }
