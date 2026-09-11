@@ -6,6 +6,7 @@ import * as splitters from './splitters/recursive-splitter.js';
 import * as markdownSplitters from './splitters/markdown-splitter.js';
 import * as embeddings from './embeddings/openai-embeddings.js';
 import * as pgvectorStore from './stores/pgvector-store.js';
+import * as retrievalGate from './retrieval-gate.js';
 
 // Mock all dependencies
 vi.mock('./loaders/index.js', () => ({
@@ -55,8 +56,8 @@ vi.mock('./rerankers/bi-encoder-reranker.js', () => ({
 }));
 
 vi.mock('./llm/chat-service.js', () => ({
-  streamChat: vi.fn(),
-  buildContext: vi.fn(),
+  streamChat: vi.fn().mockResolvedValue(undefined),
+  buildContext: vi.fn().mockReturnValue('[1] ref content'),
 }));
 
 const mockConfig: RAGPipelineConfig = {
@@ -166,5 +167,113 @@ describe('deleteByDocId', () => {
     const result = await deleteByDocId(mockConfig.pg, 'langchainjs', 'doc-123');
 
     expect(result.deleted).toBe(1);
+  });
+});
+
+describe('retrieveAndChat quality gate (A3)', () => {
+  beforeEach(() => {
+    delete process.env.RETRIEVAL_QUALITY_GATE_ENABLED;
+  });
+
+  it('闸门开启时 evaluateQualityGate 正确拦截低分结果', () => {
+    process.env.RETRIEVAL_QUALITY_GATE_ENABLED = 'true';
+    const verdict = retrievalGate.evaluateQualityGate([{ score: 0.1 }], 'vector', 'rrf');
+    expect(verdict.gated).toBe(true);
+    expect(verdict.top1).toBe(0.1);
+    expect(verdict.warned).toBe(false);
+  });
+
+  it('闸门关闭时 evaluateQualityGate 不拦截', () => {
+    const verdict = retrievalGate.evaluateQualityGate([{ score: 0.05 }], 'vector', 'rrf');
+    expect(verdict.gated).toBe(false);
+    expect(verdict.warned).toBe(false);
+  });
+
+  it('空结果闸门拦截（任何模式）', () => {
+    process.env.RETRIEVAL_QUALITY_GATE_ENABLED = 'true';
+    const verdict = retrievalGate.evaluateQualityGate([], 'keyword', 'rrf');
+    expect(verdict.gated).toBe(true);
+    expect(verdict.top1).toBeNull();
+  });
+});
+
+describe('retrieveAndChat quality gate integration (A3)', () => {
+  beforeEach(() => {
+    delete process.env.RETRIEVAL_QUALITY_GATE_ENABLED;
+  });
+
+  afterEach(() => {
+    delete process.env.RETRIEVAL_QUALITY_GATE_ENABLED;
+  });
+
+  it('闸门开启时 evaluateQualityGate 正确拦截低分结果（直接验证闸门模块）', async () => {
+    process.env.RETRIEVAL_QUALITY_GATE_ENABLED = 'true';
+    const { evaluateQualityGate } = await import('./retrieval-gate.js');
+    const result = evaluateQualityGate([{ score: 0.1 }], 'vector', 'rrf');
+    expect(result.gated).toBe(true);
+    expect(result.top1).toBe(0.1);
+    expect(result.warned).toBe(false);
+  });
+
+  it('闸门关闭时 retrieveAndChat 走正常路径（streamChat 被调用）', async () => {
+    const { similaritySearch } = await import('./retrievers/similarity-retriever.js');
+    vi.mocked(similaritySearch).mockResolvedValue([{ score: 0.8, content: 'ref', sourceFile: 'f.txt', metadata: {} }]);
+    const { retrieveAndChat } = await import('./pipeline.js');
+    const { streamChat } = await import('./llm/chat-service.js');
+    const onSources = vi.fn();
+    const onDone = vi.fn();
+    // Make streamChat call callbacks.onDone() to simulate real behavior
+    streamChat.mockImplementation(async (_req, _config, callbacks) => {
+      callbacks?.onDone?.();
+    });
+
+    await retrieveAndChat('query', 'kb-1', { topK: 10, minScore: 0.7, useReranker: false, denseWeight: 0.5, retrievalMode: 'vector' }, mockConfig, {
+      onSources, onToken: vi.fn(), onDone, onError: vi.fn(),
+    });
+
+    expect(streamChat).toHaveBeenCalledOnce();
+    expect(onDone).toHaveBeenCalledOnce();
+  });
+
+  it('请求级 temperature 透传给 streamChat', async () => {
+    const { similaritySearch } = await import('./retrievers/similarity-retriever.js');
+    vi.mocked(similaritySearch).mockResolvedValue([{ score: 0.8, content: 'ref', sourceFile: 'f.txt', metadata: {} }]);
+    const { retrieveAndChat } = await import('./pipeline.js');
+    const { streamChat } = await import('./llm/chat-service.js');
+    const onDone = vi.fn();
+
+    await retrieveAndChat('query', 'kb-1', {
+      topK: 10, minScore: 0.7, useReranker: false, denseWeight: 0.5, temperature: 0.3, retrievalMode: 'vector',
+    }, mockConfig, {
+      onSources: vi.fn(), onToken: vi.fn(), onDone, onError: vi.fn(),
+    });
+
+    expect(streamChat).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ temperature: 0.3 }),
+      expect.anything(),
+    );
+  });
+});
+
+describe('A5 稀疏分归一化（pipeline 集成）', () => {
+  it('applySparseScoreNormalization 对空结果无副作用', async () => {
+    const { applySparseScoreNormalization } = await import('./fusion/index.js');
+    expect(applySparseScoreNormalization([])).toEqual([]);
+  });
+
+  it('hybrid+RRF 模式下归一化将 fused 分映射到 [0,1]', async () => {
+    const { applySparseScoreNormalization } = await import('./fusion/index.js');
+    const results = [
+      { score: 1.8, content: 'a', sourceFile: 'f1', metadata: {} },
+      { score: 1.2, content: 'b', sourceFile: 'f2', metadata: {} },
+      { score: 0.6, content: 'c', sourceFile: 'f3', metadata: {} },
+    ];
+    const normalized = applySparseScoreNormalization(results);
+    // (1.8-0.6)/(1.8-0.6)=1, (1.2-0.6)/1.2=0.5, (0.6-0.6)/1.2=0
+    expect(normalized[0].score).toBeCloseTo(1.0, 5);
+    expect(normalized[1].score).toBeCloseTo(0.5, 5);
+    expect(normalized[2].score).toBeCloseTo(0.0, 5);
+    expect(normalized[0].metadata.scoreRaw).toBe(1.8);
   });
 });

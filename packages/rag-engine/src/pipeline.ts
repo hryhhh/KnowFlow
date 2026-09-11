@@ -21,6 +21,8 @@ import type { HybridSearchParams } from './retrievers/hybrid-retriever.js';
 import { rerank } from './rerankers/bi-encoder-reranker.js';
 import { streamChat, buildContext } from './llm/chat-service.js';
 import { getCachedResults, setCachedResults } from './cache/search-cache.js';
+import { evaluateQualityGate, QUALITY_GATE_FIXED_ANSWER } from './retrieval-gate.js';
+import { applySparseScoreNormalization, isSparseScoreNormalizationOn } from './fusion/index.js';
 import type {
   RAGPipelineConfig,
   TextChunk,
@@ -238,7 +240,10 @@ async function performSearch(
       results = await (
         await import('./retrievers/sparse-retriever.js')
       ).sparseSearch({ query, filter, topK: resolved.topK }, config.pg, 'chunks');
-      // keyword 模式：minScore 对稀疏分无固定范围意义，不启用
+      // A5：稀疏分归一化 — 仅在同批调用方开关打开时对原始 ts_rank 做 min-max 映射
+      if (isSparseScoreNormalizationOn()) {
+        results = applySparseScoreNormalization(results);
+      }
       if (params.debug) {
         debugInfo = {
           mode: 'keyword',
@@ -297,6 +302,12 @@ async function performSearch(
   // 4. 过滤测试文件结果（防止测试数据污染检索）
   const TEST_FILE_PATTERN = /^gen-test-|\.test\.|\.spec\./;
   results = results.filter((r) => !TEST_FILE_PATTERN.test(r.sourceFile));
+
+  // A5：稀疏分归一化 — RRF 融合分范围 [0,2]，A5 on 时对结果做 min-max 归一化到 [0,1]，
+  // 使 minScore 语义在 vector / linear / RRF 模式下统一。
+  if (isSparseScoreNormalizationOn() && (mode === 'keyword' || (mode === 'hybrid' && fusionMethod === 'rrf'))) {
+    results = applySparseScoreNormalization(results);
+  }
 
   // 5. 可选重排（与 retrievalMode 独立）
   if (resolved.useReranker && results.length > 0) {
@@ -366,6 +377,16 @@ export async function retrieveAndChat(
 ): Promise<void> {
   const { results } = await performSearch(query, { kbId }, params, config);
 
+  // A3：检索质量闸门——结果为空或 top1 低于阈值时跳过 LLM
+  const gateResult = evaluateQualityGate(results, params.retrievalMode ?? 'vector', params.fusionMethod ?? 'rrf');
+  if (gateResult.gated) {
+    callbacks.onSources([]);
+    // 推 no_result process 事件供前端展示
+    callbacks.onToken(QUALITY_GATE_FIXED_ANSWER);
+    callbacks.onDone();
+    return;
+  }
+
   // 推送引用来源
   const sources: SourceRef[] = results.map((r) => ({
     content: r.content,
@@ -375,7 +396,7 @@ export async function retrieveAndChat(
   callbacks.onSources(sources);
 
   const context = buildContext(results);
-  await streamChat({ query, context }, config.llm, callbacks);
+  await streamChat({ query, context }, { ...config.llm, temperature: params.temperature }, callbacks);
 }
 
 /**
