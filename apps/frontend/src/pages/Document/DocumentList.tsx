@@ -191,7 +191,7 @@ export default function DocumentList() {
       )}
 
       {/* 拖拽上传区（antd Upload.Dragger，beforeUpload 返回 false 走自定义上传） */}
-      <div style={{ marginBottom: 16, minHeight: 100, maxHeight: 140 }}>
+      <div style={{ marginBottom: 16, minHeight: 100, maxHeight: 160 }}>
         <Upload.Dragger
           accept=".csv,.xlsx,.xls,.pdf,.docx,.doc"
           showUploadList={false}
@@ -201,7 +201,7 @@ export default function DocumentList() {
             onUpload(file);
             return false;
           }}
-          style={{ background: 'var(--panel)', minHeight: 100, maxHeight: 140 }}
+          style={{ background: 'var(--panel)', minHeight: 100, maxHeight: 160 }}
         >
           <p className="ant-upload-drag-icon">
             <InboxOutlined />
