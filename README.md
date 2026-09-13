@@ -428,7 +428,7 @@ knowbase-x/
 │   │   │   ├── router/      # IntentRouter（YAML 规则 + LLM 仲裁）
 │   │   │   ├── tools/       # ToolRegistry + 5 个内置工具
 │   │   │   ├── memory/      # ConversationMemory
-│   │   │   ├── observability/# TraceCollector
+│   │   │   ├── observability/     # TraceCollector
 │   │   │   └── orchestrator.ts  # Orchestrator（路由→调度→合成）
 │   │   └── src/agents/      # RAGFlowAgent / DbQueryAgent / WebSearchAgent
 │   ├── rag-engine/          # RAG 引擎
@@ -437,8 +437,8 @@ knowbase-x/
 │   │   │   ├── splitters/   # 智能切片（递归 / Markdown / 语义）
 │   │   │   ├── embeddings/  # Embedding 接口
 │   │   │   ├── stores/      # pgvector / sparse-store / memory-store
-│   │   │   ├── retrievers/  # vector / keyword / hybrid 三路检索
-│   │   │   ├── fusion/      # RRF / 线性加权融合
+│   │   │   ├── retrievers/  # similarity / sparse / hybrid 检索
+│   │   │   ├── fusion/      # RRF / 线性加权融合 + 稀疏分归一化（A5）
 │   │   │   ├── rerankers/   # Bi-encoder / Cross-encoder 重排
 │   │   │   ├── llm/         # LLM 调用 + Faithfulness 校验
 │   │   │   ├── pipeline.ts  # retrieveAndChat 主管线
@@ -536,11 +536,14 @@ registry.register(new MyCustomTool());
 
 | 阶段 | 目标 | 状态 |
 | --- | --- | --- |
-| Phase 1 | 质量护栏：Faithfulness 校验、检索质量闸门、Temperature 收紧、稀疏分归一化 | ✅ 已完成 |
-| Phase 2 | 评测体系：Golden Set、Agent 评测 Runner、指标 Dashboard | 🔄 进行中 |
-| Phase 3 | Agent 生态：更多内置工具、外部服务集成、插件机制 | 📋 规划中 |
+| Phase | 目标 | 状态 |
+| --- | --- | --- |
+| P1 | 质量护栏：Faithfulness 校验（A2）、检索质量闸门（A3）、Temperature 收紧（A4）、稀疏分归一化（A5） | ✅ 已完成 |
+| P2 | 架构收敛：Supervisor 统一双链路（B1）、ToolBudget 落地（B2）、失败自省重试（B3）、Multi-hop 检索（B4） | 📋 规划中 |
+| P3 | 工具与记忆生态：MCP 接入（C1）、自定义工具（C2）、记忆升级（C3）、Query 改写（C4）等 | 📋 规划中 |
+| P4 | 工程化与产品化：异步 Agent 运行（D1）、工具权限配额（D2）、HITL 审批（D3）、成本核算（D4）等 | 📋 规划中 |
 
-详细设计见 [docs/18-agent-prd-quality-guardrails.md](docs/18-agent-prd-quality-guardrails.md)。
+详细设计见 [docs/09-agent-evolution-roadmap.md](docs/09-agent-evolution-roadmap.md)。
 
 ---
 
@@ -555,7 +558,11 @@ registry.register(new MyCustomTool());
 - [混合检索设计](docs/07-hybrid-retrieval.md)
 - [Agent 系统总览（Tool / Runtime / 可观测）](docs/12-agent-upgrade-overview.md)
 - [RAG 待优化点清单](docs/17-rag-optimizations.md)
+- [Agent 演进路线图](docs/09-agent-evolution-roadmap.md)
 - [Agent PRD — 质量护栏与评测（A1~A5）](docs/18-agent-prd-quality-guardrails.md)
+- [Agent PRD — 架构收敛（Supervisor/Budget/自省/Multi-hop）](docs/19-agent-prd-architecture-convergence.md)
+- [Agent PRD — 工具与记忆生态（C1~C7）](docs/20-agent-prd-tool-memory-ecosystem.md)
+- [Agent PRD — 工程化与产品化（D1~D5）](docs/21-agent-prd-platform-engineering.md)
 
 ## 贡献指南
 
