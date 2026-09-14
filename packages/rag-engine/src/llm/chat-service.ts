@@ -33,7 +33,7 @@ export async function streamChat(
   const llm = new ChatOpenAI({
     apiKey: config.apiKey,
     model: config.model,
-    temperature: config.temperature ?? 0.7,
+    temperature: config.temperature ?? 0.1,
     streaming: true,
     configuration: { baseURL: config.baseURL },
   });

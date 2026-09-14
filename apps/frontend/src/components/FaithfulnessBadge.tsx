@@ -16,7 +16,7 @@ export default function FaithfulnessBadge({ result }: { result: FaithfulnessInfo
       {result.claims.length === 0 ? (
         <span style={{ color: 'var(--text-subtle)' }}>未从答案中提取到可核查的陈述</span>
       ) : (
-        result.claims.map((c, i) => (
+        result.claims.map((c: any, i: number) => (
           <div key={i} style={{ marginBottom: 6 }}>
             <span style={{ color: c.supported ? '#52c41a' : '#ff4d4f' }}>
               {c.supported ? '✓' : '✗'}
@@ -25,7 +25,7 @@ export default function FaithfulnessBadge({ result }: { result: FaithfulnessInfo
             {c.evidenceIndexes.length > 0 && (
               <span style={{ color: 'var(--text-subtle)' }}>
                 {' '}
-                [资料 {c.evidenceIndexes.map((n) => n + 1).join(',')}]{' '}
+                [资料 {c.evidenceIndexes.map((n: number) => n + 1).join(',')}]{' '}
               </span>
             )}
           </div>

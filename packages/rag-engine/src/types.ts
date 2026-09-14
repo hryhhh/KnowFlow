@@ -35,6 +35,8 @@ export interface SearchParams {
   minDenseScore?: number | null;
   /** 是否开启调试模式，返回详细的检索信息 */
   debug?: boolean;
+  /** LLM 生成温度（0~2），缺省用 env.llm.temperature；仅生成答案的链路生效 */
+  temperature?: number;
 }
 
 /** 调试信息结构 */
@@ -76,6 +78,8 @@ export interface StreamCallbacks {
   onToken: (token: string) => void;
   onDone: () => void;
   onError: (error: Error) => void;
+  /** 流式完成时，推送完整答案文本（由框架聚合 tokens 后调用，供 faithfulness 等后处理钩子使用） */
+  onAnswer?: (answer: string) => void;
 }
 
 /** Embedding 配置 */

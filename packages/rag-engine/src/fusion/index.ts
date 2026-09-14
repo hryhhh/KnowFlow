@@ -1,5 +1,34 @@
 import type { RetrievalResult, SearchDebugInfo } from '../types.js';
 
+/** 稀疏分归一化开关（A5，RETRIEVAL_SPARSE_SCORE_NORMALIZATION） */
+export function isSparseScoreNormalizationOn(): boolean {
+  return process.env.RETRIEVAL_SPARSE_SCORE_NORMALIZATION === 'true';
+}
+
+/**
+ * 对 results 的稀疏分数做 min-max 归一化到 [0, 1]。
+ * - 将原始 sparse rank 分（ts_rank）存入 metadata.scoreRaw；
+ * - 归一化后回写 result.score（与 vector 分同一量纲）；
+ * - batch 仅 1 条或全同分时 range=0，记 1.0（最高相关度）。
+ *
+ * 注意：只处理 score 未归一化的模式（keyword / hybrid+RRF）。
+ * 调用方须在 mode == 'keyword' || (mode == 'hybrid' && fusionMethod == 'rrf') 时传入。
+ */
+export function applySparseScoreNormalization(results: RetrievalResult[]): RetrievalResult[] {
+  if (results.length === 0) return results;
+
+  const rawScores = results.map((r) => r.score);
+  const min = Math.min(...rawScores);
+  const max = Math.max(...rawScores);
+  const range = max - min;
+
+  return results.map((r) => ({
+    ...r,
+    score: range === 0 ? 1.0 : (r.score - min) / range,
+    metadata: { ...r.metadata, scoreRaw: r.score },
+  }));
+}
+
 /**
  * Reciprocal Rank Fusion
  *

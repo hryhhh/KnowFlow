@@ -207,3 +207,14 @@ export interface AgentTrace {
   tokensUsed: { prompt: number; completion: number; total: number };
   errorMsg: string | null;
 }
+
+/** A2：faithfulness 校验结果，由 SSE faithfulness 事件携带 */
+export interface FaithfulnessClaim {
+  text: string;
+  supported: boolean;
+  evidenceIndexes: number[];
+}
+export interface FaithfulnessInfo {
+  score: number;
+  claims: FaithfulnessClaim[];
+}

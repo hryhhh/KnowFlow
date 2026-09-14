@@ -78,6 +78,8 @@ export const env = {
       apiKey: strEnv('LLM_API_KEY', ''),
       baseURL: strEnv('LLM_BASE_URL', ''),
       model: strEnv('LLM_MODEL', 'qwen3.7-plus'),
+      /** RAG 链路 LLM 默认 temperature（默认 0.1）；请求级可通过 SearchParams.temperature 覆盖 */
+      temperature: intEnv('DEFAULT_LLM_TEMPERATURE', 1) / 10,
     };
   },
   get embedding() {
@@ -132,6 +134,12 @@ export const env = {
   get session() {
     return {
       cacheTtlSeconds: intEnv('SESSION_CACHE_TTL_SECONDS', 60),
+    };
+  },
+  get retrieval() {
+    return {
+      /** Faithfulness 校验总开关（A2）：默认 false */
+      faithfulnessEnabled: boolEnv('FAITHFULNESS_ENABLED', false),
     };
   },
 };

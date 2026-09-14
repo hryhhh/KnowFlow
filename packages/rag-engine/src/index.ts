@@ -50,13 +50,33 @@ export { hybridSearch, type HybridSearchParams } from './retrievers/hybrid-retri
 export { sparseSearch, type SparseSearchParams } from './retrievers/sparse-retriever.js';
 
 // Fusion
-export { rrfFuse, linearFuse } from './fusion/index.js';
+export { rrfFuse, linearFuse, applySparseScoreNormalization } from './fusion/index.js';
 
 // Rerankers
 export { rerank } from './rerankers/bi-encoder-reranker.js';
 
 // LLM
 export { streamChat, buildContext, DEFAULT_SYSTEM_PROMPT } from './llm/chat-service.js';
+export {
+  checkFaithfulness,
+  annotateFaithfulness,
+  isFaithfulnessEnabled,
+  isFaithfulnessGatePass,
+  getFaithfulnessMode,
+  getFaithfulnessMinScore,
+  getFaithfulnessTimeoutMs,
+  type FaithfulnessResult,
+  type FaithfulnessClaim,
+} from './llm/faithfulness.js';
+
+// Retrieval Gate
+export {
+  evaluateQualityGate,
+  isQualityGateEnabled,
+  getQualityGateThreshold,
+  QUALITY_GATE_FIXED_ANSWER,
+  type QualityGateVerdict,
+} from './retrieval-gate.js';
 
 // Pipeline
 export { ingestDocument, retrieve, retrieveAndChat, getChunkIds } from './pipeline.js';
